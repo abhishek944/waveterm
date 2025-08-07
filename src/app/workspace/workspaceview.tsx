@@ -82,6 +82,10 @@ class SessionKeybindings extends React.Component<{}, {}> {
         keybindManager.registerKeybinding("pane", "screen", "app:deleteActiveLine", (waveEvent) => {
             return GlobalModel.handleDeleteActiveLine();
         });
+        keybindManager.registerKeybinding("pane", "screen", "app:copy", (waveEvent) => {
+            GlobalModel.copySelectedBlock();
+            return true;
+        });
     }
 
     componentWillUnmount() {

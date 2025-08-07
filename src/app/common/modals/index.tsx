@@ -10,4 +10,3 @@ export { SessionSettingsModal } from "./sessionsettings";
 export { ScreenSettingsModal } from "./screensettings";
 export { LineSettingsModal } from "./linesettings";
 export { UserInputModal } from "./userinput";
-export { NewWaveModal } from "./newwave";

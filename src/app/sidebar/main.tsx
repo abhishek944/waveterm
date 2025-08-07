@@ -266,14 +266,14 @@ class MainSideBar extends React.Component<MainSideBarProps, {}> {
                         </div>
                         <div className="contents">
                             <div className="top">
-                                <SideBarItem
+                                {/* <SideBarItem
                                     key="history"
                                     frontIcon={<i className="fa-sharp fa-regular fa-clock-rotate-left icon" />}
                                     className={clsx({ highlight: historyActive })}
                                     contents="History"
                                     endIcons={[<HotKeyIcon key="hotkey" hotkey="H" />]}
                                     onClick={this.handleHistoryClick}
-                                />
+                                /> */}
                                 {/* <SideBarItem className="hoverEffect unselectable" frontIcon={<FavoritesIcon className="icon" />} contents="Favorites" endIcon={<span className="hotkey">&#x2318;B</span>} onClick={this.handleBookmarksClick}/> */}
                                 <SideBarItem
                                     key="connections"
@@ -329,7 +329,7 @@ class MainSideBar extends React.Component<MainSideBarProps, {}> {
                                     contents="Settings"
                                     onClick={this.handleSettingsClick}
                                 />
-                                <SideBarItem
+                                {/* <SideBarItem
                                     key="documentation"
                                     frontIcon={<i className="fa-sharp fa-regular fa-circle-question icon" />}
                                     contents="Documentation"
@@ -339,18 +339,7 @@ class MainSideBar extends React.Component<MainSideBarProps, {}> {
                                             <i className="fa-sharp fa-solid fa-arrow-up-right-from-square"></i>
                                         </CenteredIcon>,
                                     ]}
-                                />
-                                <SideBarItem
-                                    key="discord"
-                                    frontIcon={<i className="fa-brands fa-discord icon" />}
-                                    contents="Discord"
-                                    onClick={() => openLink("https://discord.gg/XfvZ334gwU")}
-                                    endIcons={[
-                                        <CenteredIcon key="offsite" className="link-offsite hoverEffect">
-                                            <i className="fa-sharp fa-solid fa-arrow-up-right-from-square"></i>
-                                        </CenteredIcon>,
-                                    ]}
-                                />
+                                /> */}
                             </div>
                         </div>
                     </React.Fragment>

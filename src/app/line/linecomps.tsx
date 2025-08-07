@@ -540,8 +540,8 @@ class LineCmd extends React.Component<
     }
 
     @boundMethod
-    handleClick() {
-        const { line, noSelect } = this.props;
+    handleClick(e: React.MouseEvent) {
+        const { line, noSelect, screen } = this.props;
         if (noSelect) {
             return;
         }
@@ -552,7 +552,11 @@ class LineCmd extends React.Component<
                 return;
             }
         }
-        GlobalCommandRunner.screenSelectLine(String(line.linenum), "cmd");
+        if (e.metaKey) {
+            screen.toggleLineSelect(line.linenum);
+        } else {
+            GlobalCommandRunner.screenSelectLine(String(line.linenum), "cmd");
+        }
     }
 
     getTerminalRendererHeight(cmd: Cmd): number {
@@ -700,6 +704,7 @@ class LineCmd extends React.Component<
             { role: "paste", label: "Paste", type: "normal" },
             { type: "separator" },
             { label: "Copy Command", click: () => this.copyCommandStr() },
+            { label: "Copy Block", click: () => this.copyBlock() },
         ];
         const isTerminal = isBlank(line.renderer) || line.renderer == "terminal";
         if (isTerminal) {
@@ -752,6 +757,22 @@ class LineCmd extends React.Component<
         }
     }
 
+    copyBlock() {
+        const { line, screen } = this.props;
+        const cmd: Cmd = screen.getCmd(line);
+        if (cmd == null) {
+            return;
+        }
+        let termWrap = screen.getTermWrap(line.lineid);
+        if (termWrap == null) {
+            navigator.clipboard.writeText(cmd.getCmdStr());
+            return;
+        }
+        let outputStr = termWrap.getOutput(true);
+        let copyStr = cmd.getCmdStr() + "\n\n" + outputStr;
+        navigator.clipboard.writeText(copyStr);
+    }
+
     copyOutput(fullOutput: boolean) {
         const { line, screen } = this.props;
         let termWrap = screen.getTermWrap(line.lineid);
@@ -786,7 +807,7 @@ class LineCmd extends React.Component<
         }
         const isRtnState = cmd.getRtnState() && false; // turning off rtnstate for now
         const isSelected = mobx
-            .computed(() => screen.getSelectedLine() == line.linenum, {
+            .computed(() => screen.getSelectedLines().includes(line.linenum), {
                 name: "computed-isSelected",
             })
             .get();

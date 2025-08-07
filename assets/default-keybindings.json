@@ -97,8 +97,7 @@
       "keys": ["PageDown"]
     },
     {
-      "command": "app:openHistoryView",
-      "keys": ["Cmd:h"]
+      "command": "app:openHistoryView"
     },
     {
       "command": "app:openTabSearchModal",
@@ -234,6 +233,10 @@
     {
       "command": "app:deleteActiveLine",
       "keys": ["Cmd:d"]
+    },
+    {
+      "command": "app:copy",
+      "keys": ["Cmd:c"]
     },
     {
       "command": "app:openBookmarksView",

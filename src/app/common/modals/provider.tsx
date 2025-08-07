@@ -5,20 +5,11 @@ import * as React from "react";
 import * as mobxReact from "mobx-react";
 import { GlobalModel } from "@/models";
 import { TosModal } from "./tos";
-import { NewWaveModal } from "./newwave";
-
-const SessionStorageKey = "newWaveRendered";
 
 @mobxReact.observer
 class ModalsProvider extends React.Component<{}, {}> {
     constructor(props) {
         super(props);
-        this.handleNewWaveOnClose = this.handleNewWaveOnClose.bind(this);
-    }
-
-    handleNewWaveOnClose() {
-        sessionStorage.setItem(SessionStorageKey, "1");
-        this.forceUpdate();
     }
 
     render() {
@@ -26,11 +17,6 @@ class ModalsProvider extends React.Component<{}, {}> {
 
         if (GlobalModel.needsTos()) {
             return <TosModal />;
-        }
-
-        const newWaveRendered = sessionStorage.getItem(SessionStorageKey);
-        if (!newWaveRendered) {
-            return <NewWaveModal onClose={this.handleNewWaveOnClose} />;
         }
 
         let rtn: JSX.Element[] = [];

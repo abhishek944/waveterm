@@ -32,7 +32,7 @@ class Screen {
     lastScreenSize: WindowSize;
     lastCols: number;
     lastRows: number;
-    selectedLine: OV<number>;
+    selectedLines: OV<number[]>;
     focusType: OV<FocusTypeStrs>;
     anchor: OV<{ anchorLine: number; anchorOffset: number }>;
     termLineNumFocus: OV<number>;
@@ -63,8 +63,8 @@ class Screen {
         this.focusType = mobx.observable.box(sdata.focustype, {
             name: "focusType",
         });
-        this.selectedLine = mobx.observable.box(sdata.selectedline == 0 ? null : sdata.selectedline, {
-            name: "selectedLine",
+        this.selectedLines = mobx.observable.box(sdata.selectedline == 0 ? [] : [sdata.selectedline], {
+            name: "selectedLines",
         });
         this.setAnchor_debounced = debounce(1000, this.setAnchor.bind(this));
         this.anchor = mobx.observable.box(
@@ -164,15 +164,26 @@ class Screen {
             this.name.set(data.name);
             this.nextLineNum.set(data.nextlinenum);
             this.archived.set(!!data.archived);
-            let oldSelectedLine = this.selectedLine.get();
+            let oldSelectedLines = this.selectedLines.get();
             let oldFocusType = this.focusType.get();
-            this.selectedLine.set(data.selectedline);
+            this.selectedLines.set(data.selectedline == 0 ? [] : [data.selectedline]);
             this.curRemote.set(data.curremote);
             this.focusType.set(data.focustype);
-            this.refocusLine(data, oldFocusType, oldSelectedLine);
+            this.refocusLine(data, oldFocusType, oldSelectedLines);
             this.shareMode.set(data.sharemode);
             this.webShareOpts.set(data.webshareopts);
             // do not update anchorLine/anchorOffset (only stored)
+        })();
+    }
+
+    toggleLineSelect(lineNum: number) {
+        mobx.action(() => {
+            const selected = this.selectedLines.get();
+            if (selected.includes(lineNum)) {
+                this.selectedLines.set(selected.filter((num) => num !== lineNum));
+            } else {
+                this.selectedLines.set([...selected, lineNum].sort((a, b) => a - b));
+            }
         })();
     }
 
@@ -286,7 +297,7 @@ class Screen {
     getAnchor(): { anchorLine: number; anchorOffset: number } {
         let anchor = this.anchor.get();
         if (anchor.anchorLine == null || anchor.anchorLine == 0) {
-            return { anchorLine: this.selectedLine.get(), anchorOffset: 0 };
+            return { anchorLine: this.getSelectedLine(), anchorOffset: 0 };
         }
         return anchor;
     }
@@ -366,18 +377,24 @@ class Screen {
         return lines[lines.length - 1].linenum;
     }
 
+    setSelectedLines(lineNums: number[]): void {
+        mobx.action(() => {
+            this.selectedLines.set(lineNums);
+        })();
+    }
+
     setSelectedLine(lineNum: number): void {
         mobx.action(() => {
             let pln = this.getPresentLineNum(lineNum);
-            if (pln != this.selectedLine.get()) {
-                this.selectedLine.set(pln);
+            if (pln != this.getSelectedLine()) {
+                this.selectedLines.set([pln]);
             }
         })();
     }
 
     checkSelectedLine(): void {
-        let pln = this.getPresentLineNum(this.selectedLine.get());
-        if (pln != this.selectedLine.get()) {
+        let pln = this.getPresentLineNum(this.getSelectedLine());
+        if (pln != this.getSelectedLine()) {
             this.setSelectedLine(pln);
         }
     }
@@ -550,7 +567,7 @@ class Screen {
             },
         });
         this.terminals[lineId] = termWrap;
-        if (this.focusType.get() == "cmd" && this.selectedLine.get() == line.linenum) {
+        if (this.focusType.get() == "cmd" && this.getSelectedLine() == line.linenum) {
             termWrap.giveFocus();
         }
     }
@@ -594,9 +611,15 @@ class Screen {
         return this.termLineNumFocus.get() == lineNum;
     }
 
-    getSelectedLine(): number {
-        return this.selectedLine.get();
+    getSelectedLines(): number[] {
+        return this.selectedLines.get();
     }
+
+    getSelectedLine(): number {
+        const lines = this.selectedLines.get();
+        return lines.length > 0 ? lines[0] : null;
+    }
+
 
     getScreenLines(): ScreenLines {
         return this.globalModel.getScreenLinesById(this.screenId);

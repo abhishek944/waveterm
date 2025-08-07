@@ -559,7 +559,7 @@ class Model {
         if (activeScreen == null || activeScreen.getFocusType() != "cmd") {
             return false;
         }
-        const selectedLine = activeScreen.selectedLine.get();
+        const selectedLine = activeScreen.getSelectedLine();
         if (selectedLine == null || selectedLine <= 0) {
             return false;
         }
@@ -623,11 +623,44 @@ class Model {
         if (activeScreen == null) {
             return;
         }
-        const selectedLine = activeScreen.selectedLine.get();
+        const selectedLine = activeScreen.getSelectedLine();
         if (selectedLine == null || selectedLine == 0) {
             return;
         }
         GlobalCommandRunner.lineRestart(String(selectedLine), true);
+    }
+
+    copySelectedBlock() {
+        if (this.activeMainView.get() != "session") {
+            return;
+        }
+        const activeScreen = this.getActiveScreen();
+        if (activeScreen == null) {
+            return;
+        }
+        const selectedLines = activeScreen.getSelectedLines();
+        if (selectedLines == null || selectedLines.length == 0) {
+            return;
+        }
+        const lines = selectedLines.map((lineNum) => activeScreen.getLineByNum(lineNum));
+        const blocks: string[] = [];
+        for (const line of lines) {
+            if (line == null) {
+                continue;
+            }
+            const cmd = activeScreen.getCmd(line);
+            if (cmd == null) {
+                continue;
+            }
+            const termWrap = activeScreen.getTermWrap(line.lineid);
+            if (termWrap == null) {
+                blocks.push(cmd.getCmdStr());
+                continue;
+            }
+            const outputStr = termWrap.getOutput(true);
+            blocks.push(cmd.getCmdStr() + "\n\n" + outputStr);
+        }
+        navigator.clipboard.writeText(blocks.join("\n-------------------------------------------------------------------------------------------------\n"));
     }
 
     onZoomChanged(): void {
@@ -643,7 +676,7 @@ class Model {
         if (screen == null) {
             return null;
         }
-        let lineNum = screen.selectedLine.get();
+        let lineNum = screen.getSelectedLine();
         if (lineNum == null) {
             return null;
         }
@@ -717,7 +750,7 @@ class Model {
                 rtn.screenid = screen.screenId;
                 rtn.remote = screen.curRemote.get();
                 rtn.winsize = { rows: screen.lastRows, cols: screen.lastCols };
-                rtn.linenum = screen.selectedLine.get();
+                rtn.linenum = screen.getSelectedLine();
             }
         }
         return rtn;

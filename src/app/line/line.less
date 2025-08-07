@@ -20,31 +20,6 @@
 
     &.selected {
         .line-mask {
-            border-left: 4px solid var(--line-selected-border-left-color);
-        }
-
-        &.has-error {
-            .line-mask {
-                border-left: 4px solid var(--line-selected-error-border-color);
-            }
-        }
-    }
-
-    .centered-icon {
-        .positional-icon-visible;
-        height: 15px;
-        width: 15px;
-        .positional-icon-inner {
-            height: 15px;
-            width: 15px;
-            &:first-child {
-                font-size: var(--termfontsize-sm);
-            }
-        }
-    }
-
-    &.active.selected {
-        .line-mask {
             border: 2px solid var(--line-active-border-color);
             border-left: 4px solid var(--line-active-border-color);
         }
