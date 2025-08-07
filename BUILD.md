@@ -42,7 +42,7 @@ yarn install
 ## Clone the Repo
 
 ```sh
-git clone git@github.com:wavetermdev/waveterm.git
+git clone git@github.com:abhishek944/waveterm.git
 ```
 
 ## Building WaveShell / WaveSrv

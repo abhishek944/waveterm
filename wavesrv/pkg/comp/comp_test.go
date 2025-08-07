@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/wavetermdev/waveterm/waveshell/pkg/utilfn"
+	"github.com/abhishek944/waveterm/waveshell/pkg/utilfn"
 )
 
 func parseToSP(s string) utilfn.StrWithPos {

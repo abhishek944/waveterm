@@ -18,8 +18,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/wavetermdev/waveterm/waveshell/pkg/base"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/wlog"
+	"github.com/abhishek944/waveterm/waveshell/pkg/base"
+	"github.com/abhishek944/waveterm/waveshell/pkg/wlog"
 )
 
 // single          : <init, >run, >cmddata, >cmddone, <cmdstart, <>data, <>dataack, <cmddone

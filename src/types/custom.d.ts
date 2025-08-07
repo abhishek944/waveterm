@@ -654,8 +654,28 @@ declare global {
         cmdstoretype: "session" | "screen";
         dbversion: number;
         openaiopts?: OpenAIOptsType;
+        aiopts?: AIOptsType;
         releaseinfo?: ReleaseInfoType;
         winsize: ClientWinSize;
+    };
+
+    type AIOptsType = {
+        default: "openai" | "azure" | "gemini";
+        gemini?: GeminiOptsType;
+        openai?: OpenAIOptsType;
+        azure?: AzureOpenAIOptsType;
+    };
+
+    type GeminiOptsType = {
+        model?: string;
+        apitoken?: string;
+        maxtokens?: number;
+    };
+
+    type AzureOpenAIOptsType = {
+        baseurl?: string;
+        deploymentname?: string;
+        apitoken?: string;
     };
 
     type OpenAIOptsType = {

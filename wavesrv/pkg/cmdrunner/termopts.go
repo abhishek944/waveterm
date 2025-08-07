@@ -8,12 +8,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/wavetermdev/waveterm/waveshell/pkg/base"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/packet"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/shellutil"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/shexec"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/remote"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/sstore"
+	"github.com/abhishek944/waveterm/waveshell/pkg/base"
+	"github.com/abhishek944/waveterm/waveshell/pkg/packet"
+	"github.com/abhishek944/waveterm/waveshell/pkg/shellutil"
+	"github.com/abhishek944/waveterm/waveshell/pkg/shexec"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/remote"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/sstore"
 )
 
 // PTERM=MxM,Mx25

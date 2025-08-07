@@ -6,7 +6,7 @@ package scbus
 import (
 	"reflect"
 
-	"github.com/wavetermdev/waveterm/waveshell/pkg/packet"
+	"github.com/abhishek944/waveterm/waveshell/pkg/packet"
 )
 
 const PtyDataUpdateStr = "pty"

@@ -58,7 +58,7 @@ yarn install
 Move out of the `scripthaus` directory if you're still in it. Clone the wave repository into the directory that you'd like to use for development.
 
 ```
-git clone git@github.com:wavetermdev/waveterm.git
+git clone git@github.com:abhishek944/waveterm.git
 ```
 
 ## One-Time Setup

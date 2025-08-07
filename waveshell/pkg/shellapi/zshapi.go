@@ -14,14 +14,14 @@ import (
 	"unicode"
 
 	"github.com/alessio/shellescape"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/base"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/binpack"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/packet"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/shellenv"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/statediff"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/utilfn"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/wlog"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/scbase"
+	"github.com/abhishek944/waveterm/waveshell/pkg/base"
+	"github.com/abhishek944/waveterm/waveshell/pkg/binpack"
+	"github.com/abhishek944/waveterm/waveshell/pkg/packet"
+	"github.com/abhishek944/waveterm/waveshell/pkg/shellenv"
+	"github.com/abhishek944/waveterm/waveshell/pkg/statediff"
+	"github.com/abhishek944/waveterm/waveshell/pkg/utilfn"
+	"github.com/abhishek944/waveterm/waveshell/pkg/wlog"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/scbase"
 )
 
 const BaseZshOpts = ``

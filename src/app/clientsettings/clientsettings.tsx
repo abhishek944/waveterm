@@ -16,6 +16,8 @@ import { OverlayScrollbarsComponent } from "overlayscrollbars-react";
 
 import "./clientsettings.less";
 
+import { AiProviders } from "./aiproviders";
+
 class ClientSettingsKeybindings extends React.Component<{}, {}> {
     componentDidMount() {
         let clientSettingsViewModel = GlobalModel.clientSettingsViewModel;
@@ -350,71 +352,8 @@ class ClientSettingsView extends React.Component<{ model: RemotesModel }, { hove
                             />
                         </div>
                     </div>
-                    <div className="settings-field">
-                        <div className="settings-label">AI Token</div>
-                        <div className="settings-input">
-                            <InlineSettingsTextEdit
-                                placeholder=""
-                                text={apiTokenStr}
-                                value={""}
-                                onChange={this.inlineUpdateOpenAIToken}
-                                maxLength={100}
-                                showIcon={true}
-                            />
-                        </div>
-                    </div>
-                    <div className="settings-field">
-                        <div className="settings-label">AI Base URL</div>
-                        <div className="settings-input">
-                            <InlineSettingsTextEdit
-                                placeholder=""
-                                text={isBlank(openAIOpts.baseurl) ? "openai default" : openAIOpts.baseurl}
-                                value={openAIOpts.baseurl ?? ""}
-                                onChange={this.inlineUpdateOpenAIBaseURL}
-                                maxLength={200}
-                                showIcon={true}
-                            />
-                        </div>
-                    </div>
-                    <div className="settings-field">
-                        <div className="settings-label">AI Model</div>
-                        <div className="settings-input">
-                            <InlineSettingsTextEdit
-                                placeholder="gpt-3.5-turbo"
-                                text={isBlank(openAIOpts.model) ? "gpt-3.5-turbo" : openAIOpts.model}
-                                value={openAIOpts.model ?? ""}
-                                onChange={this.inlineUpdateOpenAIModel}
-                                maxLength={100}
-                                showIcon={true}
-                            />
-                        </div>
-                    </div>
-                    <div className="settings-field">
-                        <div className="settings-label">AI MaxTokens</div>
-                        <div className="settings-input">
-                            <InlineSettingsTextEdit
-                                placeholder=""
-                                text={maxTokensStr}
-                                value={maxTokensStr}
-                                onChange={this.inlineUpdateOpenAIMaxTokens}
-                                maxLength={10}
-                                showIcon={true}
-                            />
-                        </div>
-                    </div>
-                    <div className="settings-field">
-                        <div className="settings-label">AI Timeout (seconds)</div>
-                        <div className="settings-input">
-                            <InlineSettingsTextEdit
-                                placeholder=""
-                                text={aiTimeoutStr}
-                                value={aiTimeoutStr}
-                                onChange={this.inlineUpdateOpenAITimeout}
-                                maxLength={10}
-                                showIcon={true}
-                            />
-                        </div>
-                    </div>
+                    <AiProviders />
+
                     <div className="settings-field">
                         <div className="settings-label">Global Hotkey</div>
                         <div className="settings-input">

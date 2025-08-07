@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/base"
+	"github.com/abhishek944/waveterm/waveshell/pkg/base"
 	"golang.org/x/mod/semver"
 	"golang.org/x/sys/unix"
 )

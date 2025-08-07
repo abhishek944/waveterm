@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/wavetermdev/waveterm/waveshell/pkg/packet"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/simpleexpand"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/utilfn"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/wlog"
+	"github.com/abhishek944/waveterm/waveshell/pkg/packet"
+	"github.com/abhishek944/waveterm/waveshell/pkg/simpleexpand"
+	"github.com/abhishek944/waveterm/waveshell/pkg/utilfn"
+	"github.com/abhishek944/waveterm/waveshell/pkg/wlog"
 )
 
 const (

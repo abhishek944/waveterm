@@ -1,4 +1,4 @@
-module github.com/wavetermdev/waveterm/wavesrv
+module github.com/abhishek944X/waveterm/wavesrv
 
 go 1.22
 
@@ -19,7 +19,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.16
 	github.com/sashabaranov/go-openai v1.30.0
 	github.com/sawka/txwrap v0.1.2
-	github.com/wavetermdev/waveterm/waveshell v0.0.0
+	github.com/abhishek944/waveterm/waveshell v0.0.0
 	golang.org/x/crypto v0.24.0
 	golang.org/x/mod v0.10.0
 	golang.org/x/sys v0.21.0
@@ -34,6 +34,6 @@ require (
 	go.uber.org/atomic v1.7.0 // indirect
 )
 
-replace github.com/wavetermdev/waveterm/waveshell => ../waveshell
+replace github.com/abhishek944/waveterm/waveshell => ../waveshell
 
 replace github.com/kevinburke/ssh_config => github.com/wavetermdev/ssh_config v0.0.0-20240306041034-17e2087ebde2

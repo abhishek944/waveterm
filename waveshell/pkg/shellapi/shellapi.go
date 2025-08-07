@@ -20,11 +20,11 @@ import (
 	"time"
 
 	"github.com/creack/pty"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/base"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/packet"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/shellutil"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/utilfn"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/wlog"
+	"github.com/abhishek944/waveterm/waveshell/pkg/base"
+	"github.com/abhishek944/waveterm/waveshell/pkg/packet"
+	"github.com/abhishek944/waveterm/waveshell/pkg/shellutil"
+	"github.com/abhishek944/waveterm/waveshell/pkg/utilfn"
+	"github.com/abhishek944/waveterm/waveshell/pkg/wlog"
 )
 
 const GetVersionTimeout = 5 * time.Second

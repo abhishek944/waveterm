@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/scbase"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/scbase"
 )
 
 const ConfigReturnTypeStr = "termthemes"

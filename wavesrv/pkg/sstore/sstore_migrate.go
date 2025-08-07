@@ -10,8 +10,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/wavetermdev/waveterm/waveshell/pkg/packet"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/scbase"
+	"github.com/abhishek944/waveterm/waveshell/pkg/packet"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/scbase"
 )
 
 const MigrationChunkSize = 10

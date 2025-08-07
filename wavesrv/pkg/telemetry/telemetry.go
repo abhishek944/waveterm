@@ -12,10 +12,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/dbutil"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/scbase"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/scpacket"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/sstore"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/dbutil"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/scbase"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/scpacket"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/sstore"
 )
 
 const MaxTzNameLen = 50

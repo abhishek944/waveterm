@@ -22,13 +22,13 @@ import (
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/sawka/txwrap"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/base"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/packet"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/shellenv"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/dbutil"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/scbase"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/scbus"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/scpacket"
+	"github.com/abhishek944/waveterm/waveshell/pkg/base"
+	"github.com/abhishek944/waveterm/waveshell/pkg/packet"
+	"github.com/abhishek944/waveterm/waveshell/pkg/shellenv"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/dbutil"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/scbase"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/scbus"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/scpacket"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -284,6 +284,7 @@ type ClientData struct {
 	CmdStoreType        string            `json:"cmdstoretype"`
 	DBVersion           int               `json:"dbversion" dbmap:"-"`
 	OpenAIOpts          *OpenAIOptsType   `json:"openaiopts,omitempty" dbmap:"openaiopts"`
+	AIOpts              *AIOptsType       `json:"aiopts,omitempty" dbmap:"aiopts"`
 	ReleaseInfo         ReleaseInfoType   `json:"releaseinfo"`
 }
 
@@ -749,6 +750,25 @@ type OpenAIOptsType struct {
 	MaxTokens  int    `json:"maxtokens,omitempty"`
 	MaxChoices int    `json:"maxchoices,omitempty"`
 	Timeout    int    `json:"timeout,omitempty"`
+}
+
+type GeminiOptsType struct {
+	Model     string `json:"model"`
+	APIToken  string `json:"apitoken"`
+	MaxTokens int    `json:"maxtokens,omitempty"`
+}
+
+type AzureOpenAIOptsType struct {
+	BaseURL        string `json:"baseurl,omitempty"`
+	DeploymentName string `json:"deploymentname,omitempty"`
+	APIToken       string `json:"apitoken"`
+}
+
+type AIOptsType struct {
+	Default string               `json:"default"`
+	Gemini  *GeminiOptsType      `json:"gemini,omitempty"`
+	OpenAI  *OpenAIOptsType      `json:"openai,omitempty"`
+	Azure   *AzureOpenAIOptsType `json:"azure,omitempty"`
 }
 
 const (

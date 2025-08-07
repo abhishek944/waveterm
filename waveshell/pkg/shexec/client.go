@@ -10,9 +10,9 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/wavetermdev/waveterm/waveshell/pkg/base"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/packet"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/utilfn"
+	"github.com/abhishek944/waveterm/waveshell/pkg/base"
+	"github.com/abhishek944/waveterm/waveshell/pkg/packet"
+	"github.com/abhishek944/waveterm/waveshell/pkg/utilfn"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/mod/semver"
 )

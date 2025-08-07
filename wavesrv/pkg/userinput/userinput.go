@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/wavetermdev/waveterm/waveshell/pkg/packet"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/scbus"
+	"github.com/abhishek944/waveterm/waveshell/pkg/packet"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/scbus"
 )
 
 const UserInputRequestStr = "userinputrequest"

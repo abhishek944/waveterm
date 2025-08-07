@@ -12,16 +12,16 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/packet"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/configstore"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/mapqueue"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/remote"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/scbus"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/scpacket"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/sstore"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/telemetry"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/userinput"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/wsshell"
+	"github.com/abhishek944/waveterm/waveshell/pkg/packet"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/configstore"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/mapqueue"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/remote"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/scbus"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/scpacket"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/sstore"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/telemetry"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/userinput"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/wsshell"
 )
 
 const WSStatePacketChSize = 20

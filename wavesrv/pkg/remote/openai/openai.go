@@ -13,9 +13,9 @@ import (
 	"github.com/gorilla/websocket"
 
 	openaiapi "github.com/sashabaranov/go-openai"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/packet"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/pcloud"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/sstore"
+	"github.com/abhishek944/waveterm/waveshell/pkg/packet"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/pcloud"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/sstore"
 )
 
 // https://github.com/tiktoken-go/tokenizer

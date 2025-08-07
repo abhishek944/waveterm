@@ -8,8 +8,8 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/dbutil"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/sstore"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/dbutil"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/sstore"
 )
 
 type PlaybookType struct {

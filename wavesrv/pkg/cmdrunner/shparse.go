@@ -9,10 +9,10 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/wavetermdev/waveterm/waveshell/pkg/shellapi"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/simpleexpand"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/utilfn"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/scpacket"
+	"github.com/abhishek944/waveterm/waveshell/pkg/shellapi"
+	"github.com/abhishek944/waveterm/waveshell/pkg/simpleexpand"
+	"github.com/abhishek944/waveterm/waveshell/pkg/utilfn"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/scpacket"
 	"mvdan.cc/sh/v3/expand"
 	"mvdan.cc/sh/v3/syntax"
 )

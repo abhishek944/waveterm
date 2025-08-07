@@ -14,10 +14,10 @@ import (
 	"sync"
 
 	"github.com/alessio/shellescape"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/packet"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/shellenv"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/statediff"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/utilfn"
+	"github.com/abhishek944/waveterm/waveshell/pkg/packet"
+	"github.com/abhishek944/waveterm/waveshell/pkg/shellenv"
+	"github.com/abhishek944/waveterm/waveshell/pkg/statediff"
+	"github.com/abhishek944/waveterm/waveshell/pkg/utilfn"
 )
 
 const BaseBashOpts = `set +m; set +H; shopt -s extglob`

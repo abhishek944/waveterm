@@ -548,6 +548,31 @@ class CommandRunner {
     setGlobalShortcut(shortcut: string): Promise<CommandRtnType> {
         return GlobalModel.submitCommand("client", "setglobalshortcut", [shortcut], { nohist: "1" }, false);
     }
+    
+    // Set AI Providers options (gemini, openai, azure)
+    setAIOpts(opts: any): Promise<CommandRtnType> {
+        let kwargs: Record<string, string> = { nohist: "1" };
+        // default provider
+        if (opts.default != null) {
+            kwargs["defaultprovider"] = opts.default;
+        }
+        if (opts.gemini?.apitoken != null) {
+            kwargs["geminiapitoken"] = opts.gemini.apitoken;
+        }
+        if (opts.openai?.apitoken != null) {
+            kwargs["openaiapitoken"] = opts.openai.apitoken;
+        }
+        if (opts.azure?.baseurl != null) {
+            kwargs["azurebaseurl"] = opts.azure.baseurl;
+        }
+        if (opts.azure?.deploymentname != null) {
+            kwargs["azuredeploymentname"] = opts.azure.deploymentname;
+        }
+        if (opts.azure?.apitoken != null) {
+            kwargs["azureapitoken"] = opts.azure.apitoken;
+        }
+        return GlobalModel.submitCommand("client", "set", null, kwargs, false);
+    }
 
     setAutocompleteEnabled(enabled: boolean): Promise<CommandRtnType> {
         return GlobalModel.submitCommand("autocomplete", enabled ? "on" : "off", null, { nohist: "1" }, false);

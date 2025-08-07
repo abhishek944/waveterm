@@ -12,10 +12,10 @@ import (
 
 	"github.com/alessio/shellescape"
 	"github.com/google/uuid"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/base"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/packet"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/utilfn"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/ephemeral"
+	"github.com/abhishek944/waveterm/waveshell/pkg/base"
+	"github.com/abhishek944/waveterm/waveshell/pkg/packet"
+	"github.com/abhishek944/waveterm/waveshell/pkg/utilfn"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/ephemeral"
 )
 
 var RemoteNameRe = regexp.MustCompile(`^\*?[a-zA-Z0-9_-]+$`)

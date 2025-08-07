@@ -11,7 +11,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/wavetermdev/waveterm/waveshell/pkg/wlog"
+	"github.com/abhishek944/waveterm/waveshell/pkg/wlog"
 )
 
 type PacketParser struct {

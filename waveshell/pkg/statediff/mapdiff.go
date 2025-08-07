@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/wavetermdev/waveterm/waveshell/pkg/binpack"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/utilfn"
+	"github.com/abhishek944/waveterm/waveshell/pkg/binpack"
+	"github.com/abhishek944/waveterm/waveshell/pkg/utilfn"
 )
 
 const MapDiffVersion_0 = 0

@@ -17,7 +17,7 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 	_ "github.com/mattn/go-sqlite3"
-	dbfs "github.com/wavetermdev/waveterm/wavesrv/db"
+	dbfs "github.com/abhishek944/waveterm/wavesrv/db"
 
 	"github.com/golang-migrate/migrate/v4"
 )

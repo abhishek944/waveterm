@@ -8,7 +8,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/rtnstate"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/rtnstate"
 )
 
 func xTestParseAliases(t *testing.T) {

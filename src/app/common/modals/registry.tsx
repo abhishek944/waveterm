@@ -3,7 +3,6 @@
 
 import * as React from "react";
 import {
-    AboutModal,
     AlertModal,
     CreateRemoteConnModal,
     ViewRemoteConnDetailModal,
@@ -17,7 +16,6 @@ import {
 import * as constants from "@/app/appconst";
 
 const modalsRegistry: { [key: string]: React.ComponentType } = {
-    [constants.ABOUT]: AboutModal,
     [constants.CREATE_REMOTE]: CreateRemoteConnModal,
     [constants.VIEW_REMOTE]: ViewRemoteConnDetailModal,
     [constants.EDIT_REMOTE]: EditRemoteConnModal,

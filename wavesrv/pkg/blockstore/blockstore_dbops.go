@@ -14,10 +14,10 @@ import (
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/sawka/txwrap"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/dbutil"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/scbase"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/dbutil"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/scbase"
 
-	dbfs "github.com/wavetermdev/waveterm/wavesrv/db"
+	dbfs "github.com/abhishek944/waveterm/wavesrv/db"
 )
 
 const DBFileName = "blockstore.db"

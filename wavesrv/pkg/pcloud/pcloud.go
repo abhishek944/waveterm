@@ -18,12 +18,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/wavetermdev/waveterm/waveshell/pkg/shellapi"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/dbutil"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/rtnstate"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/scbase"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/sstore"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/telemetry"
+	"github.com/abhishek944/waveterm/waveshell/pkg/shellapi"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/dbutil"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/rtnstate"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/scbase"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/sstore"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/telemetry"
 )
 
 const PCloudEndpoint = "https://api.waveterm.dev/central"

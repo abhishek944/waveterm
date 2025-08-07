@@ -8,10 +8,10 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/remote"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/rtnstate"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/sstore"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/telemetry"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/remote"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/rtnstate"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/sstore"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/telemetry"
 )
 
 type NoTelemetryInputType struct {

@@ -11,8 +11,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/wavetermdev/waveterm/waveshell/pkg/binpack"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/statediff"
+	"github.com/abhishek944/waveterm/waveshell/pkg/binpack"
+	"github.com/abhishek944/waveterm/waveshell/pkg/statediff"
 	"golang.org/x/mod/semver"
 )
 

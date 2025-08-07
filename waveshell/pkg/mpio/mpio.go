@@ -10,8 +10,8 @@ import (
 	"os"
 	"sync"
 
-	"github.com/wavetermdev/waveterm/waveshell/pkg/base"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/packet"
+	"github.com/abhishek944/waveterm/waveshell/pkg/base"
+	"github.com/abhishek944/waveterm/waveshell/pkg/packet"
 )
 
 const ReadBufSize = 128 * 1024

@@ -4,7 +4,6 @@
 import * as React from "react";
 import * as mobxReact from "mobx-react";
 import { GlobalModel } from "@/models";
-import { TosModal } from "./tos";
 
 @mobxReact.observer
 class ModalsProvider extends React.Component<{}, {}> {
@@ -14,10 +13,6 @@ class ModalsProvider extends React.Component<{}, {}> {
 
     render() {
         let store = GlobalModel.modalsModel.store.slice();
-
-        if (GlobalModel.needsTos()) {
-            return <TosModal />;
-        }
 
         let rtn: JSX.Element[] = [];
         for (let i = 0; i < store.length; i++) {

@@ -4,8 +4,8 @@
 package cmdrunner
 
 import (
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/bookmarks"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/history"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/bookmarks"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/history"
 )
 
 type MainViewUpdate struct {

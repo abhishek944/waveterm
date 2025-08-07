@@ -15,10 +15,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/cirfile"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/shexec"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/scbase"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/scbus"
+	"github.com/abhishek944/waveterm/waveshell/pkg/cirfile"
+	"github.com/abhishek944/waveterm/waveshell/pkg/shexec"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/scbase"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/scbus"
 )
 
 func CreateCmdPtyFile(ctx context.Context, screenId string, lineId string, maxSize int64) error {

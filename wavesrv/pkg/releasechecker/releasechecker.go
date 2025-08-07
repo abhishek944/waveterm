@@ -10,9 +10,9 @@ import (
 	"github.com/google/go-github/v60/github"
 	"golang.org/x/mod/semver"
 
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/scbase"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/scbus"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/sstore"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/scbase"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/scbus"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/sstore"
 )
 
 type ReleaseCheckResult int
@@ -43,7 +43,7 @@ func CheckNewRelease(ctx context.Context, force bool) (ReleaseCheckResult, error
 	// Initialize an unauthenticated client
 	client := github.NewClient(nil)
 	// Get the latest release from the repository
-	release, rsp, err := client.Repositories.GetLatestRelease(ctx, "wavetermdev", "waveterm")
+	release, rsp, err := client.Repositories.GetLatestRelease(ctx, "abhishek944", "waveterm")
 
 	releaseInfoLatest := sstore.ReleaseInfoType{
 		LatestVersion: scbase.WaveVersion,

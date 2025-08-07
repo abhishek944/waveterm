@@ -15,9 +15,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/wlog"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/scbase"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/waveenc"
+	"github.com/abhishek944/waveterm/waveshell/pkg/wlog"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/scbase"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/waveenc"
 )
 
 const (

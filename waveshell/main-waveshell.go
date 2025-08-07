@@ -10,11 +10,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/wavetermdev/waveterm/waveshell/pkg/base"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/packet"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/server"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/shexec"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/wlog"
+	"github.com/abhishek944/waveterm/waveshell/pkg/base"
+	"github.com/abhishek944/waveterm/waveshell/pkg/packet"
+	"github.com/abhishek944/waveterm/waveshell/pkg/server"
+	"github.com/abhishek944/waveterm/waveshell/pkg/shexec"
+	"github.com/abhishek944/waveterm/waveshell/pkg/wlog"
 )
 
 // this is set from build/linker flags

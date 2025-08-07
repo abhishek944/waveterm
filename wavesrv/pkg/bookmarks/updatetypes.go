@@ -3,7 +3,7 @@
 
 package bookmarks
 
-import "github.com/wavetermdev/waveterm/wavesrv/pkg/scbus"
+import "github.com/abhishek944/waveterm/wavesrv/pkg/scbus"
 
 type BookmarksUpdate struct {
 	Bookmarks        []*BookmarkType `json:"bookmarks"`

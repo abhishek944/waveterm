@@ -14,10 +14,10 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/wavetermdev/waveterm/waveshell/pkg/simpleexpand"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/utilfn"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/shparse"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/sstore"
+	"github.com/abhishek944/waveterm/waveshell/pkg/simpleexpand"
+	"github.com/abhishek944/waveterm/waveshell/pkg/utilfn"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/shparse"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/sstore"
 	"mvdan.cc/sh/v3/syntax"
 )
 

@@ -9,9 +9,9 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/packet"
-	"github.com/wavetermdev/waveterm/waveshell/pkg/utilfn"
-	"github.com/wavetermdev/waveterm/wavesrv/pkg/remote"
+	"github.com/abhishek944/waveterm/waveshell/pkg/packet"
+	"github.com/abhishek944/waveterm/waveshell/pkg/utilfn"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/remote"
 )
 
 var globalLock = &sync.Mutex{}
