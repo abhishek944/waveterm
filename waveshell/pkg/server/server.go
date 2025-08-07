@@ -19,11 +19,11 @@ import (
 
 	"github.com/alessio/shellescape"
 	"github.com/abhishek944/waveterm/waveshell/pkg/base"
-	"github.com/abhishek94/waveterm/waveshell/pkg/packet"
-	"github.com/abhishek94/waveterm/waveshell/pkg/shellapi"
-	"github.com/abhishek94/waveterm/waveshell/pkg/shexec"
-	"github.com/abhishek94/waveterm/waveshell/pkg/utilfn"
-	"github.com/abhishek94/waveterm/waveshell/pkg/wlog"
+	"github.com/abhishek944/waveterm/waveshell/pkg/packet"
+	"github.com/abhishek944/waveterm/waveshell/pkg/shellapi"
+	"github.com/abhishek944/waveterm/waveshell/pkg/shexec"
+	"github.com/abhishek944/waveterm/waveshell/pkg/utilfn"
+	"github.com/abhishek944/waveterm/waveshell/pkg/wlog"
 )
 
 const MaxFileDataPacketSize = 16 * 1024

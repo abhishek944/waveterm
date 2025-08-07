@@ -1,10 +1,11 @@
-module github.com/abhishek944X/waveterm/wavesrv
+module github.com/abhishek944/waveterm/wavesrv
 
 go 1.22
 
 toolchain go1.22.0
 
 require (
+	github.com/abhishek944/waveterm/waveshell v0.0.0
 	github.com/alessio/shellescape v1.4.1
 	github.com/armon/circbuf v0.0.0-20190214190532-5111143e8da2
 	github.com/creack/pty v1.1.18
@@ -19,7 +20,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.16
 	github.com/sashabaranov/go-openai v1.30.0
 	github.com/sawka/txwrap v0.1.2
-	github.com/abhishek944/waveterm/waveshell v0.0.0
+	github.com/skeema/knownhosts v1.3.0
 	golang.org/x/crypto v0.24.0
 	golang.org/x/mod v0.10.0
 	golang.org/x/sys v0.21.0
@@ -30,7 +31,6 @@ require (
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
-	github.com/skeema/knownhosts v1.3.0 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 )
 
