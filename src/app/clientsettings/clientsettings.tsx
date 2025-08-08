@@ -89,16 +89,16 @@ class ClientSettingsView extends React.Component<{ model: RemotesModel }, { hove
         commandRtnHandler(prtn, this.errorMessage);
     }
 
-    @boundMethod
-    handleChangeTelemetry(val: boolean): void {
-        let prtn: Promise<CommandRtnType> = null;
-        if (val) {
-            prtn = GlobalCommandRunner.telemetryOn(false);
-        } else {
-            prtn = GlobalCommandRunner.telemetryOff(false);
-        }
-        commandRtnHandler(prtn, this.errorMessage);
-    }
+    // @boundMethod
+    // handleChangeTelemetry(val: boolean): void {
+    //     let prtn: Promise<CommandRtnType> = null;
+    //     if (val) {
+    //         prtn = GlobalCommandRunner.telemetryOn(false);
+    //     } else {
+    //         prtn = GlobalCommandRunner.telemetryOff(false);
+    //     }
+    //     commandRtnHandler(prtn, this.errorMessage);
+    // }
 
     @boundMethod
     handleChangeReleaseCheck(val: boolean): void {
@@ -149,35 +149,6 @@ class ClientSettingsView extends React.Component<{ model: RemotesModel }, { hove
         return themeSources;
     }
 
-    @boundMethod
-    inlineUpdateOpenAIModel(newModel: string): void {
-        const prtn = GlobalCommandRunner.setClientOpenAISettings({ model: newModel });
-        commandRtnHandler(prtn, this.errorMessage);
-    }
-
-    @boundMethod
-    inlineUpdateOpenAIToken(newToken: string): void {
-        const prtn = GlobalCommandRunner.setClientOpenAISettings({ apitoken: newToken });
-        commandRtnHandler(prtn, this.errorMessage);
-    }
-
-    @boundMethod
-    inlineUpdateOpenAIMaxTokens(newMaxTokensStr: string): void {
-        const prtn = GlobalCommandRunner.setClientOpenAISettings({ maxtokens: newMaxTokensStr });
-        commandRtnHandler(prtn, this.errorMessage);
-    }
-
-    @boundMethod
-    inlineUpdateOpenAIBaseURL(newBaseURL: string): void {
-        const prtn = GlobalCommandRunner.setClientOpenAISettings({ baseurl: newBaseURL });
-        commandRtnHandler(prtn, this.errorMessage);
-    }
-
-    @boundMethod
-    inlineUpdateOpenAITimeout(newTimeout: string): void {
-        const prtn = GlobalCommandRunner.setClientOpenAISettings({ timeout: newTimeout });
-        commandRtnHandler(prtn, this.errorMessage);
-    }
 
     @boundMethod
     setErrorMessage(msg: string): void {
@@ -261,14 +232,6 @@ class ClientSettingsView extends React.Component<{ model: RemotesModel }, { hove
         }
 
         const cdata: ClientDataType = GlobalModel.clientData.get();
-        const openAIOpts = cdata.openaiopts ?? {};
-        const apiTokenStr = isBlank(openAIOpts.apitoken) ? "(not set)" : "********";
-        const maxTokensStr = String(
-            openAIOpts.maxtokens == null || openAIOpts.maxtokens == 0 ? 1000 : openAIOpts.maxtokens
-        );
-        const aiTimeoutStr = String(
-            openAIOpts.timeout == null || openAIOpts.timeout == 0 ? 10 : openAIOpts.timeout / 1000
-        );
         const curFontSize = GlobalModel.getTermFontSize();
         const curFontFamily = GlobalModel.getTermFontFamily();
         const curTheme = GlobalModel.getThemeSource();
@@ -349,12 +312,12 @@ class ClientSettingsView extends React.Component<{ model: RemotesModel }, { hove
                         <div className="settings-label">DB Version</div>
                         <div className="settings-input">{cdata.dbversion}</div>
                     </div>
-                    <div className="settings-field">
+                    {/* <div className="settings-field">
                         <div className="settings-label">Basic Telemetry</div>
                         <div className="settings-input">
                             <Toggle checked={!cdata.clientopts.notelemetry} onChange={this.handleChangeTelemetry} />
                         </div>
-                    </div>
+                    </div> */}
                     <div className="settings-field">
                         <div className="settings-label">Check for Updates</div>
                         <div className="settings-input">

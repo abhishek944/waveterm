@@ -165,3 +165,11 @@ type ScreenNumRunningCommandsType struct {
 func (ScreenNumRunningCommandsType) GetType() string {
 	return "screennumrunningcommands"
 }
+
+type AgentModeToggleType struct {
+	Enabled bool `json:"enabled"`
+}
+
+func (AgentModeToggleType) GetType() string {
+	return "agentmodetoggle"
+}

@@ -42,7 +42,6 @@ import (
 	"github.com/abhishek944/waveterm/wavesrv/pkg/scbus"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/scpacket"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/sstore"
-	"github.com/abhishek944/waveterm/wavesrv/pkg/telemetry"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/userinput"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/waveenc"
 
@@ -1410,15 +1409,15 @@ func getStateVarsFromInitPk(initPk *packet.InitPacketType) map[string]string {
 	return rtn
 }
 
-func makeReinitErrorUpdate(shellType string) telemetry.ActivityUpdate {
-	rtn := telemetry.ActivityUpdate{}
-	if shellType == packet.ShellType_bash {
-		rtn.ReinitBashErrors = 1
-	} else if shellType == packet.ShellType_zsh {
-		rtn.ReinitZshErrors = 1
-	}
-	return rtn
-}
+// func makeReinitErrorUpdate(shellType string) telemetry.ActivityUpdate {
+// 	rtn := telemetry.ActivityUpdate{}
+// 	if shellType == packet.ShellType_bash {
+// 		rtn.ReinitBashErrors = 1
+// 	} else if shellType == packet.ShellType_zsh {
+// 		rtn.ReinitZshErrors = 1
+// 	}
+// 	return rtn
+// }
 
 func (wsh *WaveshellProc) ReInit(ctx context.Context, ck base.CommandKey, shellType string, dataFn func([]byte), verbose bool) (rtnPk *packet.ShellStatePacketType, rtnErr error) {
 	if !wsh.IsConnected() {
@@ -1430,11 +1429,11 @@ func (wsh *WaveshellProc) ReInit(ctx context.Context, ck base.CommandKey, shellT
 	if dataFn == nil {
 		dataFn = func([]byte) {}
 	}
-	defer func() {
-		if rtnErr != nil {
-			telemetry.GoUpdateActivityWrap(makeReinitErrorUpdate(shellType), "reiniterror")
-		}
-	}()
+	// defer func() {
+	// 	if rtnErr != nil {
+	// 		telemetry.GoUpdateActivityWrap(makeReinitErrorUpdate(shellType), "reiniterror")
+	// 	}
+	// }()
 	startTs := time.Now()
 	reinitPk := packet.MakeReInitPacket()
 	reinitPk.ReqId = uuid.New().String()

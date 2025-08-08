@@ -11,10 +11,6 @@
     // just marked these as important since we're keeping the
     // settings-field styles below this intact until we figure out what do with them
     .settings-field {
-        &:not(:first-child) {
-            margin-top: 15px !important;
-        }
-
         .settings-label {
             width: 250px !important;
         }
@@ -202,10 +198,15 @@
         flex-direction: row;
         align-items: center;
         margin-top: 10px;
-        
+
         .settings-label {
             width: 12em;
             margin-right: 10px;
+        }
+    }
+    .settings-field {
+        &:not(:first-child) {
+            margin-top: 15px;
         }
     }
 }

@@ -47,7 +47,6 @@ import (
 	"github.com/abhishek944/waveterm/wavesrv/pkg/scpacket"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/scws"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/sstore"
-	"github.com/abhishek944/waveterm/wavesrv/pkg/telemetry"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/waveenc"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/wsshell"
 )
@@ -66,9 +65,9 @@ const WebSocketServerDevAddr = "127.0.0.1:8091"
 const WSStateReconnectTime = 30 * time.Second
 const WSStatePacketChSize = 20
 
-const InitialTelemetryWait = 30 * time.Second
-const TelemetryTick = 10 * time.Minute
-const TelemetryInterval = 4 * time.Hour
+// const InitialTelemetryWait = 30 * time.Second
+// const TelemetryTick = 10 * time.Minute
+// const TelemetryInterval = 4 * time.Hour
 
 const MaxWriteFileMemSize = 20 * (1024 * 1024) // 20M
 
@@ -236,34 +235,34 @@ func HandlePowerMonitor(w http.ResponseWriter, r *http.Request) {
 }
 
 // params: fg, active, open
-func HandleLogActiveState(w http.ResponseWriter, r *http.Request) {
-	decoder := json.NewDecoder(r.Body)
-	var activeState ClientActiveState
-	err := decoder.Decode(&activeState)
-	if err != nil {
-		WriteJsonError(w, fmt.Errorf(ErrorDecodingJson, err))
-		return
-	}
-	activity := telemetry.ActivityUpdate{}
-	if activeState.Fg {
-		activity.FgMinutes = 1
-	}
-	if activeState.Active {
-		activity.ActiveMinutes = 1
-	}
-	if activeState.Open {
-		activity.OpenMinutes = 1
-	}
-	activity.NumConns = remote.NumRemotes()
-	activity.NumWorkspaces, _ = sstore.NumSessions(r.Context())
-	activity.NumTabs, _ = sstore.NumScreens(r.Context())
-	err = telemetry.UpdateActivity(r.Context(), activity)
-	if err != nil {
-		WriteJsonError(w, fmt.Errorf("error updating activity: %w", err))
-		return
-	}
-	WriteJsonSuccess(w, true)
-}
+// func HandleLogActiveState(w http.ResponseWriter, r *http.Request) {
+// 	decoder := json.NewDecoder(r.Body)
+// 	var activeState ClientActiveState
+// 	err := decoder.Decode(&activeState)
+// 	if err != nil {
+// 		WriteJsonError(w, fmt.Errorf(ErrorDecodingJson, err))
+// 		return
+// 	}
+// 	activity := telemetry.ActivityUpdate{}
+// 	if activeState.Fg {
+// 		activity.FgMinutes = 1
+// 	}
+// 	if activeState.Active {
+// 		activity.ActiveMinutes = 1
+// 	}
+// 	if activeState.Open {
+// 		activity.OpenMinutes = 1
+// 	}
+// 	activity.NumConns = remote.NumRemotes()
+// 	activity.NumWorkspaces, _ = sstore.NumSessions(r.Context())
+// 	activity.NumTabs, _ = sstore.NumScreens(r.Context())
+// 	err = telemetry.UpdateActivity(r.Context(), activity)
+// 	if err != nil {
+// 		WriteJsonError(w, fmt.Errorf("error updating activity: %w", err))
+// 		return
+// 	}
+// 	WriteJsonSuccess(w, true)
+// }
 
 // params: screenid
 func HandleGetScreenLines(w http.ResponseWriter, r *http.Request) {
@@ -916,22 +915,22 @@ func test() error {
 	return nil
 }
 
-func sendTelemetryWrapper() {
-	defer func() {
-		r := recover()
-		if r == nil {
-			return
-		}
-		log.Printf("[error] in sendTelemetryWrapper: %v\n", r)
-		debug.PrintStack()
-	}()
-	ctx, cancelFn := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancelFn()
-	err := pcloud.SendTelemetry(ctx, false)
-	if err != nil {
-		log.Printf("[error] sending telemetry: %v\n", err)
-	}
-}
+// func sendTelemetryWrapper() {
+// 	defer func() {
+// 		r := recover()
+// 		if r == nil {
+// 			return
+// 		}
+// 		log.Printf("[error] in sendTelemetryWrapper: %v\n", r)
+// 		debug.PrintStack()
+// 	}()
+// 	ctx, cancelFn := context.WithTimeout(context.Background(), 5*time.Second)
+// 	defer cancelFn()
+// 	// err := pcloud.SendTelemetry(ctx, false)
+// 	// if err != nil {
+// 	// 	log.Printf("[error] sending telemetry: %v\n", err)
+// 	// }
+// }
 
 func checkNewReleaseWrapper() {
 	defer func() {
@@ -953,18 +952,18 @@ func checkNewReleaseWrapper() {
 	}
 }
 
-func telemetryLoop() {
-	var nextSend int64
-	time.Sleep(InitialTelemetryWait)
-	for {
-		if time.Now().Unix() > nextSend {
-			nextSend = time.Now().Add(TelemetryInterval).Unix()
-			sendTelemetryWrapper()
-			checkNewReleaseWrapper()
-		}
-		time.Sleep(TelemetryTick)
-	}
-}
+// func telemetryLoop() {
+// 	var nextSend int64
+// 	time.Sleep(InitialTelemetryWait)
+// 	for {
+// 		if time.Now().Unix() > nextSend {
+// 			nextSend = time.Now().Add(TelemetryInterval).Unix()
+// 			sendTelemetryWrapper()
+// 			checkNewReleaseWrapper()
+// 		}
+// 		time.Sleep(TelemetryTick)
+// 	}
+// }
 
 // watch stdin, kill server if stdin is closed
 func stdinReadWatch() {
@@ -993,8 +992,8 @@ func installSignalHandlers() {
 func doShutdown(reason string) {
 	shutdownOnce.Do(func() {
 		log.Printf("[wave] local server %v, start shutdown\n", reason)
-		shutdownActivityUpdate()
-		sendTelemetryWrapper()
+		// shutdownActivityUpdate()
+		// sendTelemetryWrapper()
 		log.Printf("[wave] closing db connection\n")
 		sstore.CloseDB()
 		log.Printf("[wave] *** shutting down local server\n")
@@ -1054,30 +1053,30 @@ func configWatcher() {
 	}
 }
 
-func startupActivityUpdate() {
-	activity := telemetry.ActivityUpdate{
-		NumConns: remote.NumRemotes(),
-		Startup:  1,
-	}
-	ctx, cancelFn := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancelFn()
-	activity.NumWorkspaces, _ = sstore.NumSessions(ctx)
-	activity.NumTabs, _ = sstore.NumScreens(ctx)
-	err := telemetry.UpdateActivity(ctx, activity) // set at least one record into activity (don't use go routine wrap here)
-	if err != nil {
-		log.Printf("error updating startup activity: %v\n", err)
-	}
-}
+// func startupActivityUpdate() {
+// 	activity := telemetry.ActivityUpdate{
+// 		NumConns: remote.NumRemotes(),
+// 		Startup:  1,
+// 	}
+// 	ctx, cancelFn := context.WithTimeout(context.Background(), 5*time.Second)
+// 	defer cancelFn()
+// 	activity.NumWorkspaces, _ = sstore.NumSessions(ctx)
+// 	activity.NumTabs, _ = sstore.NumScreens(ctx)
+// 	err := telemetry.UpdateActivity(ctx, activity) // set at least one record into activity (don't use go routine wrap here)
+// 	if err != nil {
+// 		log.Printf("error updating startup activity: %v\n", err)
+// 	}
+// }
 
-func shutdownActivityUpdate() {
-	activity := telemetry.ActivityUpdate{Shutdown: 1}
-	ctx, cancelFn := context.WithTimeout(context.Background(), 1*time.Second)
-	defer cancelFn()
-	err := telemetry.UpdateActivity(ctx, activity) // do NOT use the go routine wrap here (this needs to be synchronous)
-	if err != nil {
-		log.Printf("error updating shutdown activity: %v\n", err)
-	}
-}
+// func shutdownActivityUpdate() {
+// 	activity := telemetry.ActivityUpdate{Shutdown: 1}
+// 	ctx, cancelFn := context.WithTimeout(context.Background(), 1*time.Second)
+// 	defer cancelFn()
+// 	err := telemetry.UpdateActivity(ctx, activity) // do NOT use the go routine wrap here (this needs to be synchronous)
+// 	if err != nil {
+// 		log.Printf("error updating shutdown activity: %v\n", err)
+// 	}
+// }
 
 func main() {
 	scbase.BuildTime = BuildTime
@@ -1160,9 +1159,9 @@ func main() {
 	}
 
 	log.Printf("PCLOUD_ENDPOINT=%s\n", pcloud.GetEndpoint())
-	startupActivityUpdate()
+	// startupActivityUpdate()
 	installSignalHandlers()
-	go telemetryLoop()
+	// go telemetryLoop()
 	go configWatcher()
 	go stdinReadWatch()
 	go runWebSocketServer()
@@ -1181,7 +1180,7 @@ func main() {
 	gr.HandleFunc("/api/get-client-data", AuthKeyWrap(HandleGetClientData))
 	gr.HandleFunc("/api/set-winsize", AuthKeyWrap(HandleSetWinSize))
 	gr.HandleFunc("/api/power-monitor", AuthKeyWrap(HandlePowerMonitor))
-	gr.HandleFunc("/api/log-active-state", AuthKeyWrap(HandleLogActiveState))
+	// gr.HandleFunc("/api/log-active-state", AuthKeyWrap(HandleLogActiveState))
 	gr.HandleFunc("/api/read-file", AuthKeyWrapAllowHmac(HandleReadFile))
 	gr.HandleFunc("/api/write-file", AuthKeyWrap(HandleWriteFile)).Methods("POST")
 	configPath := filepath.Join(scbase.GetWaveHomeDir(), "config") + string(filepath.Separator)

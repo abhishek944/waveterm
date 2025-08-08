@@ -44,7 +44,6 @@ import (
 	"github.com/abhishek944/waveterm/wavesrv/pkg/scbus"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/scpacket"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/sstore"
-	"github.com/abhishek944/waveterm/wavesrv/pkg/telemetry"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/waveenc"
 	"github.com/google/uuid"
 	"github.com/kevinburke/ssh_config"
@@ -251,11 +250,11 @@ func init() {
 	registerCmdFn("sidebar:add", SidebarAddCommand)
 	registerCmdFn("sidebar:remove", SidebarRemoveCommand)
 
-	registerCmdFn("telemetry", TelemetryCommand)
-	registerCmdFn("telemetry:on", TelemetryOnCommand)
-	registerCmdFn("telemetry:off", TelemetryOffCommand)
-	registerCmdFn("telemetry:send", TelemetrySendCommand)
-	registerCmdFn("telemetry:show", TelemetryShowCommand)
+	// registerCmdFn("telemetry", TelemetryCommand)
+	// registerCmdFn("telemetry:on", TelemetryOnCommand)
+	// registerCmdFn("telemetry:off", TelemetryOffCommand)
+	// registerCmdFn("telemetry:send", TelemetrySendCommand)
+	// registerCmdFn("telemetry:show", TelemetryShowCommand)
 
 	registerCmdFn("releasecheck", ReleaseCheckCommand)
 	registerCmdFn("releasecheck:autoon", ReleaseCheckOnCommand)
@@ -270,7 +269,7 @@ func init() {
 	registerCmdFn("bookmark:set", BookmarkSetCommand)
 	registerCmdFn("bookmark:delete", BookmarkDeleteCommand)
 
-	registerCmdFn("chat", OpenAICommand)
+	// registerCmdFn("chat", OpenAICommand)
 	registerCmdFn("agent", AgentCommand)
 
 	registerCmdFn("_killserver", KillServerCommand)
@@ -752,9 +751,9 @@ func EvalCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.U
 		return nil, fmt.Errorf("command length too long len:%d, max:%d", len(pk.Args[0]), MaxCommandLen)
 	}
 	evalDepth := getEvalDepth(ctx)
-	if pk.Interactive && evalDepth == 0 {
-		telemetry.GoUpdateActivityWrap(telemetry.ActivityUpdate{NumCommands: 1}, "numcommands")
-	}
+	// if pk.Interactive && evalDepth == 0 {
+	// 	telemetry.GoUpdateActivityWrap(telemetry.ActivityUpdate{NumCommands: 1}, "numcommands")
+	// }
 	if evalDepth > MaxEvalDepth {
 		return nil, fmt.Errorf("alias/history expansion max-depth exceeded")
 	}
@@ -905,7 +904,7 @@ func ScreenOpenCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (s
 		return nil, err
 	}
 	update.Merge(crUpdate)
-	telemetry.GoUpdateActivityWrap(telemetry.ActivityUpdate{NewTab: 1}, "screen:open")
+	// telemetry.GoUpdateActivityWrap(telemetry.ActivityUpdate{NewTab: 1}, "screen:open")
 	return update, nil
 }
 
@@ -2622,100 +2621,100 @@ func writePacketToPty(ctx context.Context, cmd *sstore.CmdType, pk packet.Packet
 }
 
 
-func OpenAICommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {
-	ids, err := resolveUiIds(ctx, pk, R_Session|R_Screen)
-	if err != nil {
-		return nil, fmt.Errorf("/%s error: %w", GetCmdStr(pk), err)
-	}
-	clientData, err := sstore.EnsureClientData(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("cannot retrieve client data: %v", err)
-	}
-	if clientData.OpenAIOpts == nil {
-		return nil, fmt.Errorf("error retrieving client open ai options")
-	}
-	opts := clientData.OpenAIOpts
-	if opts.APIToken == "" && opts.BaseURL == "" {
-		if clientData.ClientOpts.NoTelemetry {
-			return nil, fmt.Errorf(OpenAICloudCompletionTelemetryOffErrorMsg)
-		}
-	}
-	if opts.Model == "" {
-		opts.Model = openai.DefaultModel
-	}
-	if opts.MaxTokens == 0 {
-		opts.MaxTokens = openai.DefaultMaxTokens
-	}
-	promptStr := firstArg(pk)
-	ptermVal := defaultStr(pk.Kwargs["wterm"], DefaultPTERM)
-	pkTermOpts, err := GetUITermOpts(pk.UIContext.WinSize, ptermVal)
-	if err != nil {
-		return nil, fmt.Errorf("openai error, invalid 'pterm' value %q: %v", ptermVal, err)
-	}
-	termOpts := convertTermOpts(pkTermOpts)
-	cmd, err := makeDynCmd(ctx, GetCmdStr(pk), ids, pk.GetRawStr(), *termOpts, nil)
-	if err != nil {
-		return nil, fmt.Errorf("openai error, cannot make dyn cmd")
-	}
-	if resolveBool(pk.Kwargs["cmdinfo"], false) {
-		if promptStr == "" {
-			// this is requesting an update without wanting an openai query
-			update := sstore.UpdateWithCurrentOpenAICmdInfoChat(cmd.ScreenId, nil)
-			if err != nil {
-				return nil, fmt.Errorf("error getting update for CmdInfoChat %v", err)
-			}
-			return update, nil
-		}
-		curLineStr := defaultStr(pk.Kwargs["curline"], "")
-		userQueryPk := &packet.OpenAICmdInfoChatMessage{UserQuery: promptStr, MessageID: sstore.ScreenMemGetCmdInfoMessageCount(cmd.ScreenId)}
-		osType := GetOsTypeFromRuntime()
-		engineeredQuery := GetCmdInfoEngineeredPrompt(promptStr, curLineStr, ids.Remote.ShellType, osType)
-		userQueryPk.UserEngineeredQuery = engineeredQuery
-		WritePacketToUpdateBus(ctx, cmd, userQueryPk)
-		prompt := BuildOpenAIPromptArrayWithContext(sstore.ScreenMemGetCmdInfoChat(cmd.ScreenId).Messages)
-		go DoOpenAICmdInfoCompletion(cmd, clientData.ClientId, opts, prompt, curLineStr)
-		update := scbus.MakeUpdatePacket()
-		return update, nil
-	}
-	osType := GetOsTypeFromRuntime()
-	engineeredQuery := GetCmdInfoEngineeredPrompt(promptStr, "", ids.Remote.ShellType, osType)
-	prompt := []packet.OpenAIPromptMessageType{{Role: sstore.OpenAIRoleUser, Content: engineeredQuery}}
-	if resolveBool(pk.Kwargs["cmdinfoclear"], false) {
-		update := sstore.UpdateWithClearOpenAICmdInfo(cmd.ScreenId)
-		if err != nil {
-			return nil, fmt.Errorf("error clearing CmdInfoChat: %v", err)
-		}
-		return update, nil
-	}
-	if promptStr == "" {
-		return nil, fmt.Errorf("openai error, prompt string is blank")
-	}
-	update := scbus.MakeUpdatePacket()
-	go sstore.IncrementNumRunningCmds(cmd.ScreenId, 1)
-	line, err := sstore.AddOpenAILine(ctx, ids.ScreenId, DefaultUserId, cmd)
-	if err != nil {
-		return nil, fmt.Errorf("cannot add new line: %v", err)
-	}
-	sendRendererActivityUpdate("openai")
+// func OpenAICommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {
+// 	ids, err := resolveUiIds(ctx, pk, R_Session|R_Screen)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("/%s error: %w", GetCmdStr(pk), err)
+// 	}
+// 	clientData, err := sstore.EnsureClientData(ctx)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("cannot retrieve client data: %v", err)
+// 	}
+// 	if clientData.OpenAIOpts == nil {
+// 		return nil, fmt.Errorf("error retrieving client open ai options")
+// 	}
+// 	opts := clientData.OpenAIOpts
+// 	if opts.APIToken == "" && opts.BaseURL == "" {
+// 		if clientData.ClientOpts.NoTelemetry {
+// 			return nil, fmt.Errorf(OpenAICloudCompletionTelemetryOffErrorMsg)
+// 		}
+// 	}
+// 	if opts.Model == "" {
+// 		opts.Model = openai.DefaultModel
+// 	}
+// 	if opts.MaxTokens == 0 {
+// 		opts.MaxTokens = openai.DefaultMaxTokens
+// 	}
+// 	promptStr := firstArg(pk)
+// 	ptermVal := defaultStr(pk.Kwargs["wterm"], DefaultPTERM)
+// 	pkTermOpts, err := GetUITermOpts(pk.UIContext.WinSize, ptermVal)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("openai error, invalid 'pterm' value %q: %v", ptermVal, err)
+// 	}
+// 	termOpts := convertTermOpts(pkTermOpts)
+// 	cmd, err := makeDynCmd(ctx, GetCmdStr(pk), ids, pk.GetRawStr(), *termOpts, nil)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("openai error, cannot make dyn cmd")
+// 	}
+// 	if resolveBool(pk.Kwargs["cmdinfo"], false) {
+// 		if promptStr == "" {
+// 			// this is requesting an update without wanting an openai query
+// 			update := sstore.UpdateWithCurrentOpenAICmdInfoChat(cmd.ScreenId, nil)
+// 			if err != nil {
+// 				return nil, fmt.Errorf("error getting update for CmdInfoChat %v", err)
+// 			}
+// 			return update, nil
+// 		}
+// 		curLineStr := defaultStr(pk.Kwargs["curline"], "")
+// 		userQueryPk := &packet.OpenAICmdInfoChatMessage{UserQuery: promptStr, MessageID: sstore.ScreenMemGetCmdInfoMessageCount(cmd.ScreenId)}
+// 		osType := GetOsTypeFromRuntime()
+// 		engineeredQuery := GetCmdInfoEngineeredPrompt(promptStr, curLineStr, ids.Remote.ShellType, osType)
+// 		userQueryPk.UserEngineeredQuery = engineeredQuery
+// 		WritePacketToUpdateBus(ctx, cmd, userQueryPk)
+// 		prompt := BuildOpenAIPromptArrayWithContext(sstore.ScreenMemGetCmdInfoChat(cmd.ScreenId).Messages)
+// 		go DoOpenAICmdInfoCompletion(cmd, clientData.ClientId, opts, prompt, curLineStr)
+// 		update := scbus.MakeUpdatePacket()
+// 		return update, nil
+// 	}
+// 	osType := GetOsTypeFromRuntime()
+// 	engineeredQuery := GetCmdInfoEngineeredPrompt(promptStr, "", ids.Remote.ShellType, osType)
+// 	prompt := []packet.OpenAIPromptMessageType{{Role: sstore.OpenAIRoleUser, Content: engineeredQuery}}
+// 	if resolveBool(pk.Kwargs["cmdinfoclear"], false) {
+// 		update := sstore.UpdateWithClearOpenAICmdInfo(cmd.ScreenId)
+// 		if err != nil {
+// 			return nil, fmt.Errorf("error clearing CmdInfoChat: %v", err)
+// 		}
+// 		return update, nil
+// 	}
+// 	if promptStr == "" {
+// 		return nil, fmt.Errorf("openai error, prompt string is blank")
+// 	}
+// 	update := scbus.MakeUpdatePacket()
+// 	go sstore.IncrementNumRunningCmds(cmd.ScreenId, 1)
+// 	line, err := sstore.AddOpenAILine(ctx, ids.ScreenId, DefaultUserId, cmd)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("cannot add new line: %v", err)
+// 	}
+// 	// sendRendererActivityUpdate("openai")
 
-	if resolveBool(pk.Kwargs["stream"], true) {
-		go DoOpenAIStreamCompletion(cmd, clientData.ClientId, opts, prompt)
-	} else {
-		go DoOpenAICompletion(cmd, opts, prompt)
-	}
-	updateHistoryContext(ctx, line, cmd, nil)
-	updateMap := make(map[string]interface{})
-	updateMap[sstore.ScreenField_SelectedLine] = line.LineNum
-	updateMap[sstore.ScreenField_Focus] = sstore.ScreenFocusInput
-	screen, err := sstore.UpdateScreen(ctx, ids.ScreenId, updateMap)
-	if err != nil {
-		// ignore error again (nothing to do)
-		log.Printf("openai error updating screen selected line: %v\n", err)
-	}
-	sstore.AddLineUpdate(update, line, cmd)
-	update.AddUpdate(*screen)
-	return update, nil
-}
+// 	if resolveBool(pk.Kwargs["stream"], true) {
+// 		go DoOpenAIStreamCompletion(cmd, clientData.ClientId, opts, prompt)
+// 	} else {
+// 		go DoOpenAICompletion(cmd, opts, prompt)
+// 	}
+// 	updateHistoryContext(ctx, line, cmd, nil)
+// 	updateMap := make(map[string]interface{})
+// 	updateMap[sstore.ScreenField_SelectedLine] = line.LineNum
+// 	updateMap[sstore.ScreenField_Focus] = sstore.ScreenFocusInput
+// 	screen, err := sstore.UpdateScreen(ctx, ids.ScreenId, updateMap)
+// 	if err != nil {
+// 		// ignore error again (nothing to do)
+// 		log.Printf("openai error updating screen selected line: %v\n", err)
+// 	}
+// 	sstore.AddLineUpdate(update, line, cmd)
+// 	update.AddUpdate(*screen)
+// 	return update, nil
+// }
 
 func AgentCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {
 	ids, err := resolveUiIds(ctx, pk, R_Session|R_Screen)
@@ -2744,22 +2743,35 @@ func AgentCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.
 	}
 	termOpts := convertTermOpts(pkTermOpts)
 	
-	// Create command
-	cmd, err := makeDynCmd(ctx, GetCmdStr(pk), ids, pk.GetRawStr(), *termOpts, nil)
+	// Create command for agent mode (not a running command)
+	cmd := &sstore.CmdType{
+		ScreenId:  ids.ScreenId,
+		LineId:    scbase.GenWaveUUID(),
+		CmdStr:    pk.GetRawStr(),
+		RawCmdStr: pk.GetRawStr(),
+		Remote:    ids.Remote.RemotePtr,
+		TermOpts:  *termOpts,
+		Status:    sstore.CmdStatusDone, // Set as done, not running
+		RunOut:    nil,
+	}
+	if ids.Remote != nil && ids.Remote.StatePtr != nil {
+		cmd.StatePtr = *ids.Remote.StatePtr
+	}
+	if ids.Remote != nil && ids.Remote.FeState != nil {
+		cmd.FeState = ids.Remote.FeState
+	}
+	err = sstore.CreateCmdPtyFile(ctx, cmd.ScreenId, cmd.LineId, cmd.TermOpts.MaxPtySize)
 	if err != nil {
-		return nil, fmt.Errorf("agent error, cannot make dyn cmd")
+		return nil, fmt.Errorf("cannot create ptyout file for agent command: %w", err)
 	}
 	
-	// Increment running commands
-	go sstore.IncrementNumRunningCmds(cmd.ScreenId, 1)
-	
-	// Add AI line
-	line, err := sstore.AddOpenAILine(ctx, ids.ScreenId, DefaultUserId, cmd)
+	// Add agent mode line
+	line, err := sstore.AddAgentModeLine(ctx, ids.ScreenId, DefaultUserId, cmd)
 	if err != nil {
 		return nil, fmt.Errorf("cannot add new line: %v", err)
 	}
 	
-	sendRendererActivityUpdate("openai")
+	// sendRendererActivityUpdate("agent_mode")
 	
 	// Run agent mode
 	go func() {
@@ -2782,19 +2794,10 @@ func AgentCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.
 				case pk, ok := <-response.Stream:
 					if !ok {
 						// Channel closed, we're done
-						// Update command status
-						ck := base.MakeCommandKey(cmd.ScreenId, cmd.LineId)
-						doneInfo := sstore.CmdDoneDataValues{
-							Ts:         time.Now().UnixMilli(),
-							ExitCode:   0,
-							DurationMs: 0,
-						}
+						// Send update to toggle off agent mode
 						update := scbus.MakeUpdatePacket()
-						err := sstore.UpdateCmdDoneInfo(context.Background(), update, ck, doneInfo, sstore.CmdStatusDone)
-						if err != nil {
-							log.Printf("error updating cmddoneinfo (in agent): %v\n", err)
-						}
-						scbus.MainUpdateBus.DoScreenUpdate(cmd.ScreenId, update)
+						update.AddUpdate(sstore.AgentModeToggleType{Enabled: false})
+						scbus.MainUpdateBus.DoUpdate(update)
 						return
 					}
 					
@@ -2988,7 +2991,7 @@ func addLineForCmd(ctx context.Context, metaCmd string, shouldFocus bool, ids re
 	if err != nil {
 		return nil, err
 	}
-	sendRendererActivityUpdate(renderer)
+	// sendRendererActivityUpdate(renderer)
 	screen, err := sstore.GetScreenById(ctx, ids.ScreenId)
 	if err != nil {
 		// ignore error here, because the command has already run (nothing to do)
@@ -3352,8 +3355,8 @@ func validateRemoteColor(color string, typeStr string) error {
 }
 
 func SessionOpenSharedCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {
-	activity := telemetry.ActivityUpdate{ClickShared: 1}
-	telemetry.GoUpdateActivityWrap(activity, "click-shared")
+	// activity := telemetry.ActivityUpdate{ClickShared: 1}
+	// telemetry.GoUpdateActivityWrap(activity, "click-shared")
 	return nil, fmt.Errorf("shared sessions are not available in this version of prompt (stay tuned)")
 }
 
@@ -4142,9 +4145,9 @@ func HistoryCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbu
 		return nil, err
 	}
 	show := !resolveBool(pk.Kwargs["noshow"], false)
-	if show {
-		telemetry.GoUpdateActivityWrap(telemetry.ActivityUpdate{HistoryView: 1}, "history")
-	}
+	// if show {
+	// 	telemetry.GoUpdateActivityWrap(telemetry.ActivityUpdate{HistoryView: 1}, "history")
+	// }
 	update := scbus.MakeUpdatePacket()
 	update.AddUpdate(history.HistoryInfoType{
 		HistoryType: htype,
@@ -4371,14 +4374,14 @@ func focusScreenLine(ctx context.Context, screenId string, lineNum int64) (*ssto
 	return screen, nil
 }
 
-func sendRendererActivityUpdate(renderer string) {
-	if renderer == "" || !telemetry.IsAllowedRenderer(renderer) {
-		return
-	}
-	activity := telemetry.ActivityUpdate{Renderers: make(map[string]int)}
-	activity.Renderers[renderer] = 1
-	telemetry.GoUpdateActivityWrap(activity, "renderer")
-}
+// func sendRendererActivityUpdate(renderer string) {
+// 	if renderer == "" || !telemetry.IsAllowedRenderer(renderer) {
+// 		return
+// 	}
+// 	activity := telemetry.ActivityUpdate{Renderers: make(map[string]int)}
+// 	activity.Renderers[renderer] = 1
+// 	telemetry.GoUpdateActivityWrap(activity, "renderer")
+// }
 
 func LineSetCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {
 	ids, err := resolveUiIds(ctx, pk, R_Session|R_Screen)
@@ -4402,7 +4405,7 @@ func LineSetCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbu
 		if err != nil {
 			return nil, fmt.Errorf("error changing line renderer: %v", err)
 		}
-		sendRendererActivityUpdate(renderer)
+		// sendRendererActivityUpdate(renderer)
 		varsUpdated = append(varsUpdated, KwArgRenderer)
 	}
 	if view, found := pk.Kwargs[KwArgView]; found {
@@ -4413,7 +4416,7 @@ func LineSetCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbu
 		if err != nil {
 			return nil, fmt.Errorf("error changing line view: %v", err)
 		}
-		sendRendererActivityUpdate(view)
+		// sendRendererActivityUpdate(view)
 		varsUpdated = append(varsUpdated, KwArgView)
 	}
 	if stateJson, found := pk.Kwargs[KwArgState]; found {
@@ -4504,7 +4507,7 @@ func BookmarksShowCommand(ctx context.Context, pk *scpacket.FeCommandPacketType)
 	if err != nil {
 		return nil, fmt.Errorf("cannot retrieve bookmarks: %v", err)
 	}
-	telemetry.GoUpdateActivityWrap(telemetry.ActivityUpdate{BookmarksView: 1}, "bookmarks")
+	// telemetry.GoUpdateActivityWrap(telemetry.ActivityUpdate{BookmarksView: 1}, "bookmarks")
 	update := scbus.MakeUpdatePacket()
 
 	update.AddUpdate(&MainViewUpdate{
@@ -5902,6 +5905,98 @@ func ClientSetCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (sc
 		}
 		varsUpdated = append(varsUpdated, "webgl")
 	}
+	// Handle new AI provider options
+	aiOptsUpdated := false
+	aiOpts := clientData.AIOpts
+	if aiOpts == nil {
+		aiOpts = &sstore.AIOptsType{}
+	} else {
+		// Create a deep copy to preserve existing data
+		aiOptsCopy := *aiOpts
+		aiOpts = &aiOptsCopy
+		// Deep copy nested structs if they exist
+		if aiOpts.Gemini != nil {
+			geminiCopy := *aiOpts.Gemini
+			aiOpts.Gemini = &geminiCopy
+		}
+		if aiOpts.OpenAI != nil {
+			openaiCopy := *aiOpts.OpenAI
+			aiOpts.OpenAI = &openaiCopy
+		}
+		if aiOpts.Azure != nil {
+			azureCopy := *aiOpts.Azure
+			aiOpts.Azure = &azureCopy
+		}
+	}
+	// Handle default provider
+	if defaultProvider, found := pk.Kwargs["defaultprovider"]; found {
+		if defaultProvider != "openai" && defaultProvider != "gemini" && defaultProvider != "azure" {
+			return nil, fmt.Errorf("invalid default provider, must be 'openai', 'gemini', or 'azure'")
+		}
+		aiOpts.Default = defaultProvider
+		aiOptsUpdated = true
+		varsUpdated = append(varsUpdated, "defaultprovider")
+	}
+	// Handle Gemini options
+	if geminiAPIToken, found := pk.Kwargs["geminiapitoken"]; found {
+		// Validate token
+		err = validateOpenAIAPIToken(geminiAPIToken) // reuse validation function
+		if err != nil {
+			return nil, fmt.Errorf("invalid gemini api token: %v", err)
+		}
+		if aiOpts.Gemini == nil {
+			aiOpts.Gemini = &sstore.GeminiOptsType{}
+		}
+		aiOpts.Gemini.APIToken = geminiAPIToken
+		aiOptsUpdated = true
+		varsUpdated = append(varsUpdated, "geminiapitoken")
+	}
+	// Handle new OpenAI options through AIOpts
+	if openaiAPIToken, found := pk.Kwargs["openaiapitoken"]; found {
+		if aiOpts.OpenAI == nil {
+			aiOpts.OpenAI = &sstore.OpenAIOptsType{}
+		}
+		aiOpts.OpenAI.APIToken = openaiAPIToken
+		aiOptsUpdated = true
+		varsUpdated = append(varsUpdated, "openaiapitoken")
+	}
+	// Handle Azure options
+	if azureBaseURL, found := pk.Kwargs["azurebaseurl"]; found {
+		if aiOpts.Azure == nil {
+			aiOpts.Azure = &sstore.AzureOpenAIOptsType{}
+		}
+		aiOpts.Azure.BaseURL = azureBaseURL
+		aiOptsUpdated = true
+		varsUpdated = append(varsUpdated, "azurebaseurl")
+	}
+	if azureDeploymentName, found := pk.Kwargs["azuredeploymentname"]; found {
+		if aiOpts.Azure == nil {
+			aiOpts.Azure = &sstore.AzureOpenAIOptsType{}
+		}
+		aiOpts.Azure.DeploymentName = azureDeploymentName
+		aiOptsUpdated = true
+		varsUpdated = append(varsUpdated, "azuredeploymentname")
+	}
+	if azureAPIToken, found := pk.Kwargs["azureapitoken"]; found {
+		// Validate token
+		err = validateOpenAIAPIToken(azureAPIToken) // reuse validation function
+		if err != nil {
+			return nil, fmt.Errorf("invalid azure api token: %v", err)
+		}
+		if aiOpts.Azure == nil {
+			aiOpts.Azure = &sstore.AzureOpenAIOptsType{}
+		}
+		aiOpts.Azure.APIToken = azureAPIToken
+		aiOptsUpdated = true
+		varsUpdated = append(varsUpdated, "azureapitoken")
+	}
+	// Update AIOpts if any changes were made
+	if aiOptsUpdated {
+		err = sstore.UpdateClientAIOpts(ctx, *aiOpts)
+		if err != nil {
+			return nil, fmt.Errorf("error updating client ai options: %v", err)
+		}
+	}
 	if sudoPwStoreStr, found := pk.Kwargs["sudopwstore"]; found {
 		err := validateSudoPwStore(sudoPwStoreStr)
 		if err != nil {
@@ -5955,7 +6050,7 @@ func ClientSetCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (sc
 		varsUpdated = append(varsUpdated, "sudopwclearonsleep")
 	}
 	if len(varsUpdated) == 0 {
-		return nil, fmt.Errorf("/client:set requires a value to set: %s", formatStrs([]string{"termfontsize", "termfontfamily", "inputposition", "openaiapitoken", "openaimodel", "openaibaseurl", "openaimaxtokens", "openaimaxchoices", "openaitimeout", "webgl"}, "or", false))
+		return nil, fmt.Errorf("/client:set requires a value to set: %s", formatStrs([]string{"termfontsize", "termfontfamily", "inputposition", "openaiapitoken", "openaimodel", "openaibaseurl", "openaimaxtokens", "openaimaxchoices", "openaitimeout", "webgl", "defaultprovider", "geminiapitoken", "azurebaseurl", "azuredeploymentname", "azureapitoken"}, "or", false))
 	}
 	clientData, err = sstore.EnsureClientData(ctx)
 	if err != nil {
@@ -6030,111 +6125,111 @@ func ClientShowCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (s
 	return update, nil
 }
 
-func TelemetryCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {
-	return nil, fmt.Errorf("/telemetry requires a subcommand: %s", formatStrs([]string{"show", "on", "off", "send"}, "or", false))
-}
+// func TelemetryCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {
+// 	return nil, fmt.Errorf("/telemetry requires a subcommand: %s", formatStrs([]string{"show", "on", "off", "send"}, "or", false))
+// }
 
-func setNoTelemetry(ctx context.Context, clientData *sstore.ClientData, noTelemetryVal bool) error {
-	clientOpts := clientData.ClientOpts
-	clientOpts.NoTelemetry = noTelemetryVal
-	err := sstore.SetClientOpts(ctx, clientOpts)
-	if err != nil {
-		return fmt.Errorf("error trying to update client telemetry: %v", err)
-	}
-	log.Printf("client no-telemetry setting updated to %v\n", noTelemetryVal)
-	go func() {
-		cloudCtx, cancelFn := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancelFn()
-		err := pcloud.SendNoTelemetryUpdate(cloudCtx, clientOpts.NoTelemetry)
-		if err != nil {
-			log.Printf("[error] sending no-telemetry update: %v\n", err)
-			log.Printf("note that telemetry update has still taken effect locally, and will be respected by the client\n")
-		}
-	}()
-	return nil
-}
+// func setNoTelemetry(ctx context.Context, clientData *sstore.ClientData, noTelemetryVal bool) error {
+// 	clientOpts := clientData.ClientOpts
+// 	clientOpts.NoTelemetry = noTelemetryVal
+// 	err := sstore.SetClientOpts(ctx, clientOpts)
+// 	if err != nil {
+// 		return fmt.Errorf("error trying to update client telemetry: %v", err)
+// 	}
+// 	log.Printf("client no-telemetry setting updated to %v\n", noTelemetryVal)
+// 	go func() {
+// 		cloudCtx, cancelFn := context.WithTimeout(context.Background(), 10*time.Second)
+// 		defer cancelFn()
+// 		err := pcloud.SendNoTelemetryUpdate(cloudCtx, clientOpts.NoTelemetry)
+// 		if err != nil {
+// 			log.Printf("[error] sending no-telemetry update: %v\n", err)
+// 			log.Printf("note that telemetry update has still taken effect locally, and will be respected by the client\n")
+// 		}
+// 	}()
+// 	return nil
+// }
 
-func TelemetryOnCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {
-	clientData, err := sstore.EnsureClientData(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("cannot retrieve client data: %v", err)
-	}
-	if !clientData.ClientOpts.NoTelemetry {
-		return sstore.InfoMsgUpdate("telemetry is already on"), nil
-	}
-	err = setNoTelemetry(ctx, clientData, false)
-	if err != nil {
-		return nil, err
-	}
-	go func() {
-		cloudCtx, cancelFn := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancelFn()
-		err := pcloud.SendTelemetry(cloudCtx, false)
-		if err != nil {
-			// ignore error, but log
-			log.Printf("[error] sending telemetry update (in /telemetry:on): %v\n", err)
-		}
-	}()
-	clientData, err = sstore.EnsureClientData(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("cannot retrieve updated client data: %v", err)
-	}
-	update := sstore.InfoMsgUpdate("telemetry is now on")
-	update.AddUpdate(*clientData)
-	return update, nil
-}
+// func TelemetryOnCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {
+// 	clientData, err := sstore.EnsureClientData(ctx)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("cannot retrieve client data: %v", err)
+// 	}
+// 	if !clientData.ClientOpts.NoTelemetry {
+// 		return sstore.InfoMsgUpdate("telemetry is already on"), nil
+// 	}
+// 	err = setNoTelemetry(ctx, clientData, false)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	go func() {
+// 		cloudCtx, cancelFn := context.WithTimeout(context.Background(), 10*time.Second)
+// 		defer cancelFn()
+// 		err := pcloud.SendTelemetry(cloudCtx, false)
+// 		if err != nil {
+// 			// ignore error, but log
+// 			log.Printf("[error] sending telemetry update (in /telemetry:on): %v\n", err)
+// 		}
+// 	}()
+// 	clientData, err = sstore.EnsureClientData(ctx)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("cannot retrieve updated client data: %v", err)
+// 	}
+// 	update := sstore.InfoMsgUpdate("telemetry is now on")
+// 	update.AddUpdate(*clientData)
+// 	return update, nil
+// }
 
-func TelemetryOffCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {
-	clientData, err := sstore.EnsureClientData(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("cannot retrieve client data: %v", err)
-	}
-	if clientData.ClientOpts.NoTelemetry {
-		return sstore.InfoMsgUpdate("telemetry is already off"), nil
-	}
-	err = setNoTelemetry(ctx, clientData, true)
-	if err != nil {
-		return nil, err
-	}
-	clientData, err = sstore.EnsureClientData(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("cannot retrieve updated client data: %v", err)
-	}
-	update := sstore.InfoMsgUpdate("telemetry is now off")
-	update.AddUpdate(*clientData)
-	return update, nil
-}
+// func TelemetryOffCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {
+// 	clientData, err := sstore.EnsureClientData(ctx)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("cannot retrieve client data: %v", err)
+// 	}
+// 	if clientData.ClientOpts.NoTelemetry {
+// 		return sstore.InfoMsgUpdate("telemetry is already off"), nil
+// 	}
+// 	err = setNoTelemetry(ctx, clientData, true)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	clientData, err = sstore.EnsureClientData(ctx)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("cannot retrieve updated client data: %v", err)
+// 	}
+// 	update := sstore.InfoMsgUpdate("telemetry is now off")
+// 	update.AddUpdate(*clientData)
+// 	return update, nil
+// }
 
-func TelemetryShowCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {
-	clientData, err := sstore.EnsureClientData(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("cannot retrieve client data: %v", err)
-	}
-	var buf bytes.Buffer
-	buf.WriteString(fmt.Sprintf("  %-15s %s\n", "telemetry", boolToStr(clientData.ClientOpts.NoTelemetry, "off", "on")))
-	update := scbus.MakeUpdatePacket()
-	update.AddUpdate(sstore.InfoMsgType{
-		InfoTitle: fmt.Sprintf("telemetry info"),
-		InfoLines: splitLinesForInfo(buf.String()),
-	})
-	return update, nil
-}
+// func TelemetryShowCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {
+// 	clientData, err := sstore.EnsureClientData(ctx)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("cannot retrieve client data: %v", err)
+// 	}
+// 	var buf bytes.Buffer
+// 	buf.WriteString(fmt.Sprintf("  %-15s %s\n", "telemetry", boolToStr(clientData.ClientOpts.NoTelemetry, "off", "on")))
+// 	update := scbus.MakeUpdatePacket()
+// 	update.AddUpdate(sstore.InfoMsgType{
+// 		InfoTitle: fmt.Sprintf("telemetry info"),
+// 		InfoLines: splitLinesForInfo(buf.String()),
+// 	})
+// 	return update, nil
+// }
 
-func TelemetrySendCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {
-	clientData, err := sstore.EnsureClientData(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("cannot retrieve client data: %v", err)
-	}
-	force := resolveBool(pk.Kwargs["force"], false)
-	if clientData.ClientOpts.NoTelemetry && !force {
-		return nil, fmt.Errorf("cannot send telemetry, telemetry is off.  pass force=1 to force the send, or turn on telemetry with /telemetry:on")
-	}
-	err = pcloud.SendTelemetry(ctx, force)
-	if err != nil {
-		return nil, fmt.Errorf("failed to send telemetry: %v", err)
-	}
-	return sstore.InfoMsgUpdate("telemetry sent"), nil
-}
+// func TelemetrySendCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {
+// 	clientData, err := sstore.EnsureClientData(ctx)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("cannot retrieve client data: %v", err)
+// 	}
+// 	force := resolveBool(pk.Kwargs["force"], false)
+// 	if clientData.ClientOpts.NoTelemetry && !force {
+// 		return nil, fmt.Errorf("cannot send telemetry, telemetry is off.  pass force=1 to force the send, or turn on telemetry with /telemetry:on")
+// 	}
+// 	err = pcloud.SendTelemetry(ctx, force)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("failed to send telemetry: %v", err)
+// 	}
+// 	return sstore.InfoMsgUpdate("telemetry sent"), nil
+// }
 
 func runReleaseCheck(ctx context.Context, force bool) error {
 	rslt, err := releasechecker.CheckNewRelease(ctx, force)

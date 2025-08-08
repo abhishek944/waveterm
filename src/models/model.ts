@@ -1137,6 +1137,14 @@ class Model {
                     this.inputModel.updateCmdLine(update.cmdline);
                 } else if (update.openaicmdinfochat != null) {
                     this.inputModel.setOpenAICmdInfoChat(update.openaicmdinfochat);
+                } else if (update.agentmodetoggle != null) {
+                    mobx.action(() => {
+                        this.isAgentMode.set(update.agentmodetoggle.enabled);
+                        // If enabling agent mode and thread mode is active, turn off thread mode
+                        if (update.agentmodetoggle.enabled && this.isThreadMode.get()) {
+                            this.isThreadMode.set(false);
+                        }
+                    })();
                 } else if (update.screenstatusindicator != null) {
                     this.updateScreenStatusIndicators([update.screenstatusindicator]);
                 } else if (update.screennumrunningcommands != null) {

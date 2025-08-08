@@ -995,7 +995,7 @@ function configureAutoUpdater(enabled: boolean) {
     } catch (e) {
         console.log(e.toString());
     }
-    setTimeout(runActiveTimer, 5000); // start active timer, wait 5s just to be safe
+    // setTimeout(runActiveTimer, 5000); // start active timer, wait 5s just to be safe
     await app.whenReady();
     await createWindowWrap();
 

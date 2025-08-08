@@ -750,6 +750,7 @@ class InputModel {
         
         mobx.action(() => {
             this.resetInput();
+            // Don't toggle off agent mode here - it will be toggled off after response is received
         })();
         
         this.globalModel.submitRawCommand(commandStr, true, true, isAgentMode, isThreadMode);

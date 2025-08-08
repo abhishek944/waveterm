@@ -56,9 +56,9 @@ const APITokenSentinel = "--apitoken--"
 const ShellTypePref_Detect = "detect"
 
 const (
-	LineTypeCmd    = "cmd"
-	LineTypeText   = "text"
-	LineTypeOpenAI = "openai"
+	LineTypeCmd       = "cmd"
+	LineTypeText      = "text"
+	LineTypeAgentMode = "agent_mode"
 )
 
 const (
@@ -90,7 +90,7 @@ const (
 )
 
 const (
-	CmdRendererOpenAI = "openai"
+	CmdRendererAgentMode = "agent_mode"
 )
 
 const (
@@ -1051,16 +1051,16 @@ func makeNewLineText(screenId string, userId string, text string) *LineType {
 	return rtn
 }
 
-func makeNewLineOpenAI(screenId string, userId string, lineId string) *LineType {
+func makeNewLineAgentMode(screenId string, userId string, lineId string) *LineType {
 	rtn := &LineType{}
 	rtn.ScreenId = screenId
 	rtn.UserId = userId
 	rtn.LineId = lineId
 	rtn.Ts = time.Now().UnixMilli()
 	rtn.LineLocal = true
-	rtn.LineType = LineTypeOpenAI
+	rtn.LineType = LineTypeAgentMode
 	rtn.ContentHeight = LineNoHeight
-	rtn.Renderer = CmdRendererOpenAI
+	rtn.Renderer = CmdRendererAgentMode
 	rtn.LineState = make(map[string]any)
 	return rtn
 }
@@ -1074,8 +1074,8 @@ func AddCommentLine(ctx context.Context, screenId string, userId string, comment
 	return rtnLine, nil
 }
 
-func AddOpenAILine(ctx context.Context, screenId string, userId string, cmd *CmdType) (*LineType, error) {
-	rtnLine := makeNewLineOpenAI(screenId, userId, cmd.LineId)
+func AddAgentModeLine(ctx context.Context, screenId string, userId string, cmd *CmdType) (*LineType, error) {
+	rtnLine := makeNewLineAgentMode(screenId, userId, cmd.LineId)
 	err := InsertLine(ctx, rtnLine, cmd)
 	if err != nil {
 		return nil, err

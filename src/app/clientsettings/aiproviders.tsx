@@ -13,6 +13,28 @@ import { commandRtnHandler, isBlank } from "@/util/util";
 @mobxReact.observer
 class AiProviders extends React.Component<{}, {}> {
     @boundMethod
+    handleAiOptsChange(newAiOpts: any) {
+        console.log("Setting AI opts:", newAiOpts);
+        const prtn = GlobalCommandRunner.setAIOpts(newAiOpts);
+        commandRtnHandler(prtn, (err) => {
+            if (err) {
+                console.error("error setting ai opts", err);
+            } else {
+                console.log("AI opts set successfully");
+            }
+        });
+    }
+    @boundMethod
+    handleProviderChange(provider: "gemini" | "openai" | "azure", key: string, value: string) {
+        const cdata: ClientDataType = GlobalModel.clientData.get();
+        const aiOpts = { ...(cdata.aiopts ?? {}) };
+        const providerOpts = { ...(aiOpts[provider] ?? {}), [key]: value };
+        const newAiOpts = { ...aiOpts, [provider]: providerOpts };
+
+        this.handleAiOptsChange(newAiOpts);
+    }
+
+    @boundMethod
     handleSelectProvider(provider: "gemini" | "openai" | "azure") {
         // Update default provider immediately for UI toggle
         const cdata: ClientDataType = GlobalModel.clientData.get();
@@ -20,10 +42,7 @@ class AiProviders extends React.Component<{}, {}> {
         mobx.action(() => {
             GlobalModel.clientData.set({ ...cdata, aiopts });
         })();
-        const prtn = GlobalCommandRunner.setAIOpts(aiopts);
-        commandRtnHandler(prtn, (err) => {
-            console.log(err);
-        });
+        this.handleAiOptsChange(aiopts);
     }
 
     render() {
@@ -34,6 +53,12 @@ class AiProviders extends React.Component<{}, {}> {
         const openAIOpts = aiOpts.openai ?? {};
         const azureOpts = aiOpts.azure ?? {};
         const selectedProvider = defaultProvider;
+        
+        // Helper function to display masked API key
+        const getMaskedValue = (value: string) => {
+            if (!value) return "(not set)";
+            return "••••••••" + value.slice(-4);
+        };
 
         return (
             <div>
@@ -50,11 +75,9 @@ class AiProviders extends React.Component<{}, {}> {
                         <div className="settings-input">
                             <InlineSettingsTextEdit
                                 placeholder="API Key"
-                                text={geminiOpts.apitoken ?? "API Key"}
-                                value={geminiOpts.apitoken ?? ""}
-                                onChange={(val) =>
-                                    GlobalCommandRunner.setAIOpts({ ...aiOpts, gemini: { ...geminiOpts, apitoken: val } })
-                                }
+                                text={getMaskedValue(geminiOpts.apitoken)}
+                                value={geminiOpts.apitoken || ""}
+                                onChange={(val) => this.handleProviderChange("gemini", "apitoken", val)}
                                 maxLength={256}
                                 showIcon={true}
                             />
@@ -74,11 +97,9 @@ class AiProviders extends React.Component<{}, {}> {
                         <div className="settings-input">
                             <InlineSettingsTextEdit
                                 placeholder="API Key"
-                                text={openAIOpts.apitoken ?? "API Key"}
-                                value={openAIOpts.apitoken ?? ""}
-                                onChange={(val) =>
-                                    GlobalCommandRunner.setAIOpts({ ...aiOpts, openai: { ...openAIOpts, apitoken: val } })
-                                }
+                                text={getMaskedValue(openAIOpts.apitoken)}
+                                value={openAIOpts.apitoken || ""}
+                                onChange={(val) => this.handleProviderChange("openai", "apitoken", val)}
                                 maxLength={256}
                                 showIcon={true}
                             />
@@ -98,11 +119,9 @@ class AiProviders extends React.Component<{}, {}> {
                         <div className="settings-input">
                             <InlineSettingsTextEdit
                                 placeholder="Base URL"
-                                text={azureOpts.baseurl ?? "Base URL"}
-                                value={azureOpts.baseurl ?? ""}
-                                onChange={(val) =>
-                                    GlobalCommandRunner.setAIOpts({ ...aiOpts, azure: { ...azureOpts, baseurl: val } })
-                                }
+                                text={azureOpts.baseurl || "(not set)"}
+                                value={azureOpts.baseurl || ""}
+                                onChange={(val) => this.handleProviderChange("azure", "baseurl", val)}
                                 maxLength={256}
                                 showIcon={true}
                             />
@@ -113,11 +132,9 @@ class AiProviders extends React.Component<{}, {}> {
                         <div className="settings-input">
                             <InlineSettingsTextEdit
                                 placeholder="Deployment Name"
-                                text={azureOpts.deploymentname ?? "Deployment Name"}
-                                value={azureOpts.deploymentname ?? ""}
-                                onChange={(val) =>
-                                    GlobalCommandRunner.setAIOpts({ ...aiOpts, azure: { ...azureOpts, deploymentname: val } })
-                                }
+                                text={azureOpts.deploymentname || "(not set)"}
+                                value={azureOpts.deploymentname || ""}
+                                onChange={(val) => this.handleProviderChange("azure", "deploymentname", val)}
                                 maxLength={256}
                                 showIcon={true}
                             />
@@ -128,11 +145,9 @@ class AiProviders extends React.Component<{}, {}> {
                         <div className="settings-input">
                             <InlineSettingsTextEdit
                                 placeholder="API Key"
-                                text={azureOpts.apitoken ?? "API Key"}
-                                value={azureOpts.apitoken ?? ""}
-                                onChange={(val) =>
-                                    GlobalCommandRunner.setAIOpts({ ...aiOpts, azure: { ...azureOpts, apitoken: val } })
-                                }
+                                text={getMaskedValue(azureOpts.apitoken)}
+                                value={azureOpts.apitoken || ""}
+                                onChange={(val) => this.handleProviderChange("azure", "apitoken", val)}
                                 maxLength={256}
                                 showIcon={true}
                             />

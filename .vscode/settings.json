@@ -19,13 +19,18 @@
         "editor.defaultFormatter": "esbenp.prettier-vscode"
     },
     "cSpell.words": [
+        "abhishek",
         "agentmode",
         "cmdinput",
         "Kwargs",
+        "lineid",
+        "linetype",
+        "mapqueue",
         "metacmd",
         "scpacket",
         "screenview",
         "sstore",
-        "threadmode"
+        "threadmode",
+        "wsshell"
     ]
 }

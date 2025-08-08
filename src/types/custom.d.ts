@@ -388,6 +388,9 @@ declare global {
         screentombstone?: any;
         sessiontombstone?: any;
         termthemes?: TermThemesType;
+        agentmodetoggle?: {
+            enabled: boolean;
+        };
     };
 
     type TermThemesType = {

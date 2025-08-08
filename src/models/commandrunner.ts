@@ -427,33 +427,6 @@ class CommandRunner {
         return GlobalModel.submitCommand("screen", "termtheme", null, kwargs, interactive);
     }
 
-    setClientOpenAISettings(opts: {
-        model?: string;
-        apitoken?: string;
-        maxtokens?: string;
-        baseurl?: string;
-        timeout?: string;
-    }): Promise<CommandRtnType> {
-        let kwargs = {
-            nohist: "1",
-        };
-        if (opts.model != null) {
-            kwargs["openaimodel"] = opts.model;
-        }
-        if (opts.apitoken != null) {
-            kwargs["openaiapitoken"] = opts.apitoken;
-        }
-        if (opts.maxtokens != null) {
-            kwargs["openaimaxtokens"] = opts.maxtokens;
-        }
-        if (opts.baseurl != null) {
-            kwargs["openaibaseurl"] = opts.baseurl;
-        }
-        if (opts.timeout != null) {
-            kwargs["openaitimeout"] = opts.timeout;
-        }
-        return GlobalModel.submitCommand("client", "set", null, kwargs, false);
-    }
 
     clientAcceptTos(): void {
         GlobalModel.submitCommand("client", "accepttos", null, { nohist: "1" }, true);

@@ -5,20 +5,19 @@ import * as React from "react";
 import * as mobxReact from "mobx-react";
 import * as mobx from "mobx";
 import dayjs from "dayjs";
-import { If, For } from "tsx-control-statements/components";
+import { If } from "tsx-control-statements/components";
 
 import localizedFormat from "dayjs/plugin/localizedFormat";
 import { GlobalModel } from "@/models";
-import { ResizableSidebar, Button } from "@/elements";
-import { WaveBookDisplay } from "./wavebook";
+// import { WaveBookDisplay } from "./wavebook";
 import { ChatSidebar } from "./aichat";
-import { boundMethod } from "autobind-decorator";
-
-import "./right.less";
-
+// import { boundMethod } from "autobind-decorator";
+import { Button } from "../../components/ui/button";
+import { Sidebar, SidebarHeader, SidebarContent } from "../../components/ui/sidebar";
+import { cn } from "../../lib/utils";
 dayjs.extend(localizedFormat);
 
-@mobxReact.observer
+/* @mobxReact.observer
 class KeybindDevPane extends React.Component<{}, {}> {
     render() {
         let curActiveKeybinds: Array<{ name: string; domains: Array<string> }> =
@@ -73,45 +72,32 @@ class SidebarKeyBindings extends React.Component<{ component: RightSideBar }, {}
     render() {
         return null;
     }
-}
+} */
 
-@mobxReact.observer
-class RightSideBar extends React.Component<
-    {
-        parentRef: React.RefObject<HTMLElement>;
-    },
-    {}
-> {
-    mode: OV<string> = mobx.observable.box("aichat", { name: "RightSideBar-mode" });
-    timeoutId: NodeJS.Timeout = null;
+const RightSideBar: React.FC<{ parentRef: React.RefObject<HTMLElement> }> = mobxReact.observer(({ parentRef }) => {
+    const [mode, setMode] = React.useState("aichat");
+    const timeoutIdRef = React.useRef<NodeJS.Timeout | null>(null);
 
-    constructor(props) {
-        super(props);
-        mobx.makeObservable(this);
-    }
+    React.useEffect(() => {
+        return () => {
+            if (timeoutIdRef.current) {
+                clearTimeout(timeoutIdRef.current);
+            }
+        };
+    }, []);
 
-    componentWillUnmount() {
-        if (this.timeoutId) {
-            clearTimeout(this.timeoutId);
-            this.timeoutId = null;
+    const handleSetMode = (newMode: string) => {
+        if (newMode !== mode) {
+            setMode(newMode);
         }
-    }
+    };
 
-    @mobx.action.bound
-    setMode(mode: string) {
-        if (mode == this.mode.get()) {
-            return;
-        }
-        this.mode.set(mode);
-    }
-
-    @mobx.action.bound
-    toggleCollapse() {
+    const toggleCollapse = () => {
         const isCollapsed = GlobalModel.rightSidebarModel.getCollapsed();
         GlobalModel.rightSidebarModel.setCollapsed(!isCollapsed);
-        if (this.mode.get() == "aichat") {
+        if (mode === "aichat") {
             if (isCollapsed) {
-                this.timeoutId = setTimeout(() => {
+                timeoutIdRef.current = setTimeout(() => {
                     GlobalModel.inputModel.setChatSidebarFocus();
                 }, 100);
             } else {
@@ -119,61 +105,39 @@ class RightSideBar extends React.Component<
             }
         }
         return true;
-    }
+    };
 
-    render() {
-        const isCollapsed = GlobalModel.rightSidebarModel.getCollapsed();
-        const mode = this.mode.get();
-        return (
-            <ResizableSidebar
-                model={GlobalModel.rightSidebarModel}
-                className="right-sidebar"
-                position="right"
-                enableSnap={true}
-                parentRef={this.props.parentRef}
-            >
-                {() => (
-                    <React.Fragment>
-                        <SidebarKeyBindings component={this} />
-                        <div className="header">
-                            <div className="rsb-modes">
-                                <div
-                                    className="icon-container"
-                                    title="Show Keybinding Debugger"
-                                    onClick={() => this.setMode("aichat")}
-                                >
-                                    <i className="fa-sharp fa-regular fa-sparkles fa-fw" />
-                                    <span>Wave AI</span>
-                                </div>
-                                <div className="flex-spacer" />
-                                <If condition={GlobalModel.isDev}>
-                                    <div
-                                        className="icon-container"
-                                        title="Show Keybinding Debugger"
-                                        onClick={() => this.setMode("keybind")}
-                                    >
-                                        <i className="fa-fw fa-sharp fa-keyboard fa-solid" />
-                                    </div>
-                                </If>
-                            </div>
-                            <Button className="secondary ghost close" onClick={this.toggleCollapse}>
-                                <i className="fa-sharp fa-solid fa-xmark-large" />
-                            </Button>
-                        </div>
-                        <If condition={this.mode.get() == "keybind"}>
-                            <KeybindDevPane></KeybindDevPane>
-                        </If>
-                        <If condition={mode == "wavebook"}>
-                            <WaveBookDisplay></WaveBookDisplay>
-                        </If>
-                        <If condition={mode == "aichat" && !isCollapsed}>
-                            <ChatSidebar />
-                        </If>
-                    </React.Fragment>
-                )}
-            </ResizableSidebar>
-        );
-    }
-}
+    const isCollapsed = GlobalModel.rightSidebarModel.getCollapsed();
+
+    return (
+        <Sidebar
+            className={cn("w-[300px]", {
+                "w-0": isCollapsed,
+            })}
+        >
+            <SidebarHeader>
+                <div className="flex items-center gap-2">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleSetMode("aichat")}
+                        className={cn("flex items-center gap-2", mode === "aichat" && "bg-accent")}
+                    >
+                        <i className="fa-sharp fa-regular fa-sparkles" />
+                        <span>Wave AI</span>
+                    </Button>
+                </div>
+                <Button variant="ghost" size="icon" onClick={toggleCollapse} className="h-8 w-8">
+                    <i className="fa-sharp fa-solid fa-xmark-large" />
+                </Button>
+            </SidebarHeader>
+            <SidebarContent>
+                <If condition={mode === "aichat" && !isCollapsed}>
+                    <ChatSidebar />
+                </If>
+            </SidebarContent>
+        </Sidebar>
+    );
+});
 
 export { RightSideBar };

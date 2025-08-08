@@ -490,6 +490,15 @@ func UpdateClientOpenAIOpts(ctx context.Context, aiOpts OpenAIOptsType) error {
 	return txErr
 }
 
+func UpdateClientAIOpts(ctx context.Context, aiOpts AIOptsType) error {
+	txErr := WithTx(ctx, func(tx *TxWrap) error {
+		query := `UPDATE client SET aiopts = ?`
+		tx.Exec(query, quickJson(aiOpts))
+		return nil
+	})
+	return txErr
+}
+
 func containsStr(strs []string, testStr string) bool {
 	for _, s := range strs {
 		if s == testStr {

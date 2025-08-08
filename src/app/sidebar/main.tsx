@@ -119,10 +119,10 @@ class MainSideBar extends React.Component<MainSideBarProps, {}> {
         GlobalModel.historyViewModel.reSearch();
     }
 
-    @boundMethod
+    /* @boundMethod
     handlePlaybookClick(): void {
         console.log("playbook click");
-    }
+    } */
 
     @boundMethod
     handleBookmarksClick(): void {

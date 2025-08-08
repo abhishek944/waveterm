@@ -11,22 +11,21 @@ import (
 	"github.com/abhishek944/waveterm/wavesrv/pkg/remote"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/rtnstate"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/sstore"
-	"github.com/abhishek944/waveterm/wavesrv/pkg/telemetry"
 )
 
-type NoTelemetryInputType struct {
-	ClientId string `json:"clientid"`
-	Value    bool   `json:"value"`
-}
+// type NoTelemetryInputType struct {
+// 	ClientId string `json:"clientid"`
+// 	Value    bool   `json:"value"`
+// }
 
-type TelemetryInputType struct {
-	UserId       string                    `json:"userid"`
-	ClientId     string                    `json:"clientid"`
-	AppType      string                    `json:"apptype"`
-	CurDay       string                    `json:"curday"`
-	DefaultShell string                    `json:"defaultshell"`
-	Activity     []*telemetry.ActivityType `json:"activity"`
-}
+// type TelemetryInputType struct {
+// 	UserId       string                    `json:"userid"`
+// 	ClientId     string                    `json:"clientid"`
+// 	AppType      string                    `json:"apptype"`
+// 	CurDay       string                    `json:"curday"`
+// 	DefaultShell string                    `json:"defaultshell"`
+// 	Activity     []*telemetry.ActivityType `json:"activity"`
+// }
 
 type WebShareUpdateType struct {
 	ScreenId   string `json:"screenid"`

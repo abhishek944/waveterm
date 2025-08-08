@@ -18,12 +18,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/abhishek944/waveterm/waveshell/pkg/shellapi"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/dbutil"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/rtnstate"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/scbase"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/sstore"
-	"github.com/abhishek944/waveterm/wavesrv/pkg/telemetry"
 )
 
 const PCloudEndpoint = "https://api.waveterm.dev/central"
@@ -149,62 +147,62 @@ func doRequest(req *http.Request, outputObj interface{}) (*http.Response, error)
 	return resp, nil
 }
 
-func SendTelemetry(ctx context.Context, force bool) error {
-	clientData, err := sstore.EnsureClientData(ctx)
-	if err != nil {
-		return fmt.Errorf("cannot retrieve client data: %v", err)
-	}
-	if !force && clientData.ClientOpts.NoTelemetry {
-		return nil
-	}
-	activity, err := telemetry.GetNonUploadedActivity(ctx)
-	if err != nil {
-		return fmt.Errorf("cannot get activity: %v", err)
-	}
-	if len(activity) == 0 {
-		return nil
-	}
-	log.Printf("[pcloud] sending telemetry data\n")
-	dayStr := telemetry.GetCurDayStr()
-	defaultShellType := shellapi.DetectLocalShellType()
-	input := TelemetryInputType{
-		UserId:       clientData.UserId,
-		ClientId:     clientData.ClientId,
-		AppType:      "wave",
-		CurDay:       dayStr,
-		DefaultShell: defaultShellType,
-		Activity:     activity,
-	}
-	req, err := makeAnonPostReq(ctx, TelemetryUrl, input)
-	if err != nil {
-		return err
-	}
-	_, err = doRequest(req, nil)
-	if err != nil {
-		return err
-	}
-	err = telemetry.MarkActivityAsUploaded(ctx, activity)
-	if err != nil {
-		return fmt.Errorf("error marking activity as uploaded: %v", err)
-	}
-	return nil
-}
+// func SendTelemetry(ctx context.Context, force bool) error {
+// 	clientData, err := sstore.EnsureClientData(ctx)
+// 	if err != nil {
+// 		return fmt.Errorf("cannot retrieve client data: %v", err)
+// 	}
+// 	if !force && clientData.ClientOpts.NoTelemetry {
+// 		return nil
+// 	}
+// 	activity, err := telemetry.GetNonUploadedActivity(ctx)
+// 	if err != nil {
+// 		return fmt.Errorf("cannot get activity: %v", err)
+// 	}
+// 	if len(activity) == 0 {
+// 		return nil
+// 	}
+// 	log.Printf("[pcloud] sending telemetry data\n")
+// 	dayStr := telemetry.GetCurDayStr()
+// 	defaultShellType := shellapi.DetectLocalShellType()
+// 	input := TelemetryInputType{
+// 		UserId:       clientData.UserId,
+// 		ClientId:     clientData.ClientId,
+// 		AppType:      "wave",
+// 		CurDay:       dayStr,
+// 		DefaultShell: defaultShellType,
+// 		Activity:     activity,
+// 	}
+// 	req, err := makeAnonPostReq(ctx, TelemetryUrl, input)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	_, err = doRequest(req, nil)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	err = telemetry.MarkActivityAsUploaded(ctx, activity)
+// 	if err != nil {
+// 		return fmt.Errorf("error marking activity as uploaded: %v", err)
+// 	}
+// 	return nil
+// }
 
-func SendNoTelemetryUpdate(ctx context.Context, noTelemetryVal bool) error {
-	clientData, err := sstore.EnsureClientData(ctx)
-	if err != nil {
-		return fmt.Errorf("cannot retrieve client data: %v", err)
-	}
-	req, err := makeAnonPostReq(ctx, NoTelemetryUrl, NoTelemetryInputType{ClientId: clientData.ClientId, Value: noTelemetryVal})
-	if err != nil {
-		return err
-	}
-	_, err = doRequest(req, nil)
-	if err != nil {
-		return err
-	}
-	return nil
-}
+// func SendNoTelemetryUpdate(ctx context.Context, noTelemetryVal bool) error {
+// 	clientData, err := sstore.EnsureClientData(ctx)
+// 	if err != nil {
+// 		return fmt.Errorf("cannot retrieve client data: %v", err)
+// 	}
+// 	req, err := makeAnonPostReq(ctx, NoTelemetryUrl, NoTelemetryInputType{ClientId: clientData.ClientId, Value: noTelemetryVal})
+// 	if err != nil {
+// 		return err
+// 	}
+// 	_, err = doRequest(req, nil)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	return nil
+// }
 
 func getAuthInfo(ctx context.Context) (AuthInfo, error) {
 	clientData, err := sstore.EnsureClientData(ctx)
