@@ -626,6 +626,7 @@ declare global {
         webgl: boolean;
         autocompleteenabled: boolean = true;
         inputposition: "top" | "bottom";
+        aiprovider?: string;
     };
 
     type ReleaseInfoType = {

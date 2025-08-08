@@ -5,11 +5,12 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-import speclist, {
-    diffVersionedCompletions as versionedSpeclist,
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-} from "@withfig/autocomplete/build/index";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+import autocomplete from "@withfig/autocomplete";
+
+const speclist = autocomplete?.default || [];
+const versionedSpeclist = autocomplete?.diffVersionedCompletions || [];
 import log from "../utils/log";
 import { buildExecuteShellCommand, mergeSubcomands } from "./utils";
 
@@ -47,7 +48,9 @@ export const loadSpec = async (specName: string, entries: string[]): Promise<Fig
         }
         if (specSet[specName]) {
             log.debug("loading spec");
-            spec = await import(`@withfig/autocomplete/build/${specSet[specName]}`);
+            // For now, we'll skip dynamic spec loading since the new package structure doesn't support it
+            log.debug("Dynamic spec loading not supported with current package version");
+            return undefined;
         } else {
             log.debug("no spec found, returning undefined");
             return;
@@ -87,7 +90,9 @@ export const loadSpec = async (specName: string, entries: string[]): Promise<Fig
 
 // this load spec function should only be used for `loadSpec` on the fly as it is cacheless
 export const lazyLoadSpec = async (key: string): Promise<Fig.Spec | undefined> => {
-    return (await import(`@withfig/autocomplete/build/${key}.js`)).default;
+    // For now, we'll skip dynamic spec loading since the new package structure doesn't support it
+    log.debug("Dynamic spec loading not supported with current package version for key:", key);
+    return undefined;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- will be implemented in below TODO

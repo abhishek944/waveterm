@@ -1,13 +1,15 @@
 // Copyright 2023, Command Line Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-package openai
+package azureopenai
 
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/openai/openai-go/v2"
+	"github.com/openai/openai-go/v2/azure"
 	"github.com/openai/openai-go/v2/option"
 	"github.com/openai/openai-go/v2/packages/param"
 	"github.com/openai/openai-go/v2/shared"
@@ -16,7 +18,8 @@ import (
 )
 
 const DefaultMaxTokens = 1000
-const DefaultModel = "gpt-3.5-turbo"
+const DefaultModel = "gpt-35-turbo" // Azure uses different model names
+const DefaultAPIVersion = "2024-06-01"
 const DefaultStreamChanSize = 10
 
 func convertUsage(usage openai.CompletionUsage) *packet.OpenAIUsageType {
@@ -42,72 +45,90 @@ func ConvertPromptMessages(prompt []packet.OpenAIPromptMessageType) []openai.Cha
 	return messages
 }
 
-func RunCompletion(ctx context.Context, opts *sstore.OpenAIOptsType, prompt []packet.OpenAIPromptMessageType) ([]*packet.OpenAIPacketType, error) {
+func RunCompletion(ctx context.Context, opts *sstore.AzureOpenAIOptsType, prompt []packet.OpenAIPromptMessageType) ([]*packet.OpenAIPacketType, error) {
 	if opts == nil {
-		return nil, fmt.Errorf("no openai opts found")
+		return nil, fmt.Errorf("no azure openai opts found")
 	}
-	if opts.Model == "" {
-		return nil, fmt.Errorf("no openai model specified")
+	if opts.BaseURL == "" {
+		return nil, fmt.Errorf("no azure openai endpoint specified")
 	}
 	if opts.APIToken == "" {
 		return nil, fmt.Errorf("no api token")
 	}
+	if opts.DeploymentName == "" {
+		return nil, fmt.Errorf("no deployment name specified")
+	}
+
+	// Extract API version from BaseURL if present (format: https://xxx.openai.azure.com?api-version=2024-06-01)
+	baseURL := opts.BaseURL
+	apiVersion := DefaultAPIVersion
+	
+	if idx := strings.Index(baseURL, "?api-version="); idx != -1 {
+		apiVersion = baseURL[idx+13:]
+		baseURL = baseURL[:idx]
+	}
+	
+	// Ensure the BaseURL doesn't have trailing slash for Azure SDK
+	baseURL = strings.TrimSuffix(baseURL, "/")
 
 	clientOpts := []option.RequestOption{
-		option.WithAPIKey(opts.APIToken),
-	}
-	if opts.BaseURL != "" {
-		clientOpts = append(clientOpts, option.WithBaseURL(opts.BaseURL))
+		azure.WithEndpoint(baseURL, apiVersion),
+		azure.WithAPIKey(opts.APIToken),
 	}
 	
 	client := openai.NewClient(clientOpts...)
 	
 	params := openai.ChatCompletionNewParams{
-		Model:     shared.ChatModel(opts.Model),
+		Model:     shared.ChatModel(opts.DeploymentName), // Use deployment name as model
 		Messages:  ConvertPromptMessages(prompt),
-		MaxTokens: param.NewOpt(int64(opts.MaxTokens)),
-	}
-	
-	if opts.MaxChoices > 1 {
-		params.N = param.NewOpt(int64(opts.MaxChoices))
+		MaxTokens: param.NewOpt(int64(DefaultMaxTokens)),
 	}
 	
 	completion, err := client.Chat.Completions.New(ctx, params)
 	if err != nil {
-		return nil, fmt.Errorf("error calling openai API: %v", err)
+		return nil, fmt.Errorf("error calling azure openai API: %v", err)
 	}
 	
 	return marshalResponse(completion), nil
 }
 
-func RunCompletionStream(ctx context.Context, opts *sstore.OpenAIOptsType, prompt []packet.OpenAIPromptMessageType) (chan *packet.OpenAIPacketType, error) {
+func RunCompletionStream(ctx context.Context, opts *sstore.AzureOpenAIOptsType, prompt []packet.OpenAIPromptMessageType) (chan *packet.OpenAIPacketType, error) {
 	if opts == nil {
-		return nil, fmt.Errorf("no openai opts found")
+		return nil, fmt.Errorf("no azure openai opts found")
 	}
-	if opts.Model == "" {
-		return nil, fmt.Errorf("no openai model specified")
+	if opts.BaseURL == "" {
+		return nil, fmt.Errorf("no azure openai endpoint specified")
 	}
 	if opts.APIToken == "" {
 		return nil, fmt.Errorf("no api token")
 	}
+	if opts.DeploymentName == "" {
+		return nil, fmt.Errorf("no deployment name specified")
+	}
+
+	// Extract API version from BaseURL if present
+	baseURL := opts.BaseURL
+	apiVersion := DefaultAPIVersion
+	
+	if idx := strings.Index(baseURL, "?api-version="); idx != -1 {
+		apiVersion = baseURL[idx+13:]
+		baseURL = baseURL[:idx]
+	}
+	
+	// Ensure the BaseURL doesn't have trailing slash for Azure SDK
+	baseURL = strings.TrimSuffix(baseURL, "/")
 
 	clientOpts := []option.RequestOption{
-		option.WithAPIKey(opts.APIToken),
-	}
-	if opts.BaseURL != "" {
-		clientOpts = append(clientOpts, option.WithBaseURL(opts.BaseURL))
+		azure.WithEndpoint(baseURL, apiVersion),
+		azure.WithAPIKey(opts.APIToken),
 	}
 	
 	client := openai.NewClient(clientOpts...)
 	
 	params := openai.ChatCompletionNewParams{
-		Model:     shared.ChatModel(opts.Model),
+		Model:     shared.ChatModel(opts.DeploymentName), // Use deployment name as model
 		Messages:  ConvertPromptMessages(prompt),
-		MaxTokens: param.NewOpt(int64(opts.MaxTokens)),
-	}
-	
-	if opts.MaxChoices > 1 {
-		params.N = param.NewOpt(int64(opts.MaxChoices))
+		MaxTokens: param.NewOpt(int64(DefaultMaxTokens)),
 	}
 	
 	stream := client.Chat.Completions.NewStreaming(ctx, params)

@@ -16,7 +16,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -48,7 +47,6 @@ import (
 	"github.com/abhishek944/waveterm/wavesrv/pkg/telemetry"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/waveenc"
 	"github.com/google/uuid"
-	"github.com/gorilla/websocket"
 	"github.com/kevinburke/ssh_config"
 	"golang.org/x/mod/semver"
 )
@@ -273,6 +271,7 @@ func init() {
 	registerCmdFn("bookmark:delete", BookmarkDeleteCommand)
 
 	registerCmdFn("chat", OpenAICommand)
+	registerCmdFn("agent", AgentCommand)
 
 	registerCmdFn("_killserver", KillServerCommand)
 	registerCmdFn("_dumpstate", DumpStateCommand)
@@ -2622,279 +2621,6 @@ func writePacketToPty(ctx context.Context, cmd *sstore.CmdType, pk packet.Packet
 	return nil
 }
 
-func doOpenAICompletion(cmd *sstore.CmdType, opts *sstore.OpenAIOptsType, prompt []packet.OpenAIPromptMessageType) {
-	var outputPos int64
-	var hadError bool
-	startTime := time.Now()
-	ctx, cancelFn := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancelFn()
-	defer func() {
-		r := recover()
-		if r != nil {
-			panicMsg := fmt.Sprintf("panic: %v", r)
-			log.Printf("panic in doOpenAICompletion: %s\n", panicMsg)
-			writeErrorToPty(cmd, panicMsg, outputPos)
-			hadError = true
-		}
-		duration := time.Since(startTime)
-		cmdStatus := sstore.CmdStatusDone
-		var exitCode int
-		if hadError {
-			cmdStatus = sstore.CmdStatusError
-			exitCode = 1
-		}
-		ck := base.MakeCommandKey(cmd.ScreenId, cmd.LineId)
-		doneInfo := sstore.CmdDoneDataValues{
-			Ts:         time.Now().UnixMilli(),
-			ExitCode:   exitCode,
-			DurationMs: duration.Milliseconds(),
-		}
-		update := scbus.MakeUpdatePacket()
-		err := sstore.UpdateCmdDoneInfo(context.Background(), update, ck, doneInfo, cmdStatus)
-		if err != nil {
-			// nothing to do
-			log.Printf("error updating cmddoneinfo (in openai): %v\n", err)
-			return
-		}
-		scbus.MainUpdateBus.DoScreenUpdate(cmd.ScreenId, update)
-	}()
-	var respPks []*packet.OpenAIPacketType
-	var err error
-	// run open ai completion locally
-	respPks, err = openai.RunCompletion(ctx, opts, prompt)
-	if err != nil {
-		writeErrorToPty(cmd, fmt.Sprintf("error calling OpenAI API: %v", err), outputPos)
-		return
-	}
-	for _, pk := range respPks {
-		err = writePacketToPty(ctx, cmd, pk, &outputPos)
-		if err != nil {
-			writeErrorToPty(cmd, fmt.Sprintf("error writing response to ptybuffer: %v", err), outputPos)
-			return
-		}
-	}
-	return
-}
-
-func writePacketToUpdateBus(ctx context.Context, cmd *sstore.CmdType, pk *packet.OpenAICmdInfoChatMessage) {
-	update := sstore.UpdateWithAddNewOpenAICmdInfoPacket(ctx, cmd.ScreenId, pk)
-	scbus.MainUpdateBus.DoScreenUpdate(cmd.ScreenId, update)
-}
-
-func updateAsstResponseAndWriteToUpdateBus(ctx context.Context, cmd *sstore.CmdType, pk *packet.OpenAICmdInfoChatMessage, messageID int) {
-	update, err := sstore.UpdateWithUpdateOpenAICmdInfoPacket(ctx, cmd.ScreenId, messageID, pk)
-	if err != nil {
-		log.Printf("Open AI Update packet err: %v\n", err)
-	}
-	scbus.MainUpdateBus.DoScreenUpdate(cmd.ScreenId, update)
-}
-
-func getCmdInfoEngineeredPrompt(userQuery string, curLineStr string, shellType string, osType string) string {
-	promptBase := "You are an AI assistant with deep expertise in command line interfaces, CLI programs, and shell scripting. Your task is to help the user to fix an existing command that will be provided, or if no command is provided, help write a new command that the user requires. Feel free to provide appropriate context, but try to keep your answers short and to the point as the user is asking for help because they are trying to get a task done immediately."
-	promptBase = promptBase + " The user is current using the \"" + shellType + "\" shell on " + osType + "."
-	promptCurrentCommand := ""
-	if strings.TrimSpace(curLineStr) != "" {
-		// Enclose the command in triple backticks to format it as a code block.
-		promptCurrentCommand = " The user is currently working with the command: ```\n" + curLineStr + "\n```\n\n"
-	}
-	promptFormattingInstruction := "Please ensure any command line suggestions or code snippets or scripts that are meant to be run by the user are enclosed in triple backquotes for easy copy and paste into the terminal.  Also note that any response you give will be rendered in markdown."
-	promptQuestion := " The user's question is:\n\n" + userQuery + ""
-
-	return promptBase + promptCurrentCommand + promptFormattingInstruction + promptQuestion
-}
-
-func doOpenAICmdInfoCompletion(cmd *sstore.CmdType, clientId string, opts *sstore.OpenAIOptsType, prompt []packet.OpenAIPromptMessageType, curLineStr string) {
-	ctx, cancelFn := context.WithTimeout(context.Background(), OpenAIStreamTimeout)
-	defer cancelFn()
-	defer func() {
-		r := recover()
-		if r != nil {
-			panicMsg := fmt.Sprintf("panic: %v", r)
-			log.Printf("panic in doOpenAICompletion: %s\n", panicMsg)
-		}
-	}()
-	var ch chan *packet.OpenAIPacketType
-	var err error
-	if opts.BaseURL == "" && opts.APIToken == "" {
-		var conn *websocket.Conn
-		ch, conn, err = openai.RunCloudCompletionStream(ctx, clientId, opts, prompt)
-		if conn != nil {
-			defer conn.Close()
-		}
-	} else {
-		ch, err = openai.RunCompletionStream(ctx, opts, prompt)
-	}
-	asstOutputPk := &packet.OpenAICmdInfoPacketOutputType{
-		Model:        "",
-		Created:      0,
-		FinishReason: "",
-		Message:      "",
-	}
-	asstOutputMessageID := sstore.ScreenMemGetCmdInfoMessageCount(cmd.ScreenId)
-	asstMessagePk := &packet.OpenAICmdInfoChatMessage{IsAssistantResponse: true, AssistantResponse: asstOutputPk, MessageID: asstOutputMessageID}
-	if err != nil {
-		asstOutputPk.Error = fmt.Sprintf("Error calling OpenAI API: %v", err)
-		writePacketToUpdateBus(ctx, cmd, asstMessagePk)
-		return
-	}
-	writePacketToUpdateBus(ctx, cmd, asstMessagePk)
-	packetTimeout := OpenAIPacketTimeout
-	if opts.Timeout > 0 {
-		packetTimeout = time.Duration(opts.Timeout) * time.Millisecond
-	}
-	doneWaitingForPackets := false
-	for !doneWaitingForPackets {
-		select {
-		case <-time.After(packetTimeout):
-			// timeout reading from channel
-			doneWaitingForPackets = true
-			asstOutputPk.Error = "timeout waiting for server response"
-			updateAsstResponseAndWriteToUpdateBus(ctx, cmd, asstMessagePk, asstOutputMessageID)
-		case pk, ok := <-ch:
-			if ok {
-				// got a packet
-				if pk.Error != "" {
-					asstOutputPk.Error = pk.Error
-				}
-				if pk.Model != "" && pk.Index == 0 {
-					asstOutputPk.Model = pk.Model
-					asstOutputPk.Created = pk.Created
-					asstOutputPk.FinishReason = pk.FinishReason
-					if pk.Text != "" {
-						asstOutputPk.Message += pk.Text
-					}
-				}
-				if pk.Index == 0 {
-					if pk.FinishReason != "" {
-						asstOutputPk.FinishReason = pk.FinishReason
-					}
-					if pk.Text != "" {
-						asstOutputPk.Message += pk.Text
-					}
-				}
-				asstMessagePk.AssistantResponse = asstOutputPk
-				updateAsstResponseAndWriteToUpdateBus(ctx, cmd, asstMessagePk, asstOutputMessageID)
-			} else {
-				// channel closed
-				doneWaitingForPackets = true
-			}
-		}
-	}
-}
-
-func doOpenAIStreamCompletion(cmd *sstore.CmdType, clientId string, opts *sstore.OpenAIOptsType, prompt []packet.OpenAIPromptMessageType) {
-	var outputPos int64
-	var hadError bool
-	startTime := time.Now()
-	ctx, cancelFn := context.WithTimeout(context.Background(), OpenAIStreamTimeout)
-	defer cancelFn()
-	defer func() {
-		r := recover()
-		if r != nil {
-			panicMsg := fmt.Sprintf("panic: %v", r)
-			log.Printf("panic in doOpenAICompletion: %s\n", panicMsg)
-			writeErrorToPty(cmd, panicMsg, outputPos)
-			hadError = true
-		}
-		duration := time.Since(startTime)
-		cmdStatus := sstore.CmdStatusDone
-		var exitCode int
-		if hadError {
-			cmdStatus = sstore.CmdStatusError
-			exitCode = 1
-		}
-		ck := base.MakeCommandKey(cmd.ScreenId, cmd.LineId)
-		doneInfo := sstore.CmdDoneDataValues{
-			Ts:         time.Now().UnixMilli(),
-			ExitCode:   exitCode,
-			DurationMs: duration.Milliseconds(),
-		}
-		update := scbus.MakeUpdatePacket()
-		err := sstore.UpdateCmdDoneInfo(context.Background(), update, ck, doneInfo, cmdStatus)
-		if err != nil {
-			// nothing to do
-			log.Printf("error updating cmddoneinfo (in openai): %v\n", err)
-			return
-		}
-		scbus.MainUpdateBus.DoScreenUpdate(cmd.ScreenId, update)
-	}()
-	var ch chan *packet.OpenAIPacketType
-	var err error
-	if opts.APIToken == "" && opts.BaseURL == "" {
-		var conn *websocket.Conn
-		ch, conn, err = openai.RunCloudCompletionStream(ctx, clientId, opts, prompt)
-		if conn != nil {
-			defer conn.Close()
-		}
-	} else {
-		ch, err = openai.RunCompletionStream(ctx, opts, prompt)
-	}
-	if err != nil {
-		writeErrorToPty(cmd, fmt.Sprintf("error calling OpenAI API: %v", err), outputPos)
-		return
-	}
-	packetTimeout := OpenAIPacketTimeout
-	if opts.Timeout > 0 {
-		packetTimeout = time.Duration(opts.Timeout) * time.Millisecond
-	}
-	doneWaitingForPackets := false
-	for !doneWaitingForPackets {
-		select {
-		case <-time.After(packetTimeout):
-			// timeout reading from channel
-			hadError = true
-			pk := openai.CreateErrorPacket(fmt.Sprintf("timeout waiting for server response"))
-			err = writePacketToPty(ctx, cmd, pk, &outputPos)
-			if err != nil {
-				log.Printf("error writing response to ptybuffer: %v", err)
-				return
-			}
-			doneWaitingForPackets = true
-		case pk, ok := <-ch:
-			if ok {
-				// got a packet
-				if pk.Error != "" {
-					hadError = true
-				}
-				err = writePacketToPty(ctx, cmd, pk, &outputPos)
-				if err != nil {
-					hadError = true
-					log.Printf("error writing response to ptybuffer: %v", err)
-					return
-				}
-			} else {
-				// channel closed
-				doneWaitingForPackets = true
-			}
-		}
-	}
-	return
-}
-
-func BuildOpenAIPromptArrayWithContext(messages []*packet.OpenAICmdInfoChatMessage) []packet.OpenAIPromptMessageType {
-	rtn := make([]packet.OpenAIPromptMessageType, 0)
-	for _, msg := range messages {
-		content := msg.UserEngineeredQuery
-		if msg.UserEngineeredQuery == "" {
-			content = msg.UserQuery
-		}
-		msgRole := sstore.OpenAIRoleUser
-		if msg.IsAssistantResponse {
-			msgRole = sstore.OpenAIRoleAssistant
-			content = msg.AssistantResponse.Message
-		}
-		rtn = append(rtn, packet.OpenAIPromptMessageType{Role: msgRole, Content: content})
-	}
-	return rtn
-}
-
-func GetOsTypeFromRuntime() string {
-	osVal := runtime.GOOS
-	if osVal == "darwin" {
-		osVal = "macos"
-	}
-	return osVal
-}
 
 func OpenAICommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {
 	ids, err := resolveUiIds(ctx, pk, R_Session|R_Screen)
@@ -2943,16 +2669,16 @@ func OpenAICommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus
 		curLineStr := defaultStr(pk.Kwargs["curline"], "")
 		userQueryPk := &packet.OpenAICmdInfoChatMessage{UserQuery: promptStr, MessageID: sstore.ScreenMemGetCmdInfoMessageCount(cmd.ScreenId)}
 		osType := GetOsTypeFromRuntime()
-		engineeredQuery := getCmdInfoEngineeredPrompt(promptStr, curLineStr, ids.Remote.ShellType, osType)
+		engineeredQuery := GetCmdInfoEngineeredPrompt(promptStr, curLineStr, ids.Remote.ShellType, osType)
 		userQueryPk.UserEngineeredQuery = engineeredQuery
-		writePacketToUpdateBus(ctx, cmd, userQueryPk)
+		WritePacketToUpdateBus(ctx, cmd, userQueryPk)
 		prompt := BuildOpenAIPromptArrayWithContext(sstore.ScreenMemGetCmdInfoChat(cmd.ScreenId).Messages)
-		go doOpenAICmdInfoCompletion(cmd, clientData.ClientId, opts, prompt, curLineStr)
+		go DoOpenAICmdInfoCompletion(cmd, clientData.ClientId, opts, prompt, curLineStr)
 		update := scbus.MakeUpdatePacket()
 		return update, nil
 	}
 	osType := GetOsTypeFromRuntime()
-	engineeredQuery := getCmdInfoEngineeredPrompt(promptStr, "", ids.Remote.ShellType, osType)
+	engineeredQuery := GetCmdInfoEngineeredPrompt(promptStr, "", ids.Remote.ShellType, osType)
 	prompt := []packet.OpenAIPromptMessageType{{Role: sstore.OpenAIRoleUser, Content: engineeredQuery}}
 	if resolveBool(pk.Kwargs["cmdinfoclear"], false) {
 		update := sstore.UpdateWithClearOpenAICmdInfo(cmd.ScreenId)
@@ -2973,9 +2699,9 @@ func OpenAICommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus
 	sendRendererActivityUpdate("openai")
 
 	if resolveBool(pk.Kwargs["stream"], true) {
-		go doOpenAIStreamCompletion(cmd, clientData.ClientId, opts, prompt)
+		go DoOpenAIStreamCompletion(cmd, clientData.ClientId, opts, prompt)
 	} else {
-		go doOpenAICompletion(cmd, opts, prompt)
+		go DoOpenAICompletion(cmd, opts, prompt)
 	}
 	updateHistoryContext(ctx, line, cmd, nil)
 	updateMap := make(map[string]interface{})
@@ -2986,6 +2712,114 @@ func OpenAICommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus
 		// ignore error again (nothing to do)
 		log.Printf("openai error updating screen selected line: %v\n", err)
 	}
+	sstore.AddLineUpdate(update, line, cmd)
+	update.AddUpdate(*screen)
+	return update, nil
+}
+
+func AgentCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {
+	ids, err := resolveUiIds(ctx, pk, R_Session|R_Screen)
+	if err != nil {
+		return nil, fmt.Errorf("/%s error: %w", GetCmdStr(pk), err)
+	}
+	clientData, err := sstore.EnsureClientData(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("cannot retrieve client data: %v", err)
+	}
+	
+	// Get the prompt from args
+	promptStr := strings.Join(pk.Args, " ")
+	if promptStr == "" {
+		return nil, fmt.Errorf("agent error, prompt string is blank")
+	}
+	
+	// Get provider from UI (defaults to empty string to use configured default)
+	provider := pk.Kwargs["provider"]
+	
+	// Get terminal options
+	ptermVal := defaultStr(pk.Kwargs["wterm"], DefaultPTERM)
+	pkTermOpts, err := GetUITermOpts(pk.UIContext.WinSize, ptermVal)
+	if err != nil {
+		return nil, fmt.Errorf("agent error, invalid 'pterm' value %q: %v", ptermVal, err)
+	}
+	termOpts := convertTermOpts(pkTermOpts)
+	
+	// Create command
+	cmd, err := makeDynCmd(ctx, GetCmdStr(pk), ids, pk.GetRawStr(), *termOpts, nil)
+	if err != nil {
+		return nil, fmt.Errorf("agent error, cannot make dyn cmd")
+	}
+	
+	// Increment running commands
+	go sstore.IncrementNumRunningCmds(cmd.ScreenId, 1)
+	
+	// Add AI line
+	line, err := sstore.AddOpenAILine(ctx, ids.ScreenId, DefaultUserId, cmd)
+	if err != nil {
+		return nil, fmt.Errorf("cannot add new line: %v", err)
+	}
+	
+	sendRendererActivityUpdate("openai")
+	
+	// Run agent mode
+	go func() {
+		response, err := RunAgentMode(ctx, pk, clientData, promptStr, provider)
+		if err != nil {
+			writeErrorToPty(cmd, fmt.Sprintf("agent error: %v", err), 0)
+			return
+		}
+		
+		// Handle streaming response
+		if response.Stream != nil {
+			var outputPos int64
+			packetTimeout := OpenAIPacketTimeout
+			
+			for {
+				select {
+				case <-time.After(packetTimeout):
+					writeErrorToPty(cmd, "timeout waiting for response", outputPos)
+					return
+				case pk, ok := <-response.Stream:
+					if !ok {
+						// Channel closed, we're done
+						// Update command status
+						ck := base.MakeCommandKey(cmd.ScreenId, cmd.LineId)
+						doneInfo := sstore.CmdDoneDataValues{
+							Ts:         time.Now().UnixMilli(),
+							ExitCode:   0,
+							DurationMs: 0,
+						}
+						update := scbus.MakeUpdatePacket()
+						err := sstore.UpdateCmdDoneInfo(context.Background(), update, ck, doneInfo, sstore.CmdStatusDone)
+						if err != nil {
+							log.Printf("error updating cmddoneinfo (in agent): %v\n", err)
+						}
+						scbus.MainUpdateBus.DoScreenUpdate(cmd.ScreenId, update)
+						return
+					}
+					
+					// Write packet to PTY
+					err = writePacketToPty(ctx, cmd, pk, &outputPos)
+					if err != nil {
+						log.Printf("error writing response to ptybuffer: %v", err)
+						return
+					}
+				}
+			}
+		}
+	}()
+	
+	// Update screen
+	updateHistoryContext(ctx, line, cmd, nil)
+	updateMap := make(map[string]interface{})
+	updateMap[sstore.ScreenField_SelectedLine] = line.LineNum
+	updateMap[sstore.ScreenField_Focus] = sstore.ScreenFocusInput
+	screen, err := sstore.UpdateScreen(ctx, ids.ScreenId, updateMap)
+	if err != nil {
+		log.Printf("agent error updating screen selected line: %v\n", err)
+	}
+	
+	update := scbus.MakeUpdatePacket()
 	sstore.AddLineUpdate(update, line, cmd)
 	update.AddUpdate(*screen)
 	return update, nil

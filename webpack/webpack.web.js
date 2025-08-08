@@ -57,7 +57,11 @@ var webCommon = {
             },
             {
                 test: /\.css$/,
-                use: ["style-loader", "css-loader"],
+                use: [
+                    { loader: MiniCssExtractPlugin.loader },
+                    "css-loader",
+                    "postcss-loader"
+                ],
             },
             {
                 test: /\.less$/,
@@ -89,6 +93,8 @@ var webCommon = {
             "@/assets": path.resolve(__dirname, "../src/app/assets/"),
             "@/plugins": path.resolve(__dirname, "../src/plugins/"),
             "@/autocomplete": path.resolve(__dirname, "../src/autocomplete/"),
+            "@/components": path.resolve(__dirname, "../src/components/"),
+            "@/lib": path.resolve(__dirname, "../src/lib/"),
         },
     },
 };

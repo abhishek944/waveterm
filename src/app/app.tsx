@@ -25,6 +25,7 @@ import { ErrorBoundary } from "@/common/error/errorboundary";
 import { TermStyleList } from "@/elements";
 
 import "./app.less";
+import "./globals.css";
 
 @mobxReact.observer
 class App extends React.Component<{}, {}> {

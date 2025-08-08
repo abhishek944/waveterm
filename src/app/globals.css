@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Override Radix UI styles for our app */
+.ai-provider-wrapper {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 10px;
+}
+
+/* Custom styles for the Select component to match Wave's theme */
+[data-radix-popper-content-wrapper] {
+  z-index: 10000 !important;
+}
+
+/* AI Provider Dropdown Custom Styles */
+.ai-provider-trigger {
+  transition: all 0.2s ease;
+}
+
+.ai-provider-trigger:hover {
+  background-color: var(--app-hover-bg-color, rgba(255, 255, 255, 0.1)) !important;
+  border-color: var(--app-hover-border-color, rgba(255, 255, 255, 0.3)) !important;
+}
+
+/* Hide ALL checkmark indicators */
+[role="option"] svg.lucide-check,
+[role="option"] .lucide-check,
+[data-radix-collection-item] svg.lucide-check {
+  display: none !important;
+}
+
+/* Remove checkmark container space */
+[role="option"] > span:first-child,
+[data-radix-collection-item] > span:first-child {
+  display: none !important;
+}
+
+/* Adjust item padding since we removed the checkmark space */
+[role="option"],
+[data-radix-collection-item] {
+  padding-left: 12px !important;
+}
+
+/* Custom selected state styling */
+.ai-provider-item[data-state="checked"] {
+  background-color: rgba(76, 175, 80, 0.15) !important;
+}
+
+.ai-provider-item[data-state="checked"] span {
+  color: #4ade80 !important;
+}
+
+/* Hover state for items */
+.ai-provider-item:hover:not([data-state="checked"]) {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Focus state */
+.ai-provider-item[data-highlighted] {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  outline: none;
+}
+
+/* Dropdown content styling */
+[data-radix-select-content] {
+  border-radius: 6px !important;
+  overflow: hidden !important;
+}

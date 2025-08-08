@@ -733,14 +733,26 @@ class InputModel {
     }
 
     uiSubmitCommand(): void {
-        const commandStr = this.curLine;
+        let commandStr = this.curLine;
         if (commandStr.trim() == "") {
             return;
         }
+        
+        // Prefix command based on mode
+        const isAgentMode = this.globalModel.isAgentMode.get();
+        const isThreadMode = this.globalModel.isThreadMode.get();
+        
+        if (isAgentMode && !commandStr.startsWith("/agent ")) {
+            commandStr = "/agent " + commandStr;
+        } else if (isThreadMode && !commandStr.startsWith("/chat ")) {
+            commandStr = "/chat " + commandStr;
+        }
+        
         mobx.action(() => {
             this.resetInput();
         })();
-        this.globalModel.submitRawCommand(commandStr, true, true);
+        
+        this.globalModel.submitRawCommand(commandStr, true, true, isAgentMode, isThreadMode);
     }
 
     isEmpty(): boolean {

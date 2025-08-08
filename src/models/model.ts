@@ -157,6 +157,9 @@ class Model {
     isAgentMode: OV<boolean> = mobx.observable.box(false, {
         name: "isAgentMode",
     });
+    aiProvider: OV<string> = mobx.observable.box("", {
+        name: "aiProvider",
+    });
 
     private constructor() {
         this.clientId = getApi().getId();
@@ -458,6 +461,11 @@ class Model {
             }
             this.isAgentMode.set(!this.isAgentMode.get());
         })();
+    }
+
+    @mobx.action
+    setAIProvider(provider: string): void {
+        this.aiProvider.set(provider);
     }
 
     getBaseHostPort(): string {
@@ -1393,6 +1401,11 @@ class Model {
         const themeUpdated = newTheme != this.getThemeSource();
         mobx.action(() => {
             this.clientData.set(clientData);
+            // Load saved AI provider from config
+            const savedProvider = clientData?.clientopts?.aiprovider;
+            if (savedProvider != null) {
+                this.aiProvider.set(savedProvider);
+            }
         })();
         let shortcut = null;
         if (clientData?.clientopts?.globalshortcutenabled) {
@@ -1622,7 +1635,7 @@ class Model {
         return this.submitCommandPacket(pk, interactive);
     }
 
-    submitRawCommand(cmdStr: string, addToHistory: boolean, interactive: boolean): Promise<CommandRtnType> {
+    submitRawCommand(cmdStr: string, addToHistory: boolean, interactive: boolean, isAgentMode?: boolean, isThreadMode?: boolean): Promise<CommandRtnType> {
         const pk: FeCmdPacketType = {
             type: "fecmd",
             metacmd: "eval",
@@ -1634,6 +1647,24 @@ class Model {
         };
         if (!addToHistory && pk.kwargs) {
             pk.kwargs["nohist"] = "1";
+        }
+        // Add agent mode flag to kwargs if in agent mode
+        if (isAgentMode) {
+            pk.kwargs["agentmode"] = "1";
+            // Add AI provider if selected
+            const provider = this.aiProvider.get();
+            if (provider && provider !== "") {
+                pk.kwargs["provider"] = provider;
+            }
+        }
+        // Add thread mode flag to kwargs if in thread mode
+        if (isThreadMode) {
+            pk.kwargs["threadmode"] = "1";
+            // Add AI provider if selected
+            const provider = this.aiProvider.get();
+            if (provider && provider !== "") {
+                pk.kwargs["provider"] = provider;
+            }
         }
         return this.submitCommandPacket(pk, interactive);
     }

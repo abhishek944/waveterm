@@ -110,6 +110,14 @@ class ForwardLineContainer {
     getSelectedLine(): number {
         return this.screen.getSelectedLine();
     }
+
+    getSelectedLines(): number[] {
+        return this.screen.getSelectedLines();
+    }
+
+    toggleLineSelect(lineNum: number): void {
+        this.screen.toggleLineSelect(lineNum);
+    }
 }
 
 export { ForwardLineContainer };

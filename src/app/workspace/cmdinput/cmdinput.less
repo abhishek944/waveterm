@@ -110,9 +110,17 @@
             padding: var(--padding-top) var(--padding-sides) 0 var(--padding-sides);
             margin-left: 2px;
 
+            &.cmd-prompt-line {
+                display: flex;
+                align-items: center;
+                flex-wrap: nowrap;
+                gap: 0;
+            }
+
             .mode-indicator {
                 color: var(--term-bright-red);
                 font-weight: bold;
+                white-space: nowrap;
             }
         }
 

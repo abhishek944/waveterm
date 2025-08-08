@@ -246,7 +246,7 @@ class KeybindManager {
             return true;
         }
         let curCommand = commandsList.shift();
-        let prtn = this.globalModel.submitRawCommand(curCommand, false, true);
+        let prtn = this.globalModel.submitRawCommand(curCommand, false, true, false, false);
         prtn.then((rtn) => {
             if (!rtn.success) {
                 console.log("error running command ", curCommand);

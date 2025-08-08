@@ -19,6 +19,7 @@ import { CenteredIcon, RotateIcon } from "@/common/icons/icons";
 import * as util from "@/util/util";
 import * as appconst from "@/app/appconst";
 import { AutocompleteSuggestionView } from "./suggestionview";
+import { AIProviderDropdown } from "./aiprovider";
 
 import "./cmdinput.less";
 
@@ -279,13 +280,16 @@ class CmdInput extends React.Component<{}, {}> {
                     </div>
                     <If condition={!hidePrompt}>
                         <div key="prompt" className="cmd-input-context">
-                            <div className="has-text-white">
+                            <div className="has-text-white cmd-prompt-line">
                                 <span ref={this.promptRef}>
                                     <Prompt rptr={rptr} festate={feState} color={true} shellInitMsg={shellInitMsg} />
+                                    {(GlobalModel.isThreadMode.get() || GlobalModel.isAgentMode.get()) && (
+                                        <span className="mode-indicator"> | Mode: {GlobalModel.isAgentMode.get() ? "Agent" : "Thread"}</span>
+                                    )}
                                 </span>
-                                <If condition={GlobalModel.isThreadMode.get() || GlobalModel.isAgentMode.get()}>
-                                    <span className="mode-indicator"> | Mode: Agent</span>
-                                </If>
+                                {(GlobalModel.isThreadMode.get() || GlobalModel.isAgentMode.get()) && (
+                                    <AIProviderDropdown />
+                                )}
                             </div>
                         </div>
                     </If>
