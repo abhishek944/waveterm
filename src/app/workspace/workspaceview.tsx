@@ -235,6 +235,7 @@ class WorkspaceView extends React.Component<{}, {}> {
         const isHidden = GlobalModel.activeMainView.get() != "session";
         const mainSidebarModel = GlobalModel.mainSidebarModel;
         const showTabSettings = GlobalModel.tabSettingsOpen.get();
+        const inputPosition = GlobalModel.inputPosition.get();
         return (
             <div
                 ref={this.sessionRef}
@@ -250,7 +251,7 @@ class WorkspaceView extends React.Component<{}, {}> {
                 </If>
                 <ScreenTabs key={"tabs-" + sessionId} session={session} />
                 <If condition={activeScreen != null}>
-                    <div key="pulldown" className={clsx("tab-settings-pulldown", { closed: !showTabSettings })}>
+                    <div key="pulldown" className={clsx("tab-settings-pulldown", { closed: !showTabSettings, "input-top": inputPosition === "top" })}>
                         <Button className="close-button secondary ghost" onClick={this.toggleTabSettings}>
                             <i className="fa-solid fa-sharp fa-xmark-large" />
                         </Button>
@@ -261,10 +262,15 @@ class WorkspaceView extends React.Component<{}, {}> {
                     </div>
                 </If>
                 <ErrorBoundary key="eb">
-                    <ScreenView key={`screenview-${sessionId}`} session={session} screen={activeScreen} />
-                    <If condition={activeScreen != null}>
-                        <CmdInput key={"cmdinput-" + sessionId} />
-                    </If>
+                    <div className="screen-content-wrapper">
+                        <If condition={activeScreen != null && inputPosition === "top"}>
+                            <CmdInput key={"cmdinput-" + sessionId} />
+                        </If>
+                        <ScreenView key={`screenview-${sessionId}`} session={session} screen={activeScreen} />
+                        <If condition={activeScreen != null && inputPosition !== "top"}>
+                            <CmdInput key={"cmdinput-" + sessionId} />
+                        </If>
+                    </div>
                 </ErrorBoundary>
             </div>
         );

@@ -522,10 +522,19 @@ class ScreenWindowView extends React.Component<ScreenWindowViewProps, {}> {
 
     determineVisibleLines(win: ScreenLines): LineType[] {
         const { screen } = this.props;
+        let lines: LineType[];
+
         if (screen.filterRunning.get()) {
-            return win.getRunningCmdLines();
+            lines = win.getRunningCmdLines();
+        } else {
+            lines = win.getNonArchivedLines();
         }
-        return win.getNonArchivedLines();
+
+        if (GlobalModel.inputPosition.get() === "top") {
+            return lines.slice().reverse();
+        }
+
+        return lines;
     }
 
     @boundMethod

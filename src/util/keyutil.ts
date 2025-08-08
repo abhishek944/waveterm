@@ -642,7 +642,10 @@ class KeybindManager {
         if (!this.keyDescriptionsMap.has(keyDescription)) {
             return false;
         }
-        let keyPressArray = this.keyDescriptionsMap.get(keyDescription).keys;
+        let keyPressArray = this.keyDescriptionsMap.get(keyDescription)?.keys;
+        if (keyPressArray == null) {
+            return false;
+        }
         for (let index = 0; index < keyPressArray.length; index++) {
             let curKeyPress = keyPressArray[index];
             let pressed = checkKeyPressed(event, curKeyPress);

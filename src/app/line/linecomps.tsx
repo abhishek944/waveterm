@@ -29,6 +29,37 @@ import * as util from "@/util/util";
 import "./line.less";
 import { RotateIcon } from "../common/icons/icons";
 
+// Thread state persistence
+const THREAD_STORAGE_KEY = "threadedLines";
+
+// Create a global observable set for threaded lines
+const threadedLinesObs = mobx.observable.set<string>([], { deep: false });
+
+// Initialize from localStorage
+function initThreadedLines() {
+    const stored = localStorage.getItem(THREAD_STORAGE_KEY);
+    if (stored) {
+        const parsed = JSON.parse(stored);
+        mobx.action(() => {
+            threadedLinesObs.clear();
+            parsed.forEach(lineId => threadedLinesObs.add(lineId));
+        })();
+    }
+}
+initThreadedLines();
+
+function setThreadedLine(lineID: string, added: boolean): void {
+    mobx.action(() => {
+        if (added) {
+            threadedLinesObs.add(lineID);
+        } else {
+            threadedLinesObs.delete(lineID);
+        }
+        // Save to localStorage
+        localStorage.setItem(THREAD_STORAGE_KEY, JSON.stringify(Array.from(threadedLinesObs)));
+    })();
+}
+
 const DebugHeightProblems = false;
 const MinLine = 0;
 const MaxLine = 1000;
@@ -76,6 +107,13 @@ function getIsHidePrompt(line: LineType): boolean {
 
 @mobxReact.observer
 class LineActions extends React.Component<{ screen: LineContainerType; line: LineType; cmd: Cmd }, {}> {
+    @boundMethod
+    clickAddToThread(e: any) {
+        e.stopPropagation();
+        const { line } = this.props;
+        const isCurrentlyAdded = threadedLinesObs.has(line.lineid);
+        setThreadedLine(line.lineid, !isCurrentlyAdded);
+    }
     @boundMethod
     clickStar() {
         const { line } = this.props;
@@ -178,6 +216,13 @@ class LineActions extends React.Component<{ screen: LineContainerType; line: Lin
             <div className="line-actions">
                 <Choose>
                     <When condition={containerType == appconst.LineContainer_Main}>
+                        <div key="thread" title={threadedLinesObs.has(line.lineid) ? "Added to thread" : "Add to thread"} className="line-icon" onClick={this.clickAddToThread}>
+                            {threadedLinesObs.has(line.lineid) ? (
+                                <i className="fa-sharp fa-solid fa-check fa-fw" />
+                            ) : (
+                                <i className="fa-sharp fa-regular fa-comment fa-fw" />
+                            )}
+                        </div>
                         <div key="chat" title="Ask Wave AI" className="line-icon" onClick={this.clickChat}>
                             <i className="fa-sharp fa-regular fa-sparkles fa-fw" />
                         </div>
@@ -844,6 +889,7 @@ class LineCmd extends React.Component<
             .get();
         const isRunning = cmd.isRunning();
         const cmdError = cmdShouldMarkError(cmd);
+        const isThreaded = threadedLinesObs.has(line.lineid);
         const mainDivCn = clsx(
             "line",
             "line-cmd",
@@ -851,7 +897,8 @@ class LineCmd extends React.Component<
             { active: isSelected && isFocused },
             { "cmd-done": !isRunning },
             { "has-rtnstate": isRtnState },
-            { "has-error": cmdError }
+            { "has-error": cmdError },
+            { threaded: isThreaded }
         );
         let rendererPlugin: RendererPluginType = null;
         const isNoneRenderer = line.renderer == "none";

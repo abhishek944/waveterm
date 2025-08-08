@@ -119,7 +119,15 @@
     },
     {
       "command": "app:focusCmdInput",
+      "keys": ["Cmd:Shift:i"]
+    },
+    {
+      "command": "app:toggleThreadMode",
       "keys": ["Cmd:i"]
+    },
+    {
+      "command": "app:toggleAgentMode",
+      "keys": ["Cmd:o"]
     },
     {
       "command": "app:focusSelectedLine",

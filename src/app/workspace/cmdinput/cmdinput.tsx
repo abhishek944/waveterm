@@ -193,8 +193,11 @@ class CmdInput extends React.Component<{}, {}> {
             }
         }
 
+        const inputPosition = GlobalModel.inputPosition.get();
+        const isAgentMode = GlobalModel.isAgentMode.get();
+        const isThreadMode = GlobalModel.isThreadMode.get();
         return (
-            <div ref={this.cmdInputRef} className={clsx("cmd-input", hasOpenView, { active: focusVal })}>
+            <div ref={this.cmdInputRef} className={clsx("cmd-input", hasOpenView, { active: focusVal, "input-at-top": inputPosition === "top", "agent-mode": isAgentMode, "thread-mode": isThreadMode })}>
                 <Choose>
                     <When condition={openView === appconst.InputAuxView_History}>
                         <div className="cmd-input-grow-spacer"></div>
@@ -257,7 +260,7 @@ class CmdInput extends React.Component<{}, {}> {
                                 </CenteredIcon>
                             </div>
                         </If>
-                        <div
+                        {/* <div
                             key="aichat"
                             title="Wave AI (Cmd-Shift-Space)"
                             className="cmdinput-icon"
@@ -272,7 +275,7 @@ class CmdInput extends React.Component<{}, {}> {
                             onClick={this.clickHistoryAction}
                         >
                             <i className="fa-sharp fa-regular fa-clock-rotate-left fa-fw" />
-                        </div>
+                        </div> */}
                     </div>
                     <If condition={!hidePrompt}>
                         <div key="prompt" className="cmd-input-context">
@@ -280,6 +283,9 @@ class CmdInput extends React.Component<{}, {}> {
                                 <span ref={this.promptRef}>
                                     <Prompt rptr={rptr} festate={feState} color={true} shellInitMsg={shellInitMsg} />
                                 </span>
+                                <If condition={GlobalModel.isThreadMode.get() || GlobalModel.isAgentMode.get()}>
+                                    <span className="mode-indicator"> | Mode: Agent</span>
+                                </If>
                             </div>
                         </div>
                     </If>

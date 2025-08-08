@@ -5,7 +5,8 @@
     padding: calc(var(--termpad) * 2) var(--termpad) calc(var(--termpad) * 2 + 1px) calc(var(--termpad) * 3);
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: visible;
     flex-shrink: 0;
     position: relative;
     line-height: 11px;
@@ -122,12 +123,10 @@
         .line-icon {
             visibility: hidden;
 
-            &.active {
-                visibility: visible;
-            }
-
+            &.active,
             &:hover {
                 color: var(--line-actions-active-color);
+                visibility: visible;
             }
 
             padding: 4px 4px;
@@ -208,6 +207,11 @@
 
             .renderer .renderer-icon {
                 margin-right: 0.5em;
+            }
+
+            .mode-indicator {
+                color: var(--term-bright-red);
+                font-weight: bold;
             }
 
             .metapart-mono {

@@ -12,7 +12,6 @@ import dayjs from "dayjs";
 import localizedFormat from "dayjs/plugin/localizedFormat";
 import { debounce, throttle } from "throttle-debounce";
 import * as util from "@/util/util";
-import * as lineutil from "./lineutil";
 
 import "./lines.less";
 import { GlobalModel } from "@/models";
@@ -102,17 +101,33 @@ class LinesView extends React.Component<
             screen.setAnchorFields(null, 0, "no-line");
             return;
         }
+        const inputAtTop = GlobalModel.inputPosition.get() === "top";
         let scrollTop = linesElem.scrollTop;
         let height = linesElem.clientHeight;
         let containerBottom = scrollTop + height;
         let anchorElem: HTMLElement = null;
-        for (let i = lineElemArr.length - 1; i >= 0; i--) {
-            let lineElem = lineElemArr[i];
-            let bottomPos = lineElem.offsetTop + lineElem.offsetHeight;
-            if (anchorElem == null && (bottomPos <= containerBottom || lineElem.offsetTop <= scrollTop)) {
-                anchorElem = lineElem;
+        
+        if (inputAtTop) {
+            // When input is at top, find the first visible line from top
+            for (let i = 0; i < lineElemArr.length; i++) {
+                let lineElem = lineElemArr[i];
+                let bottomPos = lineElem.offsetTop + lineElem.offsetHeight;
+                if (bottomPos >= scrollTop) {
+                    anchorElem = lineElem;
+                    break;
+                }
+            }
+        } else {
+            // Normal behavior - find last visible line from bottom
+            for (let i = lineElemArr.length - 1; i >= 0; i--) {
+                let lineElem = lineElemArr[i];
+                let bottomPos = lineElem.offsetTop + lineElem.offsetHeight;
+                if (anchorElem == null && (bottomPos <= containerBottom || lineElem.offsetTop <= scrollTop)) {
+                    anchorElem = lineElem;
+                }
             }
         }
+        
         if (anchorElem == null) {
             anchorElem = lineElemArr[0];
         }
@@ -196,7 +211,16 @@ class LinesView extends React.Component<
         if (linesElem == null) {
             return;
         }
+        const inputAtTop = GlobalModel.inputPosition.get() === "top";
         let anchor = this.getAnchor();
+        
+        // When input is at top and we're at the newest line, keep scroll at top
+        if (inputAtTop && anchor.anchorIndex == lines.length - 1) {
+            linesElem.scrollTop = 0;
+            this.ignoreNextScroll = true;
+            return;
+        }
+        
         let anchorElem = linesElem.querySelector(sprintf('.line[data-linenum="%d"]', anchor.anchorLine));
         if (anchorElem == null) {
             return;
@@ -223,9 +247,16 @@ class LinesView extends React.Component<
         let { screen, lines } = this.props;
         let linesElem = this.linesRef.current;
         let anchor = this.getAnchor();
+        const inputAtTop = GlobalModel.inputPosition.get() === "top";
         if (anchor.anchorIndex == lines.length - 1) {
             if (linesElem != null) {
-                linesElem.scrollTop = linesElem.scrollHeight;
+                if (inputAtTop) {
+                    // When input is at top, scroll to top to show newest content
+                    linesElem.scrollTop = 0;
+                } else {
+                    // Normal behavior - scroll to bottom
+                    linesElem.scrollTop = linesElem.scrollHeight;
+                }
             }
             this.computeAnchorLine();
         } else {
@@ -344,7 +375,17 @@ class LinesView extends React.Component<
             this.updateSelectedLine();
             this.lastSelectedLine = screen.getSelectedLine();
         } else if (lines.length != this.lastLinesLength) {
-            this.restoreAnchorOffset("line-length-change");
+            const inputAtTop = GlobalModel.inputPosition.get() === "top";
+            if (inputAtTop && this.lastLinesLength < lines.length) {
+                // When input is at top and new lines are added, keep at top
+                let linesElem = this.linesRef.current;
+                if (linesElem != null) {
+                    linesElem.scrollTop = 0;
+                }
+            } else {
+                this.restoreAnchorOffset("line-length-change");
+            }
+            this.lastLinesLength = lines.length;
         }
     }
 
@@ -390,22 +431,6 @@ class LinesView extends React.Component<
         return !this.collapsedMap.get(curLineNumStr).get() || !this.collapsedMap.get(prevLineNumStr).get();
     }
 
-    getDateSepStr(
-        lines: LineInterface[],
-        idx: number,
-        prevStr: string,
-        todayStr: string,
-        yesterdayStr: string
-    ): string {
-        let curLineDate = new Date(lines[idx].ts);
-        let curLineFormat = dayjs(curLineDate).format("ddd YYYY-MM-DD");
-        if (idx == 0) {
-            return;
-        }
-        let prevLineDate = new Date(lines[idx].ts);
-        let prevLineFormat = dayjs(prevLineDate).format("YYYY-MM-DD");
-        return null;
-    }
 
     findClosestLineIndex(lineNum: number): { line: LineInterface; index: number } {
         let { lines } = this.props;
@@ -454,9 +479,6 @@ class LinesView extends React.Component<
             }
         }
         let lineElements: any = [];
-        let todayStr = util.getTodayStr();
-        let yesterdayStr = util.getYesterdayStr();
-        let prevDateStr: string = null;
         let anchor = this.getAnchor();
         let startIdx = util.boundInt(anchor.anchorIndex - 50, 0, lines.length - 1);
         let endIdx = util.boundInt(anchor.anchorIndex + 50, 0, lines.length - 1);
@@ -464,23 +486,11 @@ class LinesView extends React.Component<
         for (let idx = startIdx; idx <= endIdx; idx++) {
             let line = lines[idx];
             let lineNumStr = String(line.linenum);
-            let dateSepStr = null;
-            let curDateStr = lineutil.getLineDateStr(todayStr, yesterdayStr, line.ts);
-            if (curDateStr != prevDateStr) {
-                dateSepStr = curDateStr;
-            }
-            prevDateStr = curDateStr;
-            if (dateSepStr != null) {
-                let sepElem = (
-                    <div key={"sep-" + line.lineid} className="line-sep-labeled">
-                        {dateSepStr}
-                    </div>
-                );
-                lineElements.push(sepElem);
-            } else if (idx > 0) {
+            // Date separators removed - no longer showing date boundaries
+            if (idx > 0) {
                 lineElements.push(<div key={"sep-" + line.lineid} className="line-sep"></div>);
             }
-            let topBorder = dateSepStr == null && this.hasTopBorder(lines, idx);
+            let topBorder = this.hasTopBorder(lines, idx);
             let lineProps = {
                 key: line.lineid,
                 line: line,
@@ -496,7 +506,15 @@ class LinesView extends React.Component<
             // let lineElem = <Line key={line.lineid} line={line} screen={screen} width={width} visible={this.visibleMap.get(lineNumStr)} staticRender={this.staticRender.get()} onHeightChange={this.onHeightChange} overrideCollapsed={this.collapsedMap.get(lineNumStr)} topBorder={topBorder} renderMode={renderMode}/>;
             lineElements.push(lineElem);
         }
-        let linesClass = clsx("lines", renderMode == "normal" ? "lines-expanded" : "lines-collapsed", "wide-scrollbar");
+        const inputAtTop = GlobalModel.inputPosition.get() === "top";
+        const isThreadMode = GlobalModel.isThreadMode.get();
+        let linesClass = clsx(
+            "lines",
+            renderMode == "normal" ? "lines-expanded" : "lines-collapsed",
+            "wide-scrollbar",
+            { "input-at-top": inputAtTop },
+            { "thread-mode": isThreadMode }
+        );
         return (
             <div key="lines" className={linesClass} onScroll={this.scrollHandler} ref={this.linesRef}>
                 <div className="lines-spacer"></div>

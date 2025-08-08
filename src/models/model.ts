@@ -85,6 +85,7 @@ class Model {
         name: "activeMainView",
     });
     termFontSize: CV<number>;
+    inputPosition: CV<"top" | "bottom">;
     alertMessage: OV<AlertMessageType> = mobx.observable.box(null, {
         name: "alertMessage",
     });
@@ -150,6 +151,12 @@ class Model {
     termRenderVersion: OV<number> = mobx.observable.box(0, {
         name: "termRenderVersion",
     });
+    isThreadMode: OV<boolean> = mobx.observable.box(false, {
+        name: "isThreadMode",
+    });
+    isAgentMode: OV<boolean> = mobx.observable.box(false, {
+        name: "isAgentMode",
+    });
 
     private constructor() {
         this.clientId = getApi().getId();
@@ -196,6 +203,13 @@ class Model {
                 return appconst.MaxFontSize;
             }
             return fontSize;
+        });
+        this.inputPosition = mobx.computed(() => {
+            const cdata = this.clientData.get();
+            if (cdata?.clientopts?.inputposition == null) {
+                return "bottom";
+            }
+            return cdata.clientopts.inputposition;
         });
         getApi().onZoomChanged(this.onZoomChanged.bind(this));
         getApi().onMenuItemAbout(this.onMenuItemAbout.bind(this));
@@ -276,6 +290,14 @@ class Model {
         });
         this.keybindManager.registerKeybinding("app", "model", "app:openConnectionsView", null);
         this.keybindManager.registerKeybinding("app", "model", "app:openSettingsView", null);
+        this.keybindManager.registerKeybinding("app", "model", "app:toggleThreadMode", (waveEvent) => {
+            this.toggleThreadMode();
+            return true;
+        });
+        this.keybindManager.registerKeybinding("app", "model", "app:toggleAgentMode", (waveEvent) => {
+            this.toggleAgentMode();
+            return true;
+        });
     }
 
     static getInstance(): Model {
@@ -415,6 +437,26 @@ class Model {
     showSessionView(): void {
         mobx.action(() => {
             this.activeMainView.set("session");
+        })();
+    }
+
+    toggleThreadMode(): void {
+        mobx.action(() => {
+            // If agent mode is active, turn it off first
+            if (this.isAgentMode.get()) {
+                this.isAgentMode.set(false);
+            }
+            this.isThreadMode.set(!this.isThreadMode.get());
+        })();
+    }
+
+    toggleAgentMode(): void {
+        mobx.action(() => {
+            // If thread mode is active, turn it off first
+            if (this.isThreadMode.get()) {
+                this.isThreadMode.set(false);
+            }
+            this.isAgentMode.set(!this.isAgentMode.get());
         })();
     }
 
@@ -660,7 +702,11 @@ class Model {
             const outputStr = termWrap.getOutput(true);
             blocks.push(cmd.getCmdStr() + "\n\n" + outputStr);
         }
-        navigator.clipboard.writeText(blocks.join("\n-------------------------------------------------------------------------------------------------\n"));
+        navigator.clipboard.writeText(
+            blocks.join(
+                "\n-------------------------------------------------------------------------------------------------\n"
+            )
+        );
     }
 
     onZoomChanged(): void {

@@ -10,6 +10,11 @@
     background-color: var(--app-bg-color);
     position: relative;
 
+    &.input-at-top {
+        border-top: none;
+        border-bottom: 2px solid var(--app-border-color);
+    }
+
     // Apply a border between the base cmdinput and any views shown above it
     // TODO: use a generic selector for this
     // &.has-aichat,
@@ -20,6 +25,44 @@
         .base-cmdinput {
             border-top: 1px solid var(--app-border-color);
         }
+    }
+
+    // Agent mode styling
+    &.agent-mode {
+        position: relative;
+        
+        &::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background-color: #ff0080;
+            opacity: 0.8;
+            z-index: 1;
+        }
+
+        background-color: rgba(255, 0, 128, 0.15);
+    }
+
+    // Thread mode styling
+    &.thread-mode {
+        position: relative;
+        
+        &::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background-color: #0080ff;
+            opacity: 0.8;
+            z-index: 1;
+        }
+
+        background-color: rgba(0, 128, 255, 0.15);
     }
 
     // &.has-aichat,
@@ -66,6 +109,11 @@
             // We don't want to pad the bottom or it will push the input field down.
             padding: var(--padding-top) var(--padding-sides) 0 var(--padding-sides);
             margin-left: 2px;
+
+            .mode-indicator {
+                color: var(--term-bright-red);
+                font-weight: bold;
+            }
         }
 
         .cmd-input-field {

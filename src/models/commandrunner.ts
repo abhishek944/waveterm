@@ -373,6 +373,14 @@ class CommandRunner {
         return GlobalModel.submitCommand("client", "set", null, kwargs, interactive);
     }
 
+    setInputPosition(position: string): Promise<CommandRtnType> {
+        let kwargs = {
+            nohist: "1",
+            inputposition: position,
+        };
+        return GlobalModel.submitCommand("client", "set", null, kwargs, false);
+    }
+
     setTheme(theme: NativeThemeSource, interactive: boolean): Promise<CommandRtnType> {
         let kwargs = {
             nohist: "1",
@@ -548,7 +556,7 @@ class CommandRunner {
     setGlobalShortcut(shortcut: string): Promise<CommandRtnType> {
         return GlobalModel.submitCommand("client", "setglobalshortcut", [shortcut], { nohist: "1" }, false);
     }
-    
+
     // Set AI Providers options (gemini, openai, azure)
     setAIOpts(opts: any): Promise<CommandRtnType> {
         let kwargs: Record<string, string> = { nohist: "1" };

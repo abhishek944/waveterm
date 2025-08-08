@@ -192,6 +192,13 @@ class ClientSettingsView extends React.Component<{ model: RemotesModel }, { hove
         commandRtnHandler(prtn, this.errorMessage);
     }
 
+    getLayoutOrderOptions(): DropdownItem[] {
+        const layoutOrderOptions: DropdownItem[] = [];
+        layoutOrderOptions.push({ label: "Top", value: "top" });
+        layoutOrderOptions.push({ label: "Bottom", value: "bottom" });
+        return layoutOrderOptions;
+    }
+
     getFKeys(): DropdownItem[] {
         const opts: DropdownItem[] = [];
         opts.push({ label: "Disabled", value: "" });
@@ -214,6 +221,11 @@ class ClientSettingsView extends React.Component<{ model: RemotesModel }, { hove
     }
 
     @boundMethod
+    handleChangeInputPosition(position: string): void {
+        const prtn = GlobalCommandRunner.setInputPosition(position);
+        commandRtnHandler(prtn, this.errorMessage);
+    }
+
     getSudoPwStoreOptions(): DropdownItem[] {
         const sudoCacheSources: DropdownItem[] = [];
         sudoCacheSources.push({ label: "On", value: "on" });
@@ -362,6 +374,17 @@ class ClientSettingsView extends React.Component<{ model: RemotesModel }, { hove
                                 options={this.getFKeys()}
                                 defaultValue={this.getCurrentShortcut()}
                                 onChange={this.handleChangeShortcut}
+                            />
+                        </div>
+                    </div>
+                    <div className="settings-field">
+                        <div className="settings-label">Input Position</div>
+                        <div className="settings-input">
+                            <Dropdown
+                                className="layout-order-dropdown"
+                                options={this.getLayoutOrderOptions()}
+                                defaultValue={GlobalModel.inputPosition.get()}
+                                onChange={this.handleChangeInputPosition}
                             />
                         </div>
                     </div>

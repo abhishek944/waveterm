@@ -6,6 +6,28 @@
     flex-grow: 1;
     position: relative;
     overflow-x: hidden;
+    /* Always ensure enough bottom padding for last line header visibility */
+    /* Increased padding to ensure full header visibility including line numbers and metadata */
+    padding-bottom: calc(var(--termlineheight) * 5);
+
+    &.input-at-top {
+        // Small top padding to reduce gap while ensuring headers are visible
+        padding-top: calc(var(--termpad) + 2px);
+        /* Add extra bottom padding to ensure last line header is always visible */
+        /* Line header has 2 lines of metadata, so we need enough space for both */
+        /* Override the default padding with more space when input is at top */
+        padding-bottom: calc(var(--termlineheight) * 6) !important;
+
+        // Ensure line separators work properly
+        .line-sep:first-child {
+            display: none;
+        }
+
+        // Adjust first line to have enough space for metadata to be fully visible
+        .line:first-of-type {
+            margin-top: 0;
+        }
+    }
 
     &.hide-scrollbar::-webkit-scrollbar-thumb {
         display: none;
@@ -52,5 +74,25 @@
         width: 100%;
         height: 1px;
         border-bottom: 1px solid var(--app-border-color);
+    }
+
+    // Thread mode styling
+    &.thread-mode {
+        .line.threaded {
+            position: relative;
+            
+            &::before {
+                content: "";
+                position: absolute;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                width: 4px;
+                background-color: #0080ff;
+                opacity: 0.8;
+            }
+
+            background-color: rgba(0, 128, 255, 0.15);
+        }
     }
 }

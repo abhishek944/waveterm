@@ -501,7 +501,7 @@ class Screen {
 
     setLineFocus(lineNum: number, focus: boolean): void {
         mobx.action(() => this.termLineNumFocus.set(focus ? lineNum : 0))();
-        if (focus && this.selectedLine.get() != lineNum) {
+        if (focus && this.getSelectedLine() != lineNum) {
             GlobalCommandRunner.screenSelectLine(String(lineNum), "cmd");
         } else if (focus && this.focusType.get() == "input") {
             GlobalCommandRunner.screenSetFocus("cmd");
@@ -638,8 +638,8 @@ class Screen {
             this.globalModel.inputModel.giveFocus();
         } else {
             let sline: LineType = null;
-            if (this.selectedLine.get() != 0) {
-                sline = this.getLineByNum(this.selectedLine.get());
+            if (this.getSelectedLine() != 0) {
+                sline = this.getLineByNum(this.getSelectedLine());
             }
             if (sline != null) {
                 let renderer = this.getRenderer(sline.lineid);

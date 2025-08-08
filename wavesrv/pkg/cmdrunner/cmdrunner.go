@@ -24,9 +24,6 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/google/uuid"
-	"github.com/gorilla/websocket"
-	"github.com/kevinburke/ssh_config"
 	"github.com/abhishek944/waveterm/waveshell/pkg/base"
 	"github.com/abhishek944/waveterm/waveshell/pkg/packet"
 	"github.com/abhishek944/waveterm/waveshell/pkg/server"
@@ -50,6 +47,9 @@ import (
 	"github.com/abhishek944/waveterm/wavesrv/pkg/sstore"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/telemetry"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/waveenc"
+	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
+	"github.com/kevinburke/ssh_config"
 	"golang.org/x/mod/semver"
 )
 
@@ -5855,6 +5855,13 @@ func CheckOptionAlias(kwargs map[string]string, aliases ...string) (string, bool
 	return "", false
 }
 
+func validateInputPosition(config string) error {
+	if utilfn.ContainsStr([]string{"top", "bottom"}, config) {
+		return nil
+	}
+	return fmt.Errorf("%s is not a config option", config)
+}
+
 func validateSudoPwStore(config string) error {
 	if utilfn.ContainsStr([]string{"on", "off", "notimeout"}, config) {
 		return nil
@@ -5933,6 +5940,19 @@ func ClientSetCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (sc
 			return nil, fmt.Errorf("error updating client feopts: %v", err)
 		}
 		varsUpdated = append(varsUpdated, "termtheme")
+	}
+	if inputPositionStr, found := pk.Kwargs["inputposition"]; found {
+		err := validateInputPosition(inputPositionStr)
+		if err != nil {
+			return nil, err
+		}
+		clientOpts := clientData.ClientOpts
+		clientOpts.InputPosition = inputPositionStr
+		err = sstore.SetClientOpts(ctx, clientOpts)
+		if err != nil {
+			return nil, fmt.Errorf("error updating client inputposition: %v", err)
+		}
+		varsUpdated = append(varsUpdated, "inputposition")
 	}
 	if apiToken, found := CheckOptionAlias(pk.Kwargs, "openaiapitoken", "aiapitoken"); found {
 		err = validateOpenAIAPIToken(apiToken)
@@ -6101,7 +6121,7 @@ func ClientSetCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (sc
 		varsUpdated = append(varsUpdated, "sudopwclearonsleep")
 	}
 	if len(varsUpdated) == 0 {
-		return nil, fmt.Errorf("/client:set requires a value to set: %s", formatStrs([]string{"termfontsize", "termfontfamily", "openaiapitoken", "openaimodel", "openaibaseurl", "openaimaxtokens", "openaimaxchoices", "openaitimeout", "webgl"}, "or", false))
+		return nil, fmt.Errorf("/client:set requires a value to set: %s", formatStrs([]string{"termfontsize", "termfontfamily", "inputposition", "openaiapitoken", "openaimodel", "openaibaseurl", "openaimaxtokens", "openaimaxchoices", "openaitimeout", "webgl"}, "or", false))
 	}
 	clientData, err = sstore.EnsureClientData(ctx)
 	if err != nil {

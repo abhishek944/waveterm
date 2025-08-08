@@ -19,9 +19,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
-	"github.com/jmoiron/sqlx"
-	"github.com/sawka/txwrap"
 	"github.com/abhishek944/waveterm/waveshell/pkg/base"
 	"github.com/abhishek944/waveterm/waveshell/pkg/packet"
 	"github.com/abhishek944/waveterm/waveshell/pkg/shellenv"
@@ -29,6 +26,9 @@ import (
 	"github.com/abhishek944/waveterm/wavesrv/pkg/scbase"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/scbus"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/scpacket"
+	"github.com/google/uuid"
+	"github.com/jmoiron/sqlx"
+	"github.com/sawka/txwrap"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -253,6 +253,7 @@ type ClientOptsType struct {
 	GlobalShortcutEnabled bool              `json:"globalshortcutenabled,omitempty"`
 	WebGL                 bool              `json:"webgl,omitempty"`
 	AutocompleteEnabled   bool              `json:"autocompleteenabled,omitempty"`
+	InputPosition         string            `json:"inputposition,omitempty"`
 }
 
 type FeOptsType struct {

@@ -625,6 +625,7 @@ declare global {
         globalshortcutenabled: boolean;
         webgl: boolean;
         autocompleteenabled: boolean = true;
+        inputposition: "top" | "bottom";
     };
 
     type ReleaseInfoType = {
@@ -919,6 +920,8 @@ declare global {
         getRenderer: (lineId: string) => RendererModel;
         getFocusType: () => FocusTypeStrs;
         getSelectedLine: () => number;
+        getSelectedLines: () => number[];
+        toggleLineSelect: (lineNum: number) => void;
         getCmd: (line: LineType) => Cmd;
         setLineFocus: (lineNum: number, focus: boolean) => void;
         getUsedRows: (context: RendererContext, line: LineType, cmd: Cmd, width: number) => number;

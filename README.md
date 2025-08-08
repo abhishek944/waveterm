@@ -41,3 +41,13 @@
 
 -   [MacOS Build Instructions](./BUILD.md)
 -   [Linux Build Instructions](./build-linux.md)
+
+## Roadmap
+
+[] User input: top / bottom 
+[] Add the go openai sdk, google sdk and connect the wave ai chat
+[] Implement the threading and connect to the ai
+    - Add the 'thread' button in linecomps
+    - Clicking on it should add it to list of selected lines for thread.
+    - In the input command line, on clicking cmd + I -> highlights all the lines in a thread and agentic calls can be made.
+[] Remote server - wavify.

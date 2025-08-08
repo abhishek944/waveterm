@@ -1,6 +1,15 @@
 .session-view {
     overflow: hidden;
     position: relative;
+    display: flex;
+    flex-direction: column;
+
+    .screen-content-wrapper {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        overflow: hidden;
+    }
 
     &:before {
         content: " ";
@@ -34,6 +43,10 @@
         border-bottom: 3px solid var(--app-border-color);
         background-color: var(--app-panel-bg-color);
         border-radius: 0 0 5px 5px;
+
+        &.input-top {
+            top: calc(var(--screentabs-height) + 60px); // Adjust for cmd input height
+        }
 
         &.closed {
             height: 0;
