@@ -19,8 +19,10 @@
     "dependencies": {
         "@lexical/react": "^0.17.0",
         "@monaco-editor/react": "^4.6.0",
+        "@radix-ui/react-popover": "^1.1.14",
         "@radix-ui/react-select": "^2.2.5",
         "@radix-ui/react-slot": "^1.2.3",
+        "@radix-ui/react-tooltip": "^1.2.7",
         "@table-nav/core": "^0.0.7",
         "@table-nav/react": "^0.0.7",
         "@tanstack/match-sorter-utils": "^8.19.4",

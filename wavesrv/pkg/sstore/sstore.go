@@ -745,24 +745,30 @@ type RemoteOptsType struct {
 }
 
 type OpenAIOptsType struct {
-	Model      string `json:"model"`
-	APIToken   string `json:"apitoken"`
-	BaseURL    string `json:"baseurl,omitempty"`
-	MaxTokens  int    `json:"maxtokens,omitempty"`
-	MaxChoices int    `json:"maxchoices,omitempty"`
-	Timeout    int    `json:"timeout,omitempty"`
+	Model            string `json:"model"`
+	APIToken         string `json:"apitoken"`
+	BaseURL          string `json:"baseurl,omitempty"`
+	MaxTokens        int    `json:"maxtokens,omitempty"`
+	MaxChoices       int    `json:"maxchoices,omitempty"`
+	Timeout          int    `json:"timeout,omitempty"`
+	ConnectionStatus string `json:"connectionstatus,omitempty"`
+	Enabled          bool   `json:"enabled,omitempty"`
 }
 
 type GeminiOptsType struct {
-	Model     string `json:"model"`
-	APIToken  string `json:"apitoken"`
-	MaxTokens int    `json:"maxtokens,omitempty"`
+	Model            string `json:"model"`
+	APIToken         string `json:"apitoken"`
+	MaxTokens        int    `json:"maxtokens,omitempty"`
+	ConnectionStatus string `json:"connectionstatus,omitempty"`
+	Enabled          bool   `json:"enabled,omitempty"`
 }
 
 type AzureOpenAIOptsType struct {
-	BaseURL        string `json:"baseurl,omitempty"`
-	DeploymentName string `json:"deploymentname,omitempty"`
-	APIToken       string `json:"apitoken"`
+	BaseURL          string `json:"baseurl,omitempty"`
+	DeploymentName   string `json:"deploymentname,omitempty"`
+	APIToken         string `json:"apitoken"`
+	ConnectionStatus string `json:"connectionstatus,omitempty"`
+	Enabled          bool   `json:"enabled,omitempty"`
 }
 
 type AIOptsType struct {

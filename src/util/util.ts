@@ -365,16 +365,27 @@ function getColorRGB(colorInput: string) {
 }
 
 function commandRtnHandler(prtn: Promise<CommandRtnType>, errorMessage: OV<string>, onSuccess?: () => void) {
+    console.log("[commandRtnHandler] Starting, promise:", prtn);
     prtn.then((crtn) => {
+        console.log("[commandRtnHandler] Promise resolved, crtn:", crtn);
         if (crtn.success) {
+            console.log("[commandRtnHandler] Success, calling onSuccess callback");
             if (onSuccess) {
                 onSuccess();
             }
             return;
         }
+        console.log("[commandRtnHandler] Command failed, error:", crtn.error);
         if (errorMessage != null) {
             mobx.action(() => {
                 errorMessage.set(crtn.error);
+            })();
+        }
+    }).catch((err) => {
+        console.error("[commandRtnHandler] Promise rejected with error:", err);
+        if (errorMessage != null) {
+            mobx.action(() => {
+                errorMessage.set(err.toString());
             })();
         }
     });

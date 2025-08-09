@@ -21,16 +21,21 @@
     "cSpell.words": [
         "abhishek",
         "agentmode",
+        "azureopenai",
         "cmdinput",
         "Kwargs",
         "lineid",
         "linetype",
         "mapqueue",
         "metacmd",
+        "scbus",
         "scpacket",
         "screenview",
         "sstore",
         "threadmode",
+        "waveshell",
+        "wavesrv",
+        "waveterm",
         "wsshell"
     ]
 }

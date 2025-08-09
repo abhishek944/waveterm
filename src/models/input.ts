@@ -475,9 +475,7 @@ class InputModel {
         if (GlobalModel.activeMainView.get() != "session") {
             return false;
         }
-        if (GlobalModel.getActiveScreen()?.getFocusType() != "input") {
-            return false;
-        }
+        // Removed focusType requirement to always register keybindings for cmdinput
         // (view == null) means standard cmdinput keybindings
         if (view == null) {
             return !this.getAuxViewFocus() && !GlobalModel.sidebarchatModel.hasFocus();
@@ -744,8 +742,9 @@ class InputModel {
         
         if (isAgentMode && !commandStr.startsWith("/agent ")) {
             commandStr = "/agent " + commandStr;
-        } else if (isThreadMode && !commandStr.startsWith("/chat ")) {
-            commandStr = "/chat " + commandStr;
+        } else if (isThreadMode && !commandStr.startsWith("/thread ")) {
+            // Thread mode is not implemented yet, just submit the command as-is
+            // commandStr = "/thread " + commandStr;
         }
         
         mobx.action(() => {

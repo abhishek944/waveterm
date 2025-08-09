@@ -1165,10 +1165,11 @@ func main() {
 	go configWatcher()
 	go stdinReadWatch()
 	go runWebSocketServer()
-	go func() {
-		time.Sleep(10 * time.Second)
-		pcloud.StartUpdateWriter()
-	}()
+	// Disabled web share update feature
+	// go func() {
+	// 	time.Sleep(10 * time.Second)
+	// 	pcloud.StartUpdateWriter()
+	// }()
 	gr := mux.NewRouter()
 	gr.HandleFunc("/api/ptyout", AuthKeyWrap(HandleGetPtyOut))
 	gr.HandleFunc("/api/remote-pty", AuthKeyWrap(HandleRemotePty))

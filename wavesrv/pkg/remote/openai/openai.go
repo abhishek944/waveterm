@@ -65,7 +65,11 @@ func RunCompletion(ctx context.Context, opts *sstore.OpenAIOptsType, prompt []pa
 	params := openai.ChatCompletionNewParams{
 		Model:     shared.ChatModel(opts.Model),
 		Messages:  ConvertPromptMessages(prompt),
-		MaxTokens: param.NewOpt(int64(opts.MaxTokens)),
+	}
+	
+	// Only set MaxTokens if it's explicitly set to a positive value
+	if opts.MaxTokens > 0 {
+		params.MaxTokens = param.NewOpt(int64(opts.MaxTokens))
 	}
 	
 	if opts.MaxChoices > 1 {
@@ -103,7 +107,11 @@ func RunCompletionStream(ctx context.Context, opts *sstore.OpenAIOptsType, promp
 	params := openai.ChatCompletionNewParams{
 		Model:     shared.ChatModel(opts.Model),
 		Messages:  ConvertPromptMessages(prompt),
-		MaxTokens: param.NewOpt(int64(opts.MaxTokens)),
+	}
+	
+	// Only set MaxTokens if it's explicitly set to a positive value
+	if opts.MaxTokens > 0 {
+		params.MaxTokens = param.NewOpt(int64(opts.MaxTokens))
 	}
 	
 	if opts.MaxChoices > 1 {

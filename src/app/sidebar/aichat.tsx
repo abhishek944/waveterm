@@ -228,6 +228,10 @@ const ChatSidebar: React.FC = observer(() => {
         const inputModel = GlobalModel.inputModel;
 
         keybindManager.registerKeybinding("pane", "aichat", "generic:confirm", () => {
+            // Only handle Enter key if AI chat has focus
+            if (!GlobalModel.sidebarchatModel.hasFocus()) {
+                return false;
+            }
             handleEnterKeyPressed();
             return true;
         });
@@ -266,7 +270,8 @@ const ChatSidebar: React.FC = observer(() => {
     const requestChatUpdate = () => {
         const chatMessageItems = GlobalModel.inputModel.AICmdInfoChatItems.slice();
         if (!chatMessageItems || chatMessageItems.length === 0) {
-            submitChatMessage("");
+            // Don't submit empty message on startup
+            // submitChatMessage("");
         }
     };
 
@@ -491,129 +496,13 @@ const ChatSidebar: React.FC = observer(() => {
 
     return (
         <div ref={sidebarRef} className="h-full flex flex-col bg-background text-foreground relative overflow-hidden">
-            <div className="absolute inset-0 w-full h-full -z-10 bg-gradient-radial from-[rgb(17,17,17)] at-[50%_-20%] to-[rgb(56,56,143)] to-40% bg-[180%_180%]" />
+            <div className="absolute inset-0 w-full h-full -z-10" />
             <div className="relative z-10 flex-1 overflow-hidden">
-                {chatMessageItems.length === 0 ? (
-                    <div className="h-full flex items-center justify-center p-8">
-                        <div className="max-w-3xl w-full px-4">
-                            <div className="text-center mb-12">
-                                <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-purple-500/20">
-                                    <Sparkles className="w-12 h-12 text-white" />
-                                </div>
-                                <h1 className="text-4xl font-bold mb-3 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
-                                    How can I help you today?
-                                </h1>
-                                <p className="text-muted-foreground text-lg">Ask me anything about your code or terminal</p>
-                            </div>
-                            <div className="grid gap-4 md:grid-cols-2">
-                                <Card className="p-5 rounded-2xl bg-white/[0.03] backdrop-blur border border-white/[0.05] hover:bg-white/[0.06] hover:border-white/[0.1] transition-all cursor-pointer group text-left">
-                                    <h3 className="font-semibold text-card-foreground mb-2 group-hover:text-white transition-colors flex items-center gap-2">
-                                        <span className="text-xl">🐛</span> Debug an error
-                                    </h3>
-                                    <p className="text-sm text-muted-foreground group-hover:text-gray-400 transition-colors">"Help me fix this TypeError"</p>
-                                </Card>
-                                <Card className="p-5 rounded-2xl bg-white/[0.03] backdrop-blur border border-white/[0.05] hover:bg-white/[0.06] hover:border-white/[0.1] transition-all cursor-pointer group text-left">
-                                    <h3 className="font-semibold text-card-foreground mb-2 group-hover:text-white transition-colors flex items-center gap-2">
-                                        <span className="text-xl">✍️</span> Write a script
-                                    </h3>
-                                    <p className="text-sm text-muted-foreground group-hover:text-gray-400 transition-colors">"Create a Python script to..."</p>
-                                </Card>
-                                <Card className="p-5 rounded-2xl bg-white/[0.03] backdrop-blur border border-white/[0.05] hover:bg-white/[0.06] hover:border-white/[0.1] transition-all cursor-pointer group text-left">
-                                    <h3 className="font-semibold text-card-foreground mb-2 group-hover:text-white transition-colors flex items-center gap-2">
-                                        <span className="text-xl">💡</span> Explain code
-                                    </h3>
-                                    <p className="text-sm text-muted-foreground group-hover:text-gray-400 transition-colors">"What does this function do?"</p>
-                                </Card>
-                                <Card className="p-5 rounded-2xl bg-white/[0.03] backdrop-blur border border-white/[0.05] hover:bg-white/[0.06] hover:border-white/[0.1] transition-all cursor-pointer group text-left">
-                                    <h3 className="font-semibold text-card-foreground mb-2 group-hover:text-white transition-colors flex items-center gap-2">
-                                        <span className="text-xl">🖥️</span> Terminal help
-                                    </h3>
-                                    <p className="text-sm text-muted-foreground group-hover:text-gray-400 transition-colors">"How do I use git rebase?"</p>
-                                </Card>
-                            </div>
-                        </div>
-                    </div>
-                ) : (
-                    <ChatWindow
-                        chatWindowRef={chatWindowRef}
-                        onRendered={handleChatWindowRendered}
-                        onSetCmdInputValue={handleSetCmdInputValue}
-                    />
-                )}
-            </div>
-            <div className="relative z-10 p-4 bg-gradient-to-t from-background to-transparent">
-                <Card className="rounded-[28px] p-2 shadow-2xl bg-muted/80 backdrop-blur-xl border border-border">
-                    <div className="flex items-end gap-2">
-                        <div className="flex-1">
-                            <textarea
-                                ref={textAreaRef}
-                                autoComplete="off"
-                                autoCorrect="off"
-                                rows={1}
-                                className="w-full resize-none border-0 bg-transparent p-3 text-foreground placeholder:text-muted-foreground focus:ring-0 focus-visible:outline-none min-h-[52px] font-mono text-[15px] leading-relaxed"
-                                onBlur={handleBlur}
-                                onFocus={handleTextAreaFocus}
-                                onMouseDown={handleTextAreaMouseDown}
-                                onChange={handleTextAreaChange}
-                                onKeyDown={(e) => {
-                                    if (e.key === "Enter" && !e.shiftKey) {
-                                        e.preventDefault();
-                                        handleEnterKeyPressed();
-                                    }
-                                }}
-                                style={{ fontSize: termFontSize }}
-                                placeholder="Message AI Assistant..."
-                                value={value}
-                            />
-                        </div>
-                    </div>
-                    <div className="mt-1 px-1 pb-1">
-                        <div className="flex items-center justify-between">
-                            <Select value={selectedProvider} onValueChange={setSelectedProvider}>
-                                <SelectTrigger className="w-[180px] h-8 bg-transparent border-0 text-muted-foreground hover:text-foreground focus:ring-0 focus:ring-offset-0">
-                                    <SelectValue>
-                                        <div className="flex items-center gap-2">
-                                            <span>{selectedProviderData?.icon}</span>
-                                            <span className="text-sm">{selectedProviderData?.name}</span>
-                                        </div>
-                                    </SelectValue>
-                                </SelectTrigger>
-                                <SelectContent className="bg-muted border-border text-foreground">
-                                    {aiProviders.map(provider => (
-                                        <SelectItem
-                                            key={provider.id}
-                                            value={provider.id}
-                                            className="text-muted-foreground hover:text-foreground focus:bg-accent focus:text-accent-foreground"
-                                        >
-                                            <div className="flex items-center gap-2">
-                                                <span>{provider.icon}</span>
-                                                <span>{provider.name}</span>
-                                            </div>
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <Button
-                                type="submit"
-                                disabled={!hasValue}
-                                onClick={() => handleEnterKeyPressed()}
-                                size="icon"
-                                className={cn(
-                                    "h-9 w-9",
-                                    hasValue ? "bg-primary text-primary-foreground hover:bg-primary/90" : "bg-secondary text-secondary-foreground cursor-not-allowed"
-                                )}
-                            >
-                                <Send className="h-5 w-5" />
-                                <span className="sr-only">Send message</span>
-                            </Button>
-                        </div>
-                    </div>
-                </Card>
-                {GlobalModel.sidebarchatModel.getSelectedCodeBlockIndex() != null && (
-                    <div className="mt-2 text-xs text-muted-foreground text-center">
-                        Press Enter to execute selected code
-                    </div>
-                )}
+                <ChatWindow
+                    chatWindowRef={chatWindowRef}
+                    onRendered={handleChatWindowRendered}
+                    onSetCmdInputValue={handleSetCmdInputValue}
+                />
             </div>
         </div>
     );

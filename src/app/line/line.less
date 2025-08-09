@@ -1,5 +1,58 @@
 @import "@/common/icons/icons.less";
 
+.agent-mode-renderer {
+    background-color: rgba(255, 255, 255, 0.02);
+    border-radius: 6px;
+    margin: 5px 0;
+
+    .agent-mode-content {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        font-size: 14px;
+        line-height: 1.6;
+        color: var(--term-text-white);
+
+        .markdown {
+            pre {
+                background-color: rgba(0, 0, 0, 0.3);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 4px;
+                padding: 12px;
+                margin: 10px 0;
+                overflow-x: auto;
+
+                code {
+                    color: #e6e6e6;
+                    font-family: "Menlo", "Monaco", "Consolas", "Courier New", monospace;
+                    font-size: 13px;
+                }
+            }
+
+            code {
+                background-color: rgba(255, 255, 255, 0.1);
+                padding: 2px 4px;
+                border-radius: 3px;
+                font-family: "Menlo", "Monaco", "Consolas", "Courier New", monospace;
+                font-size: 13px;
+            }
+
+            p {
+                margin: 10px 0;
+            }
+
+            h1, h2, h3, h4, h5, h6 {
+                margin-top: 16px;
+                margin-bottom: 8px;
+                font-weight: 600;
+            }
+        }
+    }
+
+    .loading, .no-content {
+        color: rgba(255, 255, 255, 0.5);
+        font-style: italic;
+    }
+}
+
 .line {
     margin: 0;
     padding: calc(var(--termpad) * 2) var(--termpad) calc(var(--termpad) * 2 + 1px) calc(var(--termpad) * 3);

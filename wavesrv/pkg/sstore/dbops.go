@@ -491,11 +491,19 @@ func UpdateClientOpenAIOpts(ctx context.Context, aiOpts OpenAIOptsType) error {
 }
 
 func UpdateClientAIOpts(ctx context.Context, aiOpts AIOptsType) error {
+	log.Printf("[UpdateClientAIOpts] Starting update with aiOpts: %+v", aiOpts)
+	jsonData := quickJson(aiOpts)
+	log.Printf("[UpdateClientAIOpts] JSON data: %s", jsonData)
 	txErr := WithTx(ctx, func(tx *TxWrap) error {
 		query := `UPDATE client SET aiopts = ?`
-		tx.Exec(query, quickJson(aiOpts))
+		tx.Exec(query, jsonData)
 		return nil
 	})
+	if txErr != nil {
+		log.Printf("[UpdateClientAIOpts] Transaction error: %v", txErr)
+	} else {
+		log.Printf("[UpdateClientAIOpts] Update successful")
+	}
 	return txErr
 }
 

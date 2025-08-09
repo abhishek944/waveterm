@@ -7,46 +7,120 @@ import * as mobx from "mobx";
 import { boundMethod } from "autobind-decorator";
 import { If } from "tsx-control-statements/components";
 import { GlobalModel, GlobalCommandRunner } from "@/models";
-import { Toggle, InlineSettingsTextEdit } from "@/common/elements";
+import { Toggle, InlineSettingsTextEdit, Button } from "@/common/elements";
 import { commandRtnHandler, isBlank } from "@/util/util";
 
 @mobxReact.observer
 class AiProviders extends React.Component<{}, {}> {
+    @mobx.observable
+    verifyingProvider: string = null;
+    
+    @mobx.observable
+    isVerifying: boolean = false;
+    
+    constructor(props: {}) {
+        super(props);
+        mobx.makeObservable(this);
+    }
     @boundMethod
     handleAiOptsChange(newAiOpts: any) {
         console.log("Setting AI opts:", newAiOpts);
         const prtn = GlobalCommandRunner.setAIOpts(newAiOpts);
-        commandRtnHandler(prtn, (err) => {
-            if (err) {
-                console.error("error setting ai opts", err);
-            } else {
-                console.log("AI opts set successfully");
-            }
+        commandRtnHandler(prtn, null, () => {
+            console.log("AI opts set successfully");
         });
     }
     @boundMethod
     handleProviderChange(provider: "gemini" | "openai" | "azure", key: string, value: string) {
+        console.log(`[AiProviders.handleProviderChange] provider: ${provider}, key: ${key}, value: ${value}`);
         const cdata: ClientDataType = GlobalModel.clientData.get();
-        const aiOpts = { ...(cdata.aiopts ?? {}) };
-        const providerOpts = { ...(aiOpts[provider] ?? {}), [key]: value };
-        const newAiOpts = { ...aiOpts, [provider]: providerOpts };
-
+        const currentAiOpts = cdata.aiopts ?? {};
+        
+        // If this is the first time setting an API key and no provider is selected,
+        // automatically select this provider
+        let defaultProvider = (currentAiOpts as any).default;
+        if (!defaultProvider || defaultProvider === "") {
+            defaultProvider = provider;
+        }
+        
+        const providerOpts = { ...(currentAiOpts[provider] ?? {}), [key]: value };
+        const newAiOpts = { 
+            ...currentAiOpts,
+            default: defaultProvider,
+            [provider]: providerOpts 
+        };
+        
+        console.log("[AiProviders.handleProviderChange] newAiOpts:", newAiOpts);
         this.handleAiOptsChange(newAiOpts);
     }
 
     @boundMethod
-    handleSelectProvider(provider: "gemini" | "openai" | "azure") {
-        // Update default provider immediately for UI toggle
+    handleToggleProvider(provider: "gemini" | "openai" | "azure", enabled: boolean) {
         const cdata: ClientDataType = GlobalModel.clientData.get();
-        const aiopts = { ...(cdata.aiopts ?? {}), default: provider };
-        mobx.action(() => {
-            GlobalModel.clientData.set({ ...cdata, aiopts });
-        })();
-        this.handleAiOptsChange(aiopts);
+        const currentAiOpts = cdata.aiopts ?? {};
+        
+        // Create updated options with enabled status
+        const providerOpts = { ...(currentAiOpts[provider] ?? {}), enabled };
+        const newAiOpts = { 
+            ...currentAiOpts,
+            [provider]: providerOpts 
+        };
+
+        this.handleAiOptsChange(newAiOpts);
+    }
+    
+    @boundMethod
+    handleVerifyProvider(provider: "gemini" | "openai" | "azure") {
+        console.log("[AiProviders.handleVerifyProvider] Starting verification for:", provider);
+        console.log("[AiProviders.handleVerifyProvider] Current isVerifying:", this.isVerifying);
+        console.log("[AiProviders.handleVerifyProvider] Current verifyingProvider:", this.verifyingProvider);
+        
+        // Set verifying state synchronously before any async operations
+        mobx.runInAction(() => {
+            this.isVerifying = true;
+            this.verifyingProvider = provider;
+            console.log("[AiProviders.handleVerifyProvider] Inside runInAction - isVerifying:", this.isVerifying);
+        });
+        
+        console.log("[AiProviders.handleVerifyProvider] After runInAction - isVerifying:", this.isVerifying);
+        
+        // Use setTimeout to ensure the UI updates before running verification
+        setTimeout(() => {
+            console.log("[AiProviders.handleVerifyProvider] Running verification after timeout");
+            this.runVerification(provider);
+        }, 10);
+    }
+    
+    @boundMethod
+    async runVerification(provider: "gemini" | "openai" | "azure") {
+        try {
+            console.log("[AiProviders.runVerification] Sending verification command");
+            const result = await GlobalCommandRunner.verifyAIProvider(provider);
+            console.log("[AiProviders.runVerification] Response received:", result);
+            
+            if (!result.success) {
+                console.error("[AiProviders.runVerification] Verification failed:", result.error);
+            } else {
+                console.log("[AiProviders.runVerification] Verification completed successfully");
+            }
+        } catch (error) {
+            console.error("[AiProviders.runVerification] Exception caught:", error);
+        } finally {
+            // Always reset the verifying state
+            mobx.action(() => {
+                this.isVerifying = false;
+                this.verifyingProvider = null;
+            })();
+            console.log("[AiProviders.runVerification] Reset isVerifying to false");
+        }
     }
 
     render() {
+        console.log("[AiProviders] render called, isVerifying:", this.isVerifying, "verifyingProvider:", this.verifyingProvider);
         const cdata: ClientDataType = GlobalModel.clientData.get();
+        console.log("[AiProviders] render - clientData:", cdata);
+        console.log("[AiProviders] render - aiopts:", cdata?.aiopts);
+        
         const defaultProvider = cdata.aiopts?.default ?? "openai";
         const aiOpts = { default: defaultProvider, ...(cdata.aiopts ?? {}) };
         const geminiOpts = aiOpts.gemini ?? {};
@@ -54,10 +128,57 @@ class AiProviders extends React.Component<{}, {}> {
         const azureOpts = aiOpts.azure ?? {};
         const selectedProvider = defaultProvider;
         
+        console.log("[AiProviders] render - defaultProvider:", defaultProvider);
+        console.log("[AiProviders] render - geminiOpts:", geminiOpts);
+        console.log("[AiProviders] render - openAIOpts:", openAIOpts);
+        console.log("[AiProviders] render - openAIOpts.apitoken:", openAIOpts.apitoken);
+        console.log("[AiProviders] render - azureOpts:", azureOpts);
+        
         // Helper function to display masked API key
         const getMaskedValue = (value: string) => {
             if (!value) return "(not set)";
             return "••••••••" + value.slice(-4);
+        };
+        
+        // Helper function to get connection status display
+        const getConnectionStatus = (provider: "gemini" | "openai" | "azure") => {
+            // Check verifying state first, before looking at provider options
+            const isVerifying = this.isVerifying && this.verifyingProvider === provider;
+            console.log(`[AiProviders.getConnectionStatus] provider: ${provider}, isVerifying: ${isVerifying}, this.isVerifying: ${this.isVerifying}, this.verifyingProvider: ${this.verifyingProvider}`);
+            
+            if (isVerifying) {
+                return <span className="connection-status verifying">Verifying...</span>;
+            }
+            
+            const providerOpts = aiOpts[provider];
+            if (!providerOpts) return null;
+            
+            const status = providerOpts.connectionstatus;
+            
+            if (status === "connected") {
+                return <span className="connection-status connected">Connected</span>;
+            } else if (status === "failed") {
+                return <span className="connection-status failed">Failed</span>;
+            }
+            
+            return null;
+        };
+        
+        // Helper function to check if we should show verify button
+        const shouldShowVerify = (provider: "gemini" | "openai" | "azure") => {
+            const providerOpts = aiOpts[provider];
+            if (!providerOpts) return false;
+            
+            // Show verify button if API key is set (regardless of connection status)
+            let hasApiKey = false;
+            if (provider === "azure") {
+                const azureOpts = providerOpts as AzureOpenAIOptsType;
+                hasApiKey = !!(azureOpts.apitoken && azureOpts.baseurl && azureOpts.deploymentname);
+            } else {
+                hasApiKey = !!providerOpts.apitoken;
+            }
+                
+            return hasApiKey;
         };
 
         return (
@@ -66,9 +187,22 @@ class AiProviders extends React.Component<{}, {}> {
                     <div className="settings-group-title">
                         <div>Gemini</div>
                         <Toggle
-                            checked={selectedProvider === "gemini"}
-                            onChange={() => this.handleSelectProvider("gemini")}
+                            checked={geminiOpts.enabled || false}
+                            onChange={(enabled) => this.handleToggleProvider("gemini", enabled)}
                         />
+                    </div>
+                    <div className="settings-field">
+                        <div className="settings-label">Model</div>
+                        <div className="settings-input">
+                            <InlineSettingsTextEdit
+                                placeholder="Model (e.g., gemini-pro)"
+                                text={geminiOpts.model || "(not set)"}
+                                value={geminiOpts.model || ""}
+                                onChange={(val) => this.handleProviderChange("gemini", "model", val)}
+                                maxLength={256}
+                                showIcon={true}
+                            />
+                        </div>
                     </div>
                     <div className="settings-field">
                         <div className="settings-label">API Key</div>
@@ -83,14 +217,42 @@ class AiProviders extends React.Component<{}, {}> {
                             />
                         </div>
                     </div>
+                    <div className="settings-field">
+                        <div className="settings-label"></div>
+                        <div className="settings-input ai-verify-row">
+                            {shouldShowVerify("gemini") && (
+                                <Button
+                                    className="secondary small"
+                                    onClick={() => this.handleVerifyProvider("gemini")}
+                                    disabled={this.isVerifying}
+                                >
+                                    Verify
+                                </Button>
+                            )}
+                            {getConnectionStatus("gemini")}
+                        </div>
+                    </div>
                 </div>
                 <div className="settings-group">
                     <div className="settings-group-title">
                         <div>OpenAI</div>
                         <Toggle
-                            checked={selectedProvider === "openai"}
-                            onChange={() => this.handleSelectProvider("openai")}
+                            checked={openAIOpts.enabled || false}
+                            onChange={(enabled) => this.handleToggleProvider("openai", enabled)}
                         />
+                    </div>
+                    <div className="settings-field">
+                        <div className="settings-label">Model</div>
+                        <div className="settings-input">
+                            <InlineSettingsTextEdit
+                                placeholder="Model (e.g., gpt-3.5-turbo)"
+                                text={openAIOpts.model || "(not set)"}
+                                value={openAIOpts.model || ""}
+                                onChange={(val) => this.handleProviderChange("openai", "model", val)}
+                                maxLength={256}
+                                showIcon={true}
+                            />
+                        </div>
                     </div>
                     <div className="settings-field">
                         <div className="settings-label">API Key</div>
@@ -105,13 +267,28 @@ class AiProviders extends React.Component<{}, {}> {
                             />
                         </div>
                     </div>
+                    <div className="settings-field">
+                        <div className="settings-label"></div>
+                        <div className="settings-input ai-verify-row">
+                            {shouldShowVerify("openai") && (
+                                <Button
+                                    className="secondary small"
+                                    onClick={() => this.handleVerifyProvider("openai")}
+                                    disabled={this.isVerifying}
+                                >
+                                    Verify
+                                </Button>
+                            )}
+                            {getConnectionStatus("openai")}
+                        </div>
+                    </div>
                 </div>
                 <div className="settings-group">
                     <div className="settings-group-title">
                         <div>Azure OpenAI</div>
                         <Toggle
-                            checked={selectedProvider === "azure"}
-                            onChange={() => this.handleSelectProvider("azure")}
+                            checked={azureOpts.enabled || false}
+                            onChange={(enabled) => this.handleToggleProvider("azure", enabled)}
                         />
                     </div>
                     <div className="settings-field">
@@ -151,6 +328,44 @@ class AiProviders extends React.Component<{}, {}> {
                                 maxLength={256}
                                 showIcon={true}
                             />
+                        </div>
+                    </div>
+                    <div className="settings-field">
+                        <div className="settings-label"></div>
+                        <div className="settings-input ai-verify-row">
+                            {shouldShowVerify("azure") && (
+                                <Button
+                                    className="secondary small"
+                                    onClick={() => this.handleVerifyProvider("azure")}
+                                    disabled={this.isVerifying}
+                                >
+                                    Verify
+                                </Button>
+                            )}
+                            {getConnectionStatus("azure")}
+                        </div>
+                    </div>
+                </div>
+                <div className="settings-group">
+                    <div className="settings-group-title">
+                        <div>Default Provider</div>
+                    </div>
+                    <div className="settings-field">
+                        <div className="settings-label">Select Default</div>
+                        <div className="settings-input">
+                            <select 
+                                value={defaultProvider} 
+                                onChange={(e) => {
+                                    const newDefault = e.target.value as "gemini" | "openai" | "azure";
+                                    const newAiOpts = { ...aiOpts, default: newDefault };
+                                    this.handleAiOptsChange(newAiOpts);
+                                }}
+                                className="settings-select"
+                            >
+                                <option value="openai">OpenAI</option>
+                                <option value="gemini">Gemini</option>
+                                <option value="azure">Azure OpenAI</option>
+                            </select>
                         </div>
                     </div>
                 </div>

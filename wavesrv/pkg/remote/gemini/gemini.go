@@ -27,9 +27,14 @@ func ConvertPromptMessages(prompt []packet.OpenAIPromptMessageType) []genai.Part
 }
 
 func convertUsage(resp *genai.GenerateContentResponse) *packet.OpenAIUsageType {
-	// Gemini API doesn't provide usage metadata in the same way
-	// Return nil for now
-	return nil
+	if resp.UsageMetadata == nil {
+		return nil
+	}
+	return &packet.OpenAIUsageType{
+		PromptTokens:     int(resp.UsageMetadata.PromptTokenCount),
+		CompletionTokens: int(resp.UsageMetadata.CandidatesTokenCount),
+		TotalTokens:      int(resp.UsageMetadata.TotalTokenCount),
+	}
 }
 
 func RunCompletion(ctx context.Context, opts *sstore.GeminiOptsType, prompt []packet.OpenAIPromptMessageType) ([]*packet.OpenAIPacketType, error) {
@@ -50,35 +55,25 @@ func RunCompletion(ctx context.Context, opts *sstore.GeminiOptsType, prompt []pa
 	defer client.Close()
 
 	model := client.GenerativeModel(opts.Model)
+	
+	// Configure the model
 	if opts.MaxTokens > 0 {
-		maxTokens := int32(opts.MaxTokens)
-		model.MaxOutputTokens = &maxTokens
+		model.SetMaxOutputTokens(int32(opts.MaxTokens))
 	}
 
-	// Convert prompt messages to chat history
-	cs := model.StartChat()
-	for i, p := range prompt {
-		if i == len(prompt)-1 {
-			// Last message is the actual prompt
-			resp, err := cs.SendMessage(ctx, genai.Text(p.Content))
-			if err != nil {
-				return nil, fmt.Errorf("error calling gemini API: %v", err)
-			}
-			return marshalResponse(resp, opts.Model), nil
-		} else {
-			// Previous messages are history
-			role := "user"
-			if p.Role == "assistant" || p.Role == "model" {
-				role = "model"
-			}
-			cs.History = append(cs.History, &genai.Content{
-				Parts: []genai.Part{genai.Text(p.Content)},
-				Role:  role,
-			})
-		}
+	// Convert prompt messages to parts
+	parts := ConvertPromptMessages(prompt)
+	if len(parts) == 0 {
+		return nil, fmt.Errorf("no prompt provided")
 	}
-
-	return nil, fmt.Errorf("no prompt provided")
+	
+	// Generate content
+	resp, err := model.GenerateContent(ctx, parts...)
+	if err != nil {
+		return nil, fmt.Errorf("error calling gemini API: %v", err)
+	}
+	
+	return marshalResponse(resp, opts.Model), nil
 }
 
 func RunCompletionStream(ctx context.Context, opts *sstore.GeminiOptsType, prompt []packet.OpenAIPromptMessageType) (chan *packet.OpenAIPacketType, error) {
@@ -98,36 +93,17 @@ func RunCompletionStream(ctx context.Context, opts *sstore.GeminiOptsType, promp
 	}
 
 	model := client.GenerativeModel(opts.Model)
+	
+	// Configure the model
 	if opts.MaxTokens > 0 {
-		maxTokens := int32(opts.MaxTokens)
-		model.MaxOutputTokens = &maxTokens
+		model.SetMaxOutputTokens(int32(opts.MaxTokens))
 	}
 
-	// Convert prompt messages to chat history
-	cs := model.StartChat()
-	var lastPrompt string
-	for i, p := range prompt {
-		if i == len(prompt)-1 {
-			// Last message is the actual prompt
-			lastPrompt = p.Content
-		} else {
-			// Previous messages are history
-			role := "user"
-			if p.Role == "assistant" || p.Role == "model" {
-				role = "model"
-			}
-			cs.History = append(cs.History, &genai.Content{
-				Parts: []genai.Part{genai.Text(p.Content)},
-				Role:  role,
-			})
-		}
-	}
-
-	if lastPrompt == "" {
+	// Convert prompt messages to parts
+	parts := ConvertPromptMessages(prompt)
+	if len(parts) == 0 {
 		return nil, fmt.Errorf("no prompt provided")
 	}
-
-	iter := cs.SendMessageStream(ctx, genai.Text(lastPrompt))
 
 	rtn := make(chan *packet.OpenAIPacketType, DefaultStreamChanSize)
 	go func() {
@@ -135,6 +111,8 @@ func RunCompletionStream(ctx context.Context, opts *sstore.GeminiOptsType, promp
 		defer client.Close()
 		
 		sentHeader := false
+		
+		iter := model.GenerateContentStream(ctx, parts...)
 		for {
 			resp, err := iter.Next()
 			if err == io.EOF {
@@ -143,7 +121,7 @@ func RunCompletionStream(ctx context.Context, opts *sstore.GeminiOptsType, promp
 			if err != nil {
 				errPk := CreateErrorPacket(fmt.Sprintf("error in streaming: %v", err))
 				rtn <- errPk
-				break
+				return
 			}
 
 			if !sentHeader {
@@ -188,8 +166,8 @@ func marshalResponse(resp *genai.GenerateContentResponse, model string) []*packe
 		if cand.Content != nil {
 			text := ""
 			for _, part := range cand.Content.Parts {
-				if t, ok := part.(genai.Text); ok {
-					text += string(t)
+				if textPart, ok := part.(genai.Text); ok {
+					text += string(textPart)
 				}
 			}
 			
@@ -202,18 +180,13 @@ func marshalResponse(resp *genai.GenerateContentResponse, model string) []*packe
 			rtn = append(rtn, choicePk)
 		}
 	}
+
 	return rtn
 }
 
 func CreateErrorPacket(errStr string) *packet.OpenAIPacketType {
-	errPk := packet.MakeOpenAIPacket()
-	errPk.FinishReason = "error"
-	errPk.Error = errStr
-	return errPk
-}
-
-func CreateTextPacket(text string) *packet.OpenAIPacketType {
 	pk := packet.MakeOpenAIPacket()
-	pk.Text = text
+	pk.Error = errStr
+	pk.FinishReason = "error"
 	return pk
 }

@@ -14,7 +14,7 @@ import { termHeightFromRows } from "@/util/textmeasure";
 import { clsx } from "clsx";
 import { getTermPtyData } from "@/util/modelutil";
 
-import { renderCmdText } from "@/common/elements";
+import { renderCmdText, Markdown } from "@/common/elements";
 import { SimpleBlobRenderer } from "@/plugins/core/basicrenderer";
 import { IncrementalRenderer } from "@/plugins/core/incrementalrenderer";
 import { TerminalRenderer } from "@/plugins/terminal/terminal";
@@ -82,6 +82,101 @@ const heightLog = {};
 };
 
 dayjs.extend(localizedFormat);
+
+// AgentModeRenderer component for rendering AI responses with markdown
+@mobxReact.observer
+class AgentModeRenderer extends React.Component<{
+    screen: LineContainerType;
+    line: LineType;
+    width: number;
+    onHeightChange: LineHeightChangeCallbackType;
+}, {
+    content: string;
+    loading: boolean;
+}> {
+    constructor(props: any) {
+        super(props);
+        this.state = {
+            content: "",
+            loading: true
+        };
+    }
+
+    componentDidMount() {
+        this.loadContent();
+    }
+
+    async loadContent() {
+        const { line, screen } = this.props;
+        const cmd = screen.getCmd(line);
+        if (!cmd) {
+            this.setState({ loading: false });
+            return;
+        }
+
+        try {
+            // Get the PTY data
+            const termContext = { screenId: cmd.screenId, lineId: line.lineid, lineNum: line.linenum };
+            const ptyDataResult = await getTermPtyData(termContext);
+            
+            if (ptyDataResult && ptyDataResult.data) {
+                // Convert Uint8Array to string
+                const decoder = new TextDecoder();
+                const content = decoder.decode(ptyDataResult.data);
+                this.setState({ content, loading: false });
+                
+                // Calculate and report height
+                setTimeout(() => {
+                    const elem = document.querySelector(`[data-lineid="${line.lineid}"] .agent-mode-content`);
+                    if (elem) {
+                        const height = elem.scrollHeight;
+                        this.props.onHeightChange(line.linenum, height, 0);
+                    }
+                }, 100);
+            } else {
+                this.setState({ loading: false });
+            }
+        } catch (err) {
+            console.error("Error loading agent mode content:", err);
+            this.setState({ loading: false });
+        }
+    }
+
+    render() {
+        const { content, loading } = this.state;
+        const { line } = this.props;
+
+        if (loading) {
+            return (
+                <div className="agent-mode-renderer" style={{ padding: "10px" }}>
+                    <div className="loading">Loading...</div>
+                </div>
+            );
+        }
+
+        if (!content) {
+            return (
+                <div className="agent-mode-renderer" style={{ padding: "10px" }}>
+                    <div className="no-content">No content available</div>
+                </div>
+            );
+        }
+
+        return (
+            <div className="agent-mode-renderer">
+                <div className="agent-mode-content" style={{ padding: "10px 20px" }}>
+                    <Markdown 
+                        text={content} 
+                        onClickExecute={(cmd) => {
+                            // Execute the command in the terminal
+                            GlobalModel.submitRawCommand(cmd, false, true);
+                        }}
+                    />
+                </div>
+            </div>
+        );
+    }
+}
 
 function cmdShouldMarkError(cmd: Cmd): boolean {
     if (cmd.getStatus() == "error") {
@@ -937,15 +1032,27 @@ class LineCmd extends React.Component<
                                 lineContext={lineutil.getRendererContext(line)}
                             >
                                 <If condition={rendererPlugin == null && !isNoneRenderer}>
-                                    <TerminalRenderer
-                                        screen={screen}
-                                        line={line}
-                                        width={width}
-                                        staticRender={staticRender}
-                                        visible={visible}
-                                        onHeightChange={this.handleHeightChange}
-                                        collapsed={false}
-                                    />
+                                    <Choose>
+                                        <When condition={line.linetype == "agent_mode"}>
+                                            <AgentModeRenderer
+                                                screen={screen}
+                                                line={line}
+                                                width={width}
+                                                onHeightChange={this.handleHeightChange}
+                                            />
+                                        </When>
+                                        <Otherwise>
+                                            <TerminalRenderer
+                                                screen={screen}
+                                                line={line}
+                                                width={width}
+                                                staticRender={staticRender}
+                                                visible={visible}
+                                                onHeightChange={this.handleHeightChange}
+                                                collapsed={false}
+                                            />
+                                        </Otherwise>
+                                    </Choose>
                                 </If>
                                 <If condition={rendererPlugin != null && rendererPlugin.rendererType == "simple"}>
                                     <SimpleBlobRenderer

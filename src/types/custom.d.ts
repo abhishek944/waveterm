@@ -675,12 +675,16 @@ declare global {
         model?: string;
         apitoken?: string;
         maxtokens?: number;
+        connectionstatus?: string;
+        enabled?: boolean;
     };
 
     type AzureOpenAIOptsType = {
         baseurl?: string;
         deploymentname?: string;
         apitoken?: string;
+        connectionstatus?: string;
+        enabled?: boolean;
     };
 
     type OpenAIOptsType = {
@@ -690,6 +694,8 @@ declare global {
         maxchoices?: number;
         baseurl?: string;
         timeout?: number;
+        connectionstatus?: string;
+        enabled?: boolean;
     };
 
     type PlaybookType = {

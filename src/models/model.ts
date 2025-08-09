@@ -1132,6 +1132,8 @@ class Model {
                         this.bookmarksModel.mergeBookmarks(update.bookmarks.bookmarks);
                     }
                 } else if (update.clientdata != null) {
+                    console.log("[Model.runUpdate_internal] Received clientdata update:", update.clientdata);
+                    console.log("[Model.runUpdate_internal] clientdata.aiopts:", update.clientdata.aiopts);
                     this.setClientData(update.clientdata);
                 } else if (update.cmdline != null) {
                     this.inputModel.updateCmdLine(update.cmdline);
@@ -1622,7 +1624,11 @@ class Model {
     }
 
     submitChatInfoCommand(chatMsg: string, curLineStr: string, clear: boolean): Promise<CommandRtnType> {
-        const commandStr = "/chat " + chatMsg;
+        // Thread mode is not implemented yet
+        if (!chatMsg || chatMsg.trim() === "") {
+            return Promise.resolve({ success: false, error: "empty chat message" });
+        }
+        const commandStr = chatMsg; // was: "/thread " + chatMsg;
         const interactive = false;
         const pk: FeCmdPacketType = {
             type: "fecmd",
@@ -1674,6 +1680,7 @@ class Model {
                 pk.kwargs["provider"] = provider;
             }
         }
+        
         return this.submitCommandPacket(pk, interactive);
     }
 

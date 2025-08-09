@@ -35,7 +35,6 @@ import (
 	"github.com/abhishek944/waveterm/wavesrv/pkg/dbutil"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/ephemeral"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/history"
-	"github.com/abhishek944/waveterm/wavesrv/pkg/pcloud"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/releasechecker"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/remote"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/remote/openai"
@@ -72,7 +71,7 @@ const MaxCommandLen = 4096
 const MaxSignalLen = 12
 const MaxSignalNum = 64
 const MaxEvalDepth = 5
-const MaxOpenAIAPITokenLen = 100
+const MaxOpenAIAPITokenLen = 200
 const MaxOpenAIModelLen = 100
 const MaxSidebarSections = 5
 
@@ -244,6 +243,7 @@ func init() {
 	registerCmdFn("client:setmainsidebar", ClientSetMainSidebarCommand)
 	registerCmdFn("client:setrightsidebar", ClientSetRightSidebarCommand)
 	registerCmdFn("client:setglobalshortcut", ClientSetGlobalShortcut)
+	registerCmdFn("client:verifyaiprovider", ClientVerifyAIProviderCommand)
 
 	registerCmdFn("sidebar:open", SidebarOpenCommand)
 	registerCmdFn("sidebar:close", SidebarCloseCommand)
@@ -2620,101 +2620,26 @@ func writePacketToPty(ctx context.Context, cmd *sstore.CmdType, pk packet.Packet
 	return nil
 }
 
+func writeTextToPty(ctx context.Context, cmd *sstore.CmdType, text string, outputPos *int64) error {
+	if text == "" {
+		return nil
+	}
+	outBytes := []byte(text)
+	update, err := sstore.AppendToCmdPtyBlob(ctx, cmd.ScreenId, cmd.LineId, outBytes, *outputPos)
+	if err != nil {
+		return err
+	}
+	*outputPos += int64(len(outBytes))
+	scbus.MainUpdateBus.DoScreenUpdate(cmd.ScreenId, update)
+	return nil
+}
 
-// func OpenAICommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {
-// 	ids, err := resolveUiIds(ctx, pk, R_Session|R_Screen)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("/%s error: %w", GetCmdStr(pk), err)
-// 	}
-// 	clientData, err := sstore.EnsureClientData(ctx)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("cannot retrieve client data: %v", err)
-// 	}
-// 	if clientData.OpenAIOpts == nil {
-// 		return nil, fmt.Errorf("error retrieving client open ai options")
-// 	}
-// 	opts := clientData.OpenAIOpts
-// 	if opts.APIToken == "" && opts.BaseURL == "" {
-// 		if clientData.ClientOpts.NoTelemetry {
-// 			return nil, fmt.Errorf(OpenAICloudCompletionTelemetryOffErrorMsg)
-// 		}
-// 	}
-// 	if opts.Model == "" {
-// 		opts.Model = openai.DefaultModel
-// 	}
-// 	if opts.MaxTokens == 0 {
-// 		opts.MaxTokens = openai.DefaultMaxTokens
-// 	}
-// 	promptStr := firstArg(pk)
-// 	ptermVal := defaultStr(pk.Kwargs["wterm"], DefaultPTERM)
-// 	pkTermOpts, err := GetUITermOpts(pk.UIContext.WinSize, ptermVal)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("openai error, invalid 'pterm' value %q: %v", ptermVal, err)
-// 	}
-// 	termOpts := convertTermOpts(pkTermOpts)
-// 	cmd, err := makeDynCmd(ctx, GetCmdStr(pk), ids, pk.GetRawStr(), *termOpts, nil)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("openai error, cannot make dyn cmd")
-// 	}
-// 	if resolveBool(pk.Kwargs["cmdinfo"], false) {
-// 		if promptStr == "" {
-// 			// this is requesting an update without wanting an openai query
-// 			update := sstore.UpdateWithCurrentOpenAICmdInfoChat(cmd.ScreenId, nil)
-// 			if err != nil {
-// 				return nil, fmt.Errorf("error getting update for CmdInfoChat %v", err)
-// 			}
-// 			return update, nil
-// 		}
-// 		curLineStr := defaultStr(pk.Kwargs["curline"], "")
-// 		userQueryPk := &packet.OpenAICmdInfoChatMessage{UserQuery: promptStr, MessageID: sstore.ScreenMemGetCmdInfoMessageCount(cmd.ScreenId)}
-// 		osType := GetOsTypeFromRuntime()
-// 		engineeredQuery := GetCmdInfoEngineeredPrompt(promptStr, curLineStr, ids.Remote.ShellType, osType)
-// 		userQueryPk.UserEngineeredQuery = engineeredQuery
-// 		WritePacketToUpdateBus(ctx, cmd, userQueryPk)
-// 		prompt := BuildOpenAIPromptArrayWithContext(sstore.ScreenMemGetCmdInfoChat(cmd.ScreenId).Messages)
-// 		go DoOpenAICmdInfoCompletion(cmd, clientData.ClientId, opts, prompt, curLineStr)
-// 		update := scbus.MakeUpdatePacket()
-// 		return update, nil
-// 	}
-// 	osType := GetOsTypeFromRuntime()
-// 	engineeredQuery := GetCmdInfoEngineeredPrompt(promptStr, "", ids.Remote.ShellType, osType)
-// 	prompt := []packet.OpenAIPromptMessageType{{Role: sstore.OpenAIRoleUser, Content: engineeredQuery}}
-// 	if resolveBool(pk.Kwargs["cmdinfoclear"], false) {
-// 		update := sstore.UpdateWithClearOpenAICmdInfo(cmd.ScreenId)
-// 		if err != nil {
-// 			return nil, fmt.Errorf("error clearing CmdInfoChat: %v", err)
-// 		}
-// 		return update, nil
-// 	}
-// 	if promptStr == "" {
-// 		return nil, fmt.Errorf("openai error, prompt string is blank")
-// 	}
-// 	update := scbus.MakeUpdatePacket()
-// 	go sstore.IncrementNumRunningCmds(cmd.ScreenId, 1)
-// 	line, err := sstore.AddOpenAILine(ctx, ids.ScreenId, DefaultUserId, cmd)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("cannot add new line: %v", err)
-// 	}
-// 	// sendRendererActivityUpdate("openai")
-
-// 	if resolveBool(pk.Kwargs["stream"], true) {
-// 		go DoOpenAIStreamCompletion(cmd, clientData.ClientId, opts, prompt)
-// 	} else {
-// 		go DoOpenAICompletion(cmd, opts, prompt)
-// 	}
-// 	updateHistoryContext(ctx, line, cmd, nil)
-// 	updateMap := make(map[string]interface{})
-// 	updateMap[sstore.ScreenField_SelectedLine] = line.LineNum
-// 	updateMap[sstore.ScreenField_Focus] = sstore.ScreenFocusInput
-// 	screen, err := sstore.UpdateScreen(ctx, ids.ScreenId, updateMap)
-// 	if err != nil {
-// 		// ignore error again (nothing to do)
-// 		log.Printf("openai error updating screen selected line: %v\n", err)
-// 	}
-// 	sstore.AddLineUpdate(update, line, cmd)
-// 	update.AddUpdate(*screen)
-// 	return update, nil
-// }
+// formatMarkdownForTerminal processes markdown text to make it more readable in a terminal
+func formatMarkdownForTerminal(text string) string {
+	// For now, we'll just preserve the text as-is
+	// In the future, we could enhance this to better format code blocks
+	return text
+}
 
 func AgentCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {
 	ids, err := resolveUiIds(ctx, pk, R_Session|R_Screen)
@@ -2775,7 +2700,9 @@ func AgentCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.
 	
 	// Run agent mode
 	go func() {
-		response, err := RunAgentMode(ctx, pk, clientData, promptStr, provider)
+		// Create a new context that won't be canceled when the parent function returns
+		bgCtx := context.Background()
+		response, err := RunAgentMode(bgCtx, pk, clientData, promptStr, provider)
 		if err != nil {
 			writeErrorToPty(cmd, fmt.Sprintf("agent error: %v", err), 0)
 			return
@@ -2794,6 +2721,11 @@ func AgentCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.
 				case pk, ok := <-response.Stream:
 					if !ok {
 						// Channel closed, we're done
+						// Add a newline at the end for proper formatting
+						err = writeTextToPty(bgCtx, cmd, "\n", &outputPos)
+						if err != nil {
+							log.Printf("error writing newline to ptybuffer: %v", err)
+						}
 						// Send update to toggle off agent mode
 						update := scbus.MakeUpdatePacket()
 						update.AddUpdate(sstore.AgentModeToggleType{Enabled: false})
@@ -2801,11 +2733,19 @@ func AgentCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.
 						return
 					}
 					
-					// Write packet to PTY
-					err = writePacketToPty(ctx, cmd, pk, &outputPos)
-					if err != nil {
-						log.Printf("error writing response to ptybuffer: %v", err)
+					// Extract and write only the text content to PTY
+					if pk.Error != "" {
+						writeErrorToPty(cmd, pk.Error, outputPos)
 						return
+					}
+					if pk.Text != "" {
+						// For agent mode, format the text to handle markdown better
+						formattedText := formatMarkdownForTerminal(pk.Text)
+						err = writeTextToPty(bgCtx, cmd, formattedText, &outputPos)
+						if err != nil {
+							log.Printf("error writing response to ptybuffer: %v", err)
+							return
+						}
 					}
 				}
 			}
@@ -5417,227 +5357,9 @@ func DumpStateCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (sc
 	return sstore.InfoMsgUpdate("current connection state sent to log.  festate: %s", dbutil.QuickJson(feState)), nil
 }
 
-func ClientCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {
-	return nil, fmt.Errorf("/client requires a subcommand: %s", formatStrs([]string{"show", "set"}, "or", false))
-}
-
-func ClientNotifyUpdateWriterCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {
-	pcloud.ResetUpdateWriterNumFailures()
-	sstore.NotifyUpdateWriter()
-	update := scbus.MakeUpdatePacket()
-	update.AddUpdate(sstore.InfoMsgUpdate("notified update writer"))
-	return update, nil
-}
-
-func boolToStr(v bool, trueStr string, falseStr string) string {
-	if v {
-		return trueStr
-	}
-	return falseStr
-}
-
-func ClientAcceptTosCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {
-	clientData, err := sstore.EnsureClientData(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("cannot retrieve client data: %v", err)
-	}
-	clientOpts := clientData.ClientOpts
-	clientOpts.AcceptedTos = time.Now().UnixMilli()
-	err = sstore.SetClientOpts(ctx, clientOpts)
-	if err != nil {
-		return nil, fmt.Errorf("error updating client data: %v", err)
-	}
-	clientData, err = sstore.EnsureClientData(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("cannot retrieve updated client data: %v", err)
-	}
-	update := scbus.MakeUpdatePacket()
-	update.AddUpdate(*clientData)
-	return update, nil
-}
-
 var confirmKeyRe = regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
 
 // confirm flags must be all lowercase and only contain letters, numbers, and underscores (and start with letter)
-func ClientConfirmFlagCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {
-	// Check for valid arguments length
-	if len(pk.Args) < 2 {
-		return nil, fmt.Errorf("invalid arguments: expected at least 2, got %d", len(pk.Args))
-	}
-
-	// Extract confirmKey and value from pk.Args
-	confirmKey := pk.Args[0]
-	if !confirmKeyRe.MatchString(confirmKey) {
-		return nil, fmt.Errorf("invalid confirm flag key: %s", confirmKey)
-	}
-	value := resolveBool(pk.Args[1], true)
-	validKey := utilfn.ContainsStr(ConfirmFlags, confirmKey)
-	if !validKey {
-		return nil, fmt.Errorf("invalid confirm flag key: %s", confirmKey)
-	}
-
-	clientData, err := sstore.EnsureClientData(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("cannot retrieve client data: %v", err)
-	}
-
-	// Initialize ConfirmFlags if it's nil
-	if clientData.ClientOpts.ConfirmFlags == nil {
-		clientData.ClientOpts.ConfirmFlags = make(map[string]bool)
-	}
-
-	// Set the confirm flag
-	clientData.ClientOpts.ConfirmFlags[confirmKey] = value
-
-	err = sstore.SetClientOpts(ctx, clientData.ClientOpts)
-	if err != nil {
-		return nil, fmt.Errorf("error updating client data: %v", err)
-	}
-
-	// Retrieve updated client data
-	clientData, err = sstore.EnsureClientData(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("cannot retrieve updated client data: %v", err)
-	}
-
-	update := scbus.MakeUpdatePacket()
-	update.AddUpdate(*clientData)
-
-	return update, nil
-}
-
-func ClientSetGlobalShortcut(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {
-	clientData, err := sstore.EnsureClientData(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("cannot retrieve client data: %v", err)
-	}
-	newShortcut := firstArg(pk)
-	if len(newShortcut) > 50 {
-		return nil, fmt.Errorf("invalid shortcut (maxlen = 50)")
-	}
-	clientOpts := clientData.ClientOpts
-	clientOpts.GlobalShortcut = newShortcut
-	clientOpts.GlobalShortcutEnabled = (newShortcut != "")
-	err = sstore.SetClientOpts(ctx, clientOpts)
-	if err != nil {
-		return nil, fmt.Errorf("error updating client data: %v", err)
-	}
-	clientData.ClientOpts = clientOpts
-	update := scbus.MakeUpdatePacket()
-	update.AddUpdate(*clientData)
-	return update, nil
-}
-
-func ClientSetMainSidebarCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {
-	clientData, err := sstore.EnsureClientData(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("cannot retrieve client data: %v", err)
-	}
-
-	// Handle collapsed
-	collapsed, ok := pk.Kwargs["collapsed"]
-	if !ok {
-		return nil, fmt.Errorf("collapsed key not provided")
-	}
-	collapsedValue := resolveBool(collapsed, false)
-
-	// Handle width
-	var width int
-	if w, exists := pk.Kwargs["width"]; exists {
-		width, err = resolveNonNegInt(w, 0)
-		if err != nil {
-			return nil, fmt.Errorf("error resolving width: %v", err)
-		}
-	} else if clientData.ClientOpts.MainSidebar != nil {
-		width = clientData.ClientOpts.MainSidebar.Width
-	}
-
-	// Initialize SidebarCollapsed if it's nil
-	if clientData.ClientOpts.MainSidebar == nil {
-		clientData.ClientOpts.MainSidebar = new(sstore.SidebarValueType)
-	}
-
-	// Set the sidebar values
-	var sv sstore.SidebarValueType
-	sv.Collapsed = collapsedValue
-	if width != 0 {
-		sv.Width = width
-	}
-	clientData.ClientOpts.MainSidebar = &sv
-
-	// Update client data
-	err = sstore.SetClientOpts(ctx, clientData.ClientOpts)
-	if err != nil {
-		return nil, fmt.Errorf("error updating client data: %v", err)
-	}
-
-	// Retrieve updated client data
-	clientData, err = sstore.EnsureClientData(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("cannot retrieve updated client data: %v", err)
-	}
-
-	update := scbus.MakeUpdatePacket()
-	update.AddUpdate(*clientData)
-
-	return update, nil
-}
-
-func ClientSetRightSidebarCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {
-	clientData, err := sstore.EnsureClientData(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("cannot retrieve client data: %v", err)
-	}
-
-	// Handle collapsed
-	collapsed, ok := pk.Kwargs["collapsed"]
-	if !ok {
-		return nil, fmt.Errorf("collapsed key not provided")
-	}
-	collapsedValue := resolveBool(collapsed, false)
-
-	// Handle width
-	var width int
-	if w, exists := pk.Kwargs["width"]; exists {
-		width, err = resolveNonNegInt(w, 0)
-		if err != nil {
-			return nil, fmt.Errorf("error resolving width: %v", err)
-		}
-	} else if clientData.ClientOpts.RightSidebar != nil {
-		width = clientData.ClientOpts.RightSidebar.Width
-	}
-
-	// Initialize SidebarCollapsed if it's nil
-	if clientData.ClientOpts.RightSidebar == nil {
-		clientData.ClientOpts.RightSidebar = new(sstore.SidebarValueType)
-	}
-
-	// Set the sidebar values
-	var sv sstore.SidebarValueType
-	sv.Collapsed = collapsedValue
-	if width != 0 {
-		sv.Width = width
-	}
-	clientData.ClientOpts.RightSidebar = &sv
-
-	// Update client data
-	err = sstore.SetClientOpts(ctx, clientData.ClientOpts)
-	if err != nil {
-		return nil, fmt.Errorf("error updating client data: %v", err)
-	}
-
-	// Retrieve updated client data
-	clientData, err = sstore.EnsureClientData(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("cannot retrieve updated client data: %v", err)
-	}
-
-	update := scbus.MakeUpdatePacket()
-	update.AddUpdate(*clientData)
-
-	return update, nil
-}
-
 func validateOpenAIAPIToken(key string) error {
 	if len(key) > MaxOpenAIAPITokenLen {
 		return fmt.Errorf("invalid openai token, too long")
@@ -5692,437 +5414,11 @@ func CheckOptionAlias(kwargs map[string]string, aliases ...string) (string, bool
 	return "", false
 }
 
-func validateInputPosition(config string) error {
-	if utilfn.ContainsStr([]string{"top", "bottom"}, config) {
-		return nil
-	}
-	return fmt.Errorf("%s is not a config option", config)
-}
-
 func validateSudoPwStore(config string) error {
 	if utilfn.ContainsStr([]string{"on", "off", "notimeout"}, config) {
 		return nil
 	}
 	return fmt.Errorf("%s is not a config option", config)
-}
-
-func ClientSetCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {
-	clientData, err := sstore.EnsureClientData(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("cannot retrieve client data: %v", err)
-	}
-	var varsUpdated []string
-	if fontSizeStr, found := pk.Kwargs["termfontsize"]; found {
-		newFontSize, err := resolveNonNegInt(fontSizeStr, 0)
-		if err != nil {
-			return nil, fmt.Errorf("invalid termfontsize, must be a number between 8-15: %v", err)
-		}
-		if newFontSize < TermFontSizeMin || newFontSize > TermFontSizeMax {
-			return nil, fmt.Errorf("invalid termfontsize, must be a number between %d-%d", TermFontSizeMin, TermFontSizeMax)
-		}
-		feOpts := clientData.FeOpts
-		feOpts.TermFontSize = newFontSize
-		err = sstore.UpdateClientFeOpts(ctx, feOpts)
-		if err != nil {
-			return nil, fmt.Errorf("error updating client feopts: %v", err)
-		}
-		varsUpdated = append(varsUpdated, "termfontsize")
-	}
-	if fontFamilyStr, found := pk.Kwargs["termfontfamily"]; found {
-		newFontFamily := fontFamilyStr
-		err = validateFontFamily(newFontFamily)
-		if err != nil {
-			return nil, err
-		}
-		feOpts := clientData.FeOpts
-		feOpts.TermFontFamily = newFontFamily
-		err = sstore.UpdateClientFeOpts(ctx, feOpts)
-		if err != nil {
-			return nil, fmt.Errorf("error updating client feopts: %v", err)
-		}
-		varsUpdated = append(varsUpdated, "termfontfamily")
-	}
-	if themeSourceStr, found := pk.Kwargs["theme"]; found {
-		newThemeSource := themeSourceStr
-		found := false
-		for _, theme := range ThemeSources {
-			if newThemeSource == theme {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return nil, fmt.Errorf("invalid theme source")
-		}
-		feOpts := clientData.FeOpts
-		feOpts.Theme = newThemeSource
-		err = sstore.UpdateClientFeOpts(ctx, feOpts)
-		if err != nil {
-			return nil, fmt.Errorf("error updating client feopts: %v", err)
-		}
-		varsUpdated = append(varsUpdated, "theme")
-	}
-	if termthemeStr, found := pk.Kwargs["termtheme"]; found {
-		feOpts := clientData.FeOpts
-		if feOpts.TermThemeSettings == nil {
-			feOpts.TermThemeSettings = make(map[string]string)
-		}
-		if termthemeStr == "" {
-			delete(feOpts.TermThemeSettings, "root")
-		} else {
-			feOpts.TermThemeSettings["root"] = termthemeStr
-		}
-		err = sstore.UpdateClientFeOpts(ctx, feOpts)
-		if err != nil {
-			return nil, fmt.Errorf("error updating client feopts: %v", err)
-		}
-		varsUpdated = append(varsUpdated, "termtheme")
-	}
-	if inputPositionStr, found := pk.Kwargs["inputposition"]; found {
-		err := validateInputPosition(inputPositionStr)
-		if err != nil {
-			return nil, err
-		}
-		clientOpts := clientData.ClientOpts
-		clientOpts.InputPosition = inputPositionStr
-		err = sstore.SetClientOpts(ctx, clientOpts)
-		if err != nil {
-			return nil, fmt.Errorf("error updating client inputposition: %v", err)
-		}
-		varsUpdated = append(varsUpdated, "inputposition")
-	}
-	if apiToken, found := CheckOptionAlias(pk.Kwargs, "openaiapitoken", "aiapitoken"); found {
-		err = validateOpenAIAPIToken(apiToken)
-		if err != nil {
-			return nil, err
-		}
-		varsUpdated = append(varsUpdated, "openaiapitoken")
-		aiOpts := clientData.OpenAIOpts
-		if aiOpts == nil {
-			aiOpts = &sstore.OpenAIOptsType{}
-			clientData.OpenAIOpts = aiOpts
-		}
-		aiOpts.APIToken = apiToken
-		err = sstore.UpdateClientOpenAIOpts(ctx, *aiOpts)
-		if err != nil {
-			return nil, fmt.Errorf("error updating client ai api token: %v", err)
-		}
-	}
-	if aiModel, found := CheckOptionAlias(pk.Kwargs, "openaimodel", "aimodel"); found {
-		err = validateOpenAIModel(aiModel)
-		if err != nil {
-			return nil, err
-		}
-		varsUpdated = append(varsUpdated, "openaimodel")
-		aiOpts := clientData.OpenAIOpts
-		if aiOpts == nil {
-			aiOpts = &sstore.OpenAIOptsType{}
-			clientData.OpenAIOpts = aiOpts
-		}
-		aiOpts.Model = aiModel
-		err = sstore.UpdateClientOpenAIOpts(ctx, *aiOpts)
-		if err != nil {
-			return nil, fmt.Errorf("error updating client ai model: %v", err)
-		}
-	}
-	if maxTokensStr, found := CheckOptionAlias(pk.Kwargs, "openaimaxtokens", "aimaxtokens"); found {
-		maxTokens, err := strconv.Atoi(maxTokensStr)
-		if err != nil {
-			return nil, fmt.Errorf("error updating client ai maxtokens, invalid number: %v", err)
-		}
-		if maxTokens < 0 || maxTokens > 1000000 {
-			return nil, fmt.Errorf("error updating client ai maxtokens, out of range: %d", maxTokens)
-		}
-		varsUpdated = append(varsUpdated, "openaimaxtokens")
-		aiOpts := clientData.OpenAIOpts
-		if aiOpts == nil {
-			aiOpts = &sstore.OpenAIOptsType{}
-			clientData.OpenAIOpts = aiOpts
-		}
-		aiOpts.MaxTokens = maxTokens
-		err = sstore.UpdateClientOpenAIOpts(ctx, *aiOpts)
-		if err != nil {
-			return nil, fmt.Errorf("error updating client ai maxtokens: %v", err)
-		}
-	}
-	if maxChoicesStr, found := CheckOptionAlias(pk.Kwargs, "openaimaxchoices", "aimaxchoices"); found {
-		maxChoices, err := strconv.Atoi(maxChoicesStr)
-		if err != nil {
-			return nil, fmt.Errorf("error updating client ai maxchoices, invalid number: %v", err)
-		}
-		if maxChoices < 0 || maxChoices > 10 {
-			return nil, fmt.Errorf("error updating client ai maxchoices, out of range: %d", maxChoices)
-		}
-		varsUpdated = append(varsUpdated, "openaimaxchoices")
-		aiOpts := clientData.OpenAIOpts
-		if aiOpts == nil {
-			aiOpts = &sstore.OpenAIOptsType{}
-			clientData.OpenAIOpts = aiOpts
-		}
-		aiOpts.MaxChoices = maxChoices
-		err = sstore.UpdateClientOpenAIOpts(ctx, *aiOpts)
-		if err != nil {
-			return nil, fmt.Errorf("error updating client ai maxchoices: %v", err)
-		}
-	}
-	if aiBaseURL, found := CheckOptionAlias(pk.Kwargs, "openaibaseurl", "aibaseurl"); found {
-		aiOpts := clientData.OpenAIOpts
-		if aiOpts == nil {
-			aiOpts = &sstore.OpenAIOptsType{}
-			clientData.OpenAIOpts = aiOpts
-		}
-		aiOpts.BaseURL = aiBaseURL
-		varsUpdated = append(varsUpdated, "openaibaseurl")
-		err = sstore.UpdateClientOpenAIOpts(ctx, *aiOpts)
-		if err != nil {
-			return nil, fmt.Errorf("error updating client ai base url: %v", err)
-		}
-	}
-	if aiTimeoutStr, found := CheckOptionAlias(pk.Kwargs, "openaitimeout", "aitimeout"); found {
-		aiTimeout, err := strconv.ParseFloat(aiTimeoutStr, 64)
-		if err != nil {
-			return nil, fmt.Errorf("error updating client ai timeout, invalid number: %v", err)
-		}
-		aiOpts := clientData.OpenAIOpts
-		if aiOpts == nil {
-			aiOpts = &sstore.OpenAIOptsType{}
-			clientData.OpenAIOpts = aiOpts
-		}
-		aiOpts.Timeout = int(aiTimeout * 1000)
-		varsUpdated = append(varsUpdated, "openaitimeout")
-		err = sstore.UpdateClientOpenAIOpts(ctx, *aiOpts)
-		if err != nil {
-			return nil, fmt.Errorf("error updating client ai timeout: %v", err)
-		}
-	}
-	if webglStr, found := pk.Kwargs["webgl"]; found {
-		webglVal := resolveBool(webglStr, false)
-		clientOpts := clientData.ClientOpts
-		clientOpts.WebGL = webglVal
-		err = sstore.SetClientOpts(ctx, clientOpts)
-		if err != nil {
-			return nil, fmt.Errorf("error updating client webgl: %v", err)
-		}
-		varsUpdated = append(varsUpdated, "webgl")
-	}
-	// Handle new AI provider options
-	aiOptsUpdated := false
-	aiOpts := clientData.AIOpts
-	if aiOpts == nil {
-		aiOpts = &sstore.AIOptsType{}
-	} else {
-		// Create a deep copy to preserve existing data
-		aiOptsCopy := *aiOpts
-		aiOpts = &aiOptsCopy
-		// Deep copy nested structs if they exist
-		if aiOpts.Gemini != nil {
-			geminiCopy := *aiOpts.Gemini
-			aiOpts.Gemini = &geminiCopy
-		}
-		if aiOpts.OpenAI != nil {
-			openaiCopy := *aiOpts.OpenAI
-			aiOpts.OpenAI = &openaiCopy
-		}
-		if aiOpts.Azure != nil {
-			azureCopy := *aiOpts.Azure
-			aiOpts.Azure = &azureCopy
-		}
-	}
-	// Handle default provider
-	if defaultProvider, found := pk.Kwargs["defaultprovider"]; found {
-		if defaultProvider != "openai" && defaultProvider != "gemini" && defaultProvider != "azure" {
-			return nil, fmt.Errorf("invalid default provider, must be 'openai', 'gemini', or 'azure'")
-		}
-		aiOpts.Default = defaultProvider
-		aiOptsUpdated = true
-		varsUpdated = append(varsUpdated, "defaultprovider")
-	}
-	// Handle Gemini options
-	if geminiAPIToken, found := pk.Kwargs["geminiapitoken"]; found {
-		// Validate token
-		err = validateOpenAIAPIToken(geminiAPIToken) // reuse validation function
-		if err != nil {
-			return nil, fmt.Errorf("invalid gemini api token: %v", err)
-		}
-		if aiOpts.Gemini == nil {
-			aiOpts.Gemini = &sstore.GeminiOptsType{}
-		}
-		aiOpts.Gemini.APIToken = geminiAPIToken
-		aiOptsUpdated = true
-		varsUpdated = append(varsUpdated, "geminiapitoken")
-	}
-	// Handle new OpenAI options through AIOpts
-	if openaiAPIToken, found := pk.Kwargs["openaiapitoken"]; found {
-		if aiOpts.OpenAI == nil {
-			aiOpts.OpenAI = &sstore.OpenAIOptsType{}
-		}
-		aiOpts.OpenAI.APIToken = openaiAPIToken
-		aiOptsUpdated = true
-		varsUpdated = append(varsUpdated, "openaiapitoken")
-	}
-	// Handle Azure options
-	if azureBaseURL, found := pk.Kwargs["azurebaseurl"]; found {
-		if aiOpts.Azure == nil {
-			aiOpts.Azure = &sstore.AzureOpenAIOptsType{}
-		}
-		aiOpts.Azure.BaseURL = azureBaseURL
-		aiOptsUpdated = true
-		varsUpdated = append(varsUpdated, "azurebaseurl")
-	}
-	if azureDeploymentName, found := pk.Kwargs["azuredeploymentname"]; found {
-		if aiOpts.Azure == nil {
-			aiOpts.Azure = &sstore.AzureOpenAIOptsType{}
-		}
-		aiOpts.Azure.DeploymentName = azureDeploymentName
-		aiOptsUpdated = true
-		varsUpdated = append(varsUpdated, "azuredeploymentname")
-	}
-	if azureAPIToken, found := pk.Kwargs["azureapitoken"]; found {
-		// Validate token
-		err = validateOpenAIAPIToken(azureAPIToken) // reuse validation function
-		if err != nil {
-			return nil, fmt.Errorf("invalid azure api token: %v", err)
-		}
-		if aiOpts.Azure == nil {
-			aiOpts.Azure = &sstore.AzureOpenAIOptsType{}
-		}
-		aiOpts.Azure.APIToken = azureAPIToken
-		aiOptsUpdated = true
-		varsUpdated = append(varsUpdated, "azureapitoken")
-	}
-	// Update AIOpts if any changes were made
-	if aiOptsUpdated {
-		err = sstore.UpdateClientAIOpts(ctx, *aiOpts)
-		if err != nil {
-			return nil, fmt.Errorf("error updating client ai options: %v", err)
-		}
-	}
-	if sudoPwStoreStr, found := pk.Kwargs["sudopwstore"]; found {
-		err := validateSudoPwStore(sudoPwStoreStr)
-		if err != nil {
-			return nil, fmt.Errorf("invalid sudo pw store, must be \"on\", \"off\", \"notimeout\": %v", err)
-		}
-		feOpts := clientData.FeOpts
-		feOpts.SudoPwStore = strings.ToLower(sudoPwStoreStr)
-		err = sstore.UpdateClientFeOpts(ctx, feOpts)
-		if err != nil {
-			return nil, fmt.Errorf("error updating client feopts: %v", err)
-		}
-		// clear all sudo pw if turning off
-		if feOpts.SudoPwStore == "off" {
-			for _, proc := range remote.GetRemoteMap() {
-				proc.ClearCachedSudoPw()
-			}
-		}
-		varsUpdated = append(varsUpdated, "sudopwstore")
-	}
-	if sudoPwTimeoutStr, found := pk.Kwargs["sudopwtimeout"]; found {
-		oldPwTimeout := clientData.FeOpts.SudoPwTimeoutMs / 1000 / 60 // ms to minutes
-		if oldPwTimeout == 0 {
-			oldPwTimeout = sstore.DefaultSudoTimeout
-		}
-		newSudoPwTimeout, err := resolveNonNegInt(sudoPwTimeoutStr, sstore.DefaultSudoTimeout)
-		if err != nil {
-			return nil, fmt.Errorf("invalid sudo pw timeout, must be a number greater than 0: %v", err)
-		}
-		if newSudoPwTimeout == 0 {
-			return nil, fmt.Errorf("invalid sudo pw timeout, must be a number greater than 0")
-		}
-		feOpts := clientData.FeOpts
-		feOpts.SudoPwTimeoutMs = newSudoPwTimeout * 60 * 1000 // minutes to ms
-		err = sstore.UpdateClientFeOpts(ctx, feOpts)
-		if err != nil {
-			return nil, fmt.Errorf("error updating client feopts: %v", err)
-		}
-		for _, proc := range remote.GetRemoteMap() {
-			proc.ChangeSudoTimeout(int64(newSudoPwTimeout - oldPwTimeout))
-		}
-		varsUpdated = append(varsUpdated, "sudopwtimeout")
-	}
-	if sudoPwClearOnSleepStr, found := pk.Kwargs["sudopwclearonsleep"]; found {
-		newSudoPwClearOnSleep := resolveBool(sudoPwClearOnSleepStr, true)
-		feOpts := clientData.FeOpts
-		feOpts.NoSudoPwClearOnSleep = !newSudoPwClearOnSleep
-		err = sstore.UpdateClientFeOpts(ctx, feOpts)
-		if err != nil {
-			return nil, fmt.Errorf("error updating client feopts: %v", err)
-		}
-		varsUpdated = append(varsUpdated, "sudopwclearonsleep")
-	}
-	if len(varsUpdated) == 0 {
-		return nil, fmt.Errorf("/client:set requires a value to set: %s", formatStrs([]string{"termfontsize", "termfontfamily", "inputposition", "openaiapitoken", "openaimodel", "openaibaseurl", "openaimaxtokens", "openaimaxchoices", "openaitimeout", "webgl", "defaultprovider", "geminiapitoken", "azurebaseurl", "azuredeploymentname", "azureapitoken"}, "or", false))
-	}
-	clientData, err = sstore.EnsureClientData(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("cannot retrieve updated client data: %v", err)
-	}
-	update := scbus.MakeUpdatePacket()
-	update.AddUpdate(*clientData)
-	update.AddUpdate(sstore.InfoMsgType{
-		InfoMsg:   fmt.Sprintf("client updated %s", formatStrs(varsUpdated, "and", false)),
-		TimeoutMs: 2000,
-	})
-	return update, nil
-}
-
-func ClientShowCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {
-	clientData, err := sstore.EnsureClientData(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("cannot retrieve client data: %v", err)
-	}
-	dbVersion, err := sstore.GetDBVersion(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("cannot retrieve db version: %v\n", err)
-	}
-	clientVersion := "-"
-	if pk.UIContext != nil && pk.UIContext.Build != "" {
-		clientVersion = pk.UIContext.Build
-	}
-	aiModel := clientData.OpenAIOpts.Model
-	if aiModel == "" {
-		aiModel = "(default) " + openai.DefaultModel
-	}
-	aiMaxTokens := fmt.Sprintf("%d", clientData.OpenAIOpts.MaxTokens)
-	if clientData.OpenAIOpts.MaxTokens == 0 {
-		aiMaxTokens = fmt.Sprintf("(default) %d", openai.DefaultMaxTokens)
-	}
-	aiMaxChoices := fmt.Sprintf("%d", clientData.OpenAIOpts.MaxChoices)
-	if clientData.OpenAIOpts.MaxChoices == 0 {
-		aiMaxChoices = "(not set)"
-	}
-	aiBaseUrl := clientData.OpenAIOpts.BaseURL
-	if aiBaseUrl == "" {
-		aiBaseUrl = "(openai default)"
-	}
-	aiTimeout := fmt.Sprintf("(default) %d", (OpenAIPacketTimeout / 1000))
-	if clientData.OpenAIOpts.Timeout != 0 {
-		aiTimeout = strconv.FormatFloat((float64(clientData.OpenAIOpts.Timeout) / 1000.0), 'f', -1, 64)
-	}
-	var buf bytes.Buffer
-	buf.WriteString(fmt.Sprintf("  %-15s %s\n", "userid", clientData.UserId))
-	buf.WriteString(fmt.Sprintf("  %-15s %s\n", "clientid", clientData.ClientId))
-	buf.WriteString(fmt.Sprintf("  %-15s %s\n", "telemetry", boolToStr(clientData.ClientOpts.NoTelemetry, "off", "on")))
-	buf.WriteString(fmt.Sprintf("  %-15s %s\n", "release-check", boolToStr(clientData.ClientOpts.NoReleaseCheck, "off", "on")))
-	buf.WriteString(fmt.Sprintf("  %-15s %d\n", "db-version", dbVersion))
-	buf.WriteString(fmt.Sprintf("  %-15s %s\n", "client-version", clientVersion))
-	buf.WriteString(fmt.Sprintf("  %-15s %s %s\n", "server-version", scbase.WaveVersion, scbase.BuildTime))
-	buf.WriteString(fmt.Sprintf("  %-15s %s (%s)\n", "arch", scbase.ClientArch(), scbase.UnameKernelRelease()))
-	buf.WriteString(fmt.Sprintf("  %-15s %d\n", "termfontsize", clientData.FeOpts.TermFontSize))
-	buf.WriteString(fmt.Sprintf("  %-15s %s\n", "termfontfamily", clientData.FeOpts.TermFontFamily))
-	buf.WriteString(fmt.Sprintf("  %-15s %s\n", "termfontfamily", clientData.FeOpts.Theme))
-	buf.WriteString(fmt.Sprintf("  %-15s %s\n", "aiapitoken", clientData.OpenAIOpts.APIToken))
-	buf.WriteString(fmt.Sprintf("  %-15s %s\n", "aimodel", aiModel))
-	buf.WriteString(fmt.Sprintf("  %-15s %s\n", "aimaxtokens", aiMaxTokens))
-	buf.WriteString(fmt.Sprintf("  %-15s %s\n", "aimaxchoices", aiMaxChoices))
-	buf.WriteString(fmt.Sprintf("  %-15s %s\n", "aibaseurl", aiBaseUrl))
-	buf.WriteString(fmt.Sprintf("  %-15s %ss\n", "aitimeout", aiTimeout))
-	update := scbus.MakeUpdatePacket()
-	update.AddUpdate(sstore.InfoMsgType{
-		InfoTitle: fmt.Sprintf("client info"),
-		InfoLines: splitLinesForInfo(buf.String()),
-	})
-
-	return update, nil
 }
 
 // func TelemetryCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {

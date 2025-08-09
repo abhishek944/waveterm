@@ -532,16 +532,29 @@ class CommandRunner {
 
     // Set AI Providers options (gemini, openai, azure)
     setAIOpts(opts: any): Promise<CommandRtnType> {
+        console.log("[CommandRunner.setAIOpts] Called with opts:", opts);
         let kwargs: Record<string, string> = { nohist: "1" };
         // default provider
         if (opts.default != null) {
             kwargs["defaultprovider"] = opts.default;
         }
+        if (opts.gemini?.model != null) {
+            kwargs["geminimodel"] = opts.gemini.model;
+        }
         if (opts.gemini?.apitoken != null) {
             kwargs["geminiapitoken"] = opts.gemini.apitoken;
         }
+        if (opts.gemini?.enabled != null) {
+            kwargs["geminienabled"] = String(opts.gemini.enabled);
+        }
+        if (opts.openai?.model != null) {
+            kwargs["openaimodel"] = opts.openai.model;
+        }
         if (opts.openai?.apitoken != null) {
             kwargs["openaiapitoken"] = opts.openai.apitoken;
+        }
+        if (opts.openai?.enabled != null) {
+            kwargs["openaienabled"] = String(opts.openai.enabled);
         }
         if (opts.azure?.baseurl != null) {
             kwargs["azurebaseurl"] = opts.azure.baseurl;
@@ -552,11 +565,21 @@ class CommandRunner {
         if (opts.azure?.apitoken != null) {
             kwargs["azureapitoken"] = opts.azure.apitoken;
         }
+        if (opts.azure?.enabled != null) {
+            kwargs["azureenabled"] = String(opts.azure.enabled);
+        }
+        console.log("[CommandRunner.setAIOpts] Sending kwargs:", kwargs);
         return GlobalModel.submitCommand("client", "set", null, kwargs, false);
     }
 
     setAutocompleteEnabled(enabled: boolean): Promise<CommandRtnType> {
         return GlobalModel.submitCommand("autocomplete", enabled ? "on" : "off", null, { nohist: "1" }, false);
+    }
+
+    verifyAIProvider(provider: string): Promise<CommandRtnType> {
+        console.log("[CommandRunner.verifyAIProvider] Called with provider:", provider);
+        let kwargs: Record<string, string> = { nohist: "1", provider: provider };
+        return GlobalModel.submitCommand("client", "verifyaiprovider", null, kwargs, false);
     }
 }
 

@@ -1,0 +1,1 @@
+ALTER TABLE client ADD COLUMN aiopts json NOT NULL DEFAULT '{}';

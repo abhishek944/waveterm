@@ -33,7 +33,7 @@ const AIProviderDropdown: React.FC = observer(() => {
         
         // Store the choice persistently
         if (value) {
-            GlobalModel.submitCommand("client", "setconfig", ["aiprovider", value], {}, false);
+            GlobalModel.submitCommand("client", "set", null, {"defaultprovider": value}, false);
         }
     }, []);
 

@@ -465,7 +465,9 @@ class TextAreaInput extends React.Component<{ screen: Screen; onHeightChange: ()
     }
 
     @boundMethod
-    onKeyDown(e: any) {}
+    onKeyDown(e: any) {
+        // Let the keybinding system handle all keys
+    }
 
     @mobx.action.bound
     onChange(e: any) {
@@ -688,7 +690,6 @@ class TextAreaInput extends React.Component<{ screen: Screen; onHeightChange: ()
                     onBlur={this.handleMainBlur}
                     style={{ height: computedInnerHeight, minHeight: computedInnerHeight, fontSize: termFontSize }}
                     value={curLine}
-                    onKeyDown={this.onKeyDown}
                     onChange={this.onChange}
                     onSelect={this.onSelect}
                     placeholder="Type here..."
