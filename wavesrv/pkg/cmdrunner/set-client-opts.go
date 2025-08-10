@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"log"
 	"strconv"
 
 	"github.com/abhishek944/waveterm/waveshell/pkg/utilfn"
@@ -90,12 +89,10 @@ func ClientShowCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (s
 }
 
 func ClientSetCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {
-	log.Printf("[ClientSetCommand] Starting with kwargs: %v", pk.Kwargs)
 	clientData, err := sstore.EnsureClientData(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("cannot retrieve client data: %v", err)
 	}
-	log.Printf("[ClientSetCommand] Current AIOpts: %+v", clientData.AIOpts)
 	var varsUpdated []string
 	if fontSizeStr, found := pk.Kwargs["termfontsize"]; found {
 		newFontSize, err := resolveNonNegInt(fontSizeStr, 0)
@@ -315,10 +312,6 @@ func ClientSetCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (sc
 	}
 	// Handle default provider
 	if defaultProvider, found := pk.Kwargs["defaultprovider"]; found {
-		log.Printf("[ClientSetCommand] Received defaultprovider: '%s'", defaultProvider)
-		if defaultProvider == "" {
-			log.Printf("[ClientSetCommand] Warning: empty default provider received")
-		}
 		if defaultProvider != "" && defaultProvider != "openai" && defaultProvider != "gemini" && defaultProvider != "azure" {
 			return nil, fmt.Errorf("invalid default provider '%s', must be 'openai', 'gemini', or 'azure'", defaultProvider)
 		}
@@ -423,15 +416,10 @@ func ClientSetCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (sc
 	}
 	// Update AIOpts if any changes were made
 	if aiOptsUpdated {
-		log.Printf("[ClientSetCommand] Updating AIOpts: %+v", aiOpts)
-		if aiOpts.Gemini != nil {
-			log.Printf("[ClientSetCommand] Gemini config: APIToken=%s", aiOpts.Gemini.APIToken)
-		}
 		err = sstore.UpdateClientAIOpts(ctx, *aiOpts)
 		if err != nil {
 			return nil, fmt.Errorf("error updating client ai options: %v", err)
 		}
-		log.Printf("[ClientSetCommand] AIOpts updated successfully")
 	}
 	if sudoPwStoreStr, found := pk.Kwargs["sudopwstore"]; found {
 		err := validateSudoPwStore(sudoPwStoreStr)
@@ -478,7 +466,6 @@ func ClientSetCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (sc
 	if err != nil {
 		return nil, fmt.Errorf("cannot retrieve updated client data: %v", err)
 	}
-	log.Printf("[ClientSetCommand] Final clientData AIOpts: %+v", clientData.AIOpts)
 	update := scbus.MakeUpdatePacket()
 	update.AddUpdate(*clientData)
 	update.AddUpdate(sstore.InfoMsgType{
@@ -493,7 +480,6 @@ func ClientNotifyUpdateWriterCommand(ctx context.Context, pk *scpacket.FeCommand
 	if err != nil {
 		return nil, fmt.Errorf("cannot retrieve client data: %v", err)
 	}
-	log.Printf("sending notifyupdate to %s\n", clientData.UserId)
 	update := scbus.MakeUpdatePacket()
 	if clientData.UserId == "" {
 		update.AddUpdate(sstore.InfoMsgType{

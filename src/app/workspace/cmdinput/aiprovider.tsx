@@ -26,7 +26,12 @@ const AI_PROVIDERS: AIProviderOption[] = [
 ];
 
 const AIProviderDropdown: React.FC = observer(() => {
-    const currentProvider = GlobalModel.aiProvider.get() || "";
+    const aiProviderFromObservable = GlobalModel.aiProvider.get();
+    const clientData = GlobalModel.clientData.get();
+    const savedProvider = clientData?.aiopts?.default;
+    
+    // Use saved provider if aiProvider observable is empty
+    const currentProvider = aiProviderFromObservable || savedProvider || "";
 
     const handleProviderChange = useCallback((value: string) => {
         GlobalModel.setAIProvider(value);
