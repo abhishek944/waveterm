@@ -2,11 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import * as React from "react";
-import * as mobx from "mobx";
 import { observer } from "mobx-react";
-import { isBlank } from "@/util/util";
+import { isBlank } from "@/utils/util";
 import mustache from "mustache";
-import * as DOMPurify from "dompurify";
+import DOMPurify from "dompurify";
 import { GlobalModel } from "@/models";
 
 export const SimpleMustacheRenderer: React.FC<{

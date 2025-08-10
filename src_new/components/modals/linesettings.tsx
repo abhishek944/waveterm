@@ -5,9 +5,8 @@ import React, { useState, useEffect } from "react";
 import { observer } from "mobx-react";
 import { action } from "mobx";
 import { GlobalModel, GlobalCommandRunner } from "@/models";
-import { SettingsError, Modal, Dropdown } from "@/elements";
 import { PluginModel } from "@/plugins/plugins";
-import { commandRtnHandler } from "@/util/util";
+import { commandRtnHandler } from "@/utils/util";
 
 const LineSettingsModal: React.FC = observer(() => {
     const [rendererDropdownActive, setRendererDropdownActive] = useState(false);

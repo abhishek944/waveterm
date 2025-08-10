@@ -9,7 +9,7 @@ import { CSVRenderer } from "@/plugins/csv";
 import { OpenAIRenderer, OpenAIRendererModel } from "@/plugins/openai";
 import { SimplePdfRenderer } from "@/plugins/pdf";
 import { SimpleMediaRenderer } from "@/plugins/media";
-import { isBlank } from "@/util/util";
+import { isBlank } from "@/utils/util";
 import { sprintf } from "sprintf-js";
 
 const PluginConfigs: RendererPluginType[] = [
@@ -134,22 +134,22 @@ class PluginModelClass {
         try {
             switch (plugin.name) {
                 case "image":
-                    screenshotsContext = require.context(`@/plugins/image/screenshots`, false, /\.(png|jpe?g|gif)$/);
+                    screenshotsContext = require.context(`../../src/plugins/image/screenshots`, false, /\.(png|jpe?g|gif)$/);
                     break;
                 case "markdown":
-                    screenshotsContext = require.context(`@/plugins/markdown/screenshots`, false, /\.(png|jpe?g|gif)$/);
+                    screenshotsContext = require.context(`../../src/plugins/markdown/screenshots`, false, /\.(png|jpe?g|gif)$/);
                     break;
                 case "mustache":
-                    screenshotsContext = require.context(`@/plugins/mustache/screenshots`, false, /\.(png|jpe?g|gif)$/);
+                    screenshotsContext = require.context(`../../src/plugins/mustache/screenshots`, false, /\.(png|jpe?g|gif)$/);
                     break;
                 case "code":
-                    screenshotsContext = require.context(`@/plugins/code/screenshots`, false, /\.(png|jpe?g|gif)$/);
+                    screenshotsContext = require.context(`../../src/plugins/code/screenshots`, false, /\.(png|jpe?g|gif)$/);
                     break;
                 case "openai":
-                    screenshotsContext = require.context(`@/plugins/openai/screenshots`, false, /\.(png|jpe?g|gif)$/);
+                    screenshotsContext = require.context(`../../src/plugins/openai/screenshots`, false, /\.(png|jpe?g|gif)$/);
                     break;
                 case "csv":
-                    screenshotsContext = require.context(`@/plugins/csv/screenshots`, false, /\.(png|jpe?g|gif)$/);
+                    screenshotsContext = require.context(`../../src/plugins/csv/screenshots`, false, /\.(png|jpe?g|gif)$/);
                     break;
                 default:
                     return;

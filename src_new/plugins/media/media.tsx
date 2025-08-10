@@ -3,7 +3,7 @@
 
 import * as React from "react";
 import { observer } from "mobx-react";
-import * as util from "@/util/util";
+import * as util from "@/utils/util";
 import { GlobalModel } from "@/models";
 
 export const SimpleMediaRenderer: React.FC<{

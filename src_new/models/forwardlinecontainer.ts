@@ -2,13 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { TermWrap } from "@/plugins/terminal/term";
-import { windowWidthToCols, windowHeightToRows } from "@/util/textmeasure";
-import { MagicLayout } from "@/app/magiclayout";
+import { windowWidthToCols, windowHeightToRows } from "@/utils/textmeasure";
+import { MagicLayout } from "@/components/ui/magiclayout";
 import { Model } from "./model";
 import { GlobalCommandRunner } from "./global";
 import { Cmd } from "./cmd";
 import { Screen } from "./screen";
-import * as lineutil from "@/app/line/lineutil";
 
 class ForwardLineContainer {
     globalModel: Model;

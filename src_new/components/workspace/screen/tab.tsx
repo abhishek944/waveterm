@@ -6,12 +6,10 @@ import { observer } from "mobx-react";
 import * as mobx from "mobx";
 import { clsx } from "clsx";
 import { GlobalModel, GlobalCommandRunner, Screen } from "@/models";
-import { ActionsIcon, StatusIndicator, CenteredIcon } from "@/common/icons/icons";
-import * as constants from "@/app/appconst";
+import { ActionsIcon, StatusIndicator, CenteredIcon } from "@/components/icons/icons";
 import { Reorder } from "framer-motion";
-import { MagicLayout } from "@/app/magiclayout";
-import { TabIcon } from "@/elements/tabicon";
-import * as appconst from "@/app/appconst";
+import { MagicLayout } from "@/components/ui/magiclayout";
+import * as appconst from "@/appconst";
 
 const colorMapping = {
     green: "text-green-500",

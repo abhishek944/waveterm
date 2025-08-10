@@ -117,19 +117,88 @@ export const LinesView: React.FC<{
         [screen]
     );
 
-    // ... (rest of the logic)
+    const anchor = React.useMemo(() => {
+        const { anchorLine, anchorOffset } = screen.getAnchor();
+        if (!anchorLine || anchorLine === 0) {
+            return {
+                anchorLine: lines[lines.length - 1]?.linenum || 0,
+                anchorOffset: 0,
+                anchorIndex: lines.length - 1,
+            };
+        }
+        const lineIndex = lines.findIndex((line) => line.linenum >= anchorLine);
+        if (lineIndex === -1) {
+            return {
+                anchorLine: lines[lines.length - 1]?.linenum || 0,
+                anchorOffset: 0,
+                anchorIndex: lines.length - 1,
+            };
+        }
+        return {
+            anchorLine: lines[lineIndex].linenum,
+            anchorOffset: lines[lineIndex].linenum === anchorLine ? anchorOffset : 0,
+            anchorIndex: lineIndex,
+        };
+    }, [screen, lines]);
+
+    const lineElements = React.useMemo(() => {
+        const elements = [];
+        const startIdx = Math.max(0, anchor.anchorIndex - 50);
+        const endIdx = Math.min(lines.length - 1, anchor.anchorIndex + 50);
+
+        for (let idx = startIdx; idx <= endIdx; idx++) {
+            const line = lines[idx];
+            const lineNumStr = String(line.linenum);
+            
+            // Add separator between lines
+            if (idx > 0) {
+                elements.push(
+                    <div key={`sep-${line.lineid}`} className="w-full h-px border-b border-[var(--app-border-color)]" />
+                );
+            }
+
+            // Get or create visibility observable
+            if (!visibleMap.current.has(lineNumStr)) {
+                visibleMap.current.set(lineNumStr, mobx.observable.box(false, { name: "lines-vis-map" }));
+            }
+            if (!collapsedMap.current.has(lineNumStr)) {
+                collapsedMap.current.set(lineNumStr, mobx.observable.box(false, { name: "lines-collapsed-map" }));
+            }
+
+            const lineProps = {
+                key: line.lineid,
+                line,
+                width,
+                visible: visibleMap.current.get(lineNumStr),
+                staticRender,
+                onHeightChange: () => {}, // TODO: implement height change handler
+                overrideCollapsed: collapsedMap.current.get(lineNumStr),
+                topBorder: false, // TODO: implement hasTopBorder logic
+                renderMode,
+            };
+
+            elements.push(lineFactory(lineProps));
+        }
+        return elements;
+    }, [lines, anchor, width, staticRender, renderMode, lineFactory]);
 
     return (
         <div
-            className={clsx("lines", renderMode === "normal" ? "lines-expanded" : "lines-collapsed", "wide-scrollbar", {
-                "input-at-top": GlobalModel.inputPosition.get() === "top",
-                "thread-mode": GlobalModel.isThreadMode.get(),
-            })}
+            className={clsx(
+                "flex flex-col overflow-auto p-0 flex-grow relative overflow-x-hidden",
+                "pb-[calc(var(--termlineheight)*5)]",
+                renderMode === "normal" ? "lines-expanded" : "lines-collapsed",
+                "wide-scrollbar",
+                {
+                    "pt-[calc(var(--termpad)+2px)] pb-[calc(var(--termlineheight)*6)]": GlobalModel.inputPosition.get() === "top",
+                    "hide-scrollbar": false, // TODO: implement hide scrollbar logic
+                }
+            )}
             onScroll={computeVisibleMap}
             ref={linesRef}
         >
-            <div className="lines-spacer" />
-            {/* ... render lines */}
+            <div className="flex-grow" />
+            {lineElements}
         </div>
     );
 });

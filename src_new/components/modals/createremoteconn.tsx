@@ -5,8 +5,28 @@ import React, { useState, useEffect } from "react";
 import { observer } from "mobx-react";
 import { action } from "mobx";
 import { GlobalModel, GlobalCommandRunner, RemotesModel } from "@/models";
-import { Modal, TextField, InputDecoration, Dropdown, PasswordField, Tooltip } from "@/elements";
-import * as util from "@/util/util";
+import * as util from "@/utils/util";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogFooter,
+    DialogTitle,
+} from "@/components/ui/modal";
+import { TextField } from "@/components/ui/textfield";
+import { InputDecoration } from "@/components/ui/inputdecoration";
+import {
+    Select,
+    SelectContent,
+    SelectGroup,
+    SelectItem,
+    SelectLabel,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { PasswordField } from "@/components/ui/passwordfield";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Button } from "@/components/ui/button";
 
 const CreateRemoteConnModal: React.FC = observer(() => {
     const model = GlobalModel.remotesModel;
@@ -111,183 +131,175 @@ const CreateRemoteConnModal: React.FC = observer(() => {
     }
 
     return (
-        <Modal className="w-[452px] min-h-[411px]">
-            <Modal.Header title="Add Connection" onClose={model.closeModal} />
-            <div className="flex flex-col gap-6">
-                <div className="flex flex-col px-5 gap-3 w-full">
-                    <div className="w-full">
-                        <TextField
-                            label="user@host"
-                            autoFocus={true}
-                            value={tempHostName}
-                            onChange={setTempHostName}
-                            required={true}
-                            decoration={{
-                                endDecoration: (
-                                    <InputDecoration>
-                                        <Tooltip
-                                            message={`(Required) The user and host that you want to connect with. This is in the same format as
-													you would pass to ssh, e.g. "ubuntu@test.mydomain.com".`}
-                                            icon={<i className="fa-sharp fa-regular fa-circle-question" />}
-                                        >
-                                            <i className="fa-sharp fa-regular fa-circle-question" />
-                                        </Tooltip>
-                                    </InputDecoration>
-                                ),
-                            }}
-                        />
+        <Dialog open={true} onOpenChange={model.closeModal}>
+            <DialogContent className="w-[452px] min-h-[411px]">
+                <DialogHeader>
+                    <DialogTitle>Add Connection</DialogTitle>
+                </DialogHeader>
+                <div className="flex flex-col gap-6">
+                    <div className="flex flex-col px-5 gap-3 w-full">
+                        <div className="w-full">
+                            <TextField
+                                label="user@host"
+                                autoFocus={true}
+                                value={tempHostName}
+                                onChange={(e) => setTempHostName(e.target.value)}
+                                required={true}
+                                decoration={{
+                                    endDecoration: (
+                                        <InputDecoration>
+                                            <TooltipProvider>
+                                                <Tooltip>
+                                                    <TooltipTrigger>
+                                                        <i className="fa-sharp fa-regular fa-circle-question" />
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>
+                                                        {`(Required) The user and host that you want to connect with. This is in the same format as
+                                                        you would pass to ssh, e.g. "ubuntu@test.mydomain.com".`}
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            </TooltipProvider>
+                                        </InputDecoration>
+                                    ),
+                                }}
+                            />
+                        </div>
+                        <div className="w-full">
+                            <TextField
+                                label="Alias"
+                                onChange={(e) => setTempAlias(e.target.value)}
+                                value={tempAlias}
+                                maxLength={100}
+                                decoration={{
+                                    endDecoration: (
+                                        <InputDecoration>
+                                            <TooltipProvider>
+                                                <Tooltip>
+                                                    <TooltipTrigger>
+                                                        <i className="fa-sharp fa-regular fa-circle-question" />
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>
+                                                        {`(Optional) A short alias to use when selecting or displaying this connection.`}
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            </TooltipProvider>
+                                        </InputDecoration>
+                                    ),
+                                }}
+                            />
+                        </div>
+                        <div className="w-full">
+                            <TextField
+                                label="Port"
+                                placeholder="22"
+                                value={tempPort}
+                                onChange={(e) => setTempPort(e.target.value)}
+                                decoration={{
+                                    endDecoration: (
+                                        <InputDecoration>
+                                            <TooltipProvider>
+                                                <Tooltip>
+                                                    <TooltipTrigger>
+                                                        <i className="fa-sharp fa-regular fa-circle-question" />
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>
+                                                        {`(Optional) Defaults to 22. Set if the server you are connecting to listens to a non-standard
+                                                        SSH port.`}
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            </TooltipProvider>
+                                        </InputDecoration>
+                                    ),
+                                }}
+                            />
+                        </div>
+                        <div className="w-full">
+                            <Label>Auth Mode</Label>
+                            <Select onValueChange={setTempAuthMode} defaultValue={tempAuthMode}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select auth mode" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">none</SelectItem>
+                                    <SelectItem value="key">key</SelectItem>
+                                    <SelectItem value="password">password</SelectItem>
+                                    <SelectItem value="key+password">key+passphrase</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        {(tempAuthMode === "key" || tempAuthMode === "key+password") && (
+                            <TextField
+                                label="SSH Keyfile"
+                                placeholder="keyfile path"
+                                onChange={(e) => setTempKeyFile(e.target.value)}
+                                value={tempKeyFile}
+                                maxLength={400}
+                                required={true}
+                                decoration={{
+                                    endDecoration: (
+                                        <InputDecoration>
+                                            <TooltipProvider>
+                                                <Tooltip>
+                                                    <TooltipTrigger>
+                                                        <i className="fa-sharp fa-regular fa-circle-question" />
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>
+                                                        {`(Required) The path to your ssh private key file.`}
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            </TooltipProvider>
+                                        </InputDecoration>
+                                    ),
+                                }}
+                            />
+                        )}
+                        {(tempAuthMode === "password" || tempAuthMode === "key+password") && (
+                            <PasswordField
+                                placeholder={tempAuthMode === "password" ? "SSH Password" : "Key Passphrase"}
+                                onChange={(e) => setTempPassword(e.target.value)}
+                                value={tempPassword}
+                                maxLength={400}
+                            />
+                        )}
+                        <div className="w-full">
+                            <Label>Connect Mode</Label>
+                            <Select onValueChange={setTempConnectMode} defaultValue={tempConnectMode}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select connect mode" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="startup">startup</SelectItem>
+                                    <SelectItem value="auto">auto</SelectItem>
+                                    <SelectItem value="manual">manual</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="w-full">
+                            <Label>Shell Preference</Label>
+                            <Select onValueChange={setTempShellPref} defaultValue={tempShellPref}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select shell preference" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="detect">detect</SelectItem>
+                                    <SelectItem value="bash">bash</SelectItem>
+                                    <SelectItem value="zsh">zsh</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        {!util.isBlank(getErrorStr() as string) && (
+                            <div className="text-red-500 text-sm">Error: {getErrorStr()}</div>
+                        )}
                     </div>
-                    <div className="w-full">
-                        <TextField
-                            label="Alias"
-                            onChange={setTempAlias}
-                            value={tempAlias}
-                            maxLength={100}
-                            decoration={{
-                                endDecoration: (
-                                    <InputDecoration>
-                                        <Tooltip
-                                            message={`(Optional) A short alias to use when selecting or displaying this connection.`}
-                                            icon={<i className="fa-sharp fa-regular fa-circle-question" />}
-                                        >
-                                            <i className="fa-sharp fa-regular fa-circle-question" />
-                                        </Tooltip>
-                                    </InputDecoration>
-                                ),
-                            }}
-                        />
-                    </div>
-                    <div className="w-full">
-                        <TextField
-                            label="Port"
-                            placeholder="22"
-                            value={tempPort}
-                            onChange={setTempPort}
-                            isNumber={true}
-                            decoration={{
-                                endDecoration: (
-                                    <InputDecoration>
-                                        <Tooltip
-                                            message={`(Optional) Defaults to 22. Set if the server you are connecting to listens to a non-standard
-													SSH port.`}
-                                            icon={<i className="fa-sharp fa-regular fa-circle-question" />}
-                                        >
-                                            <i className="fa-sharp fa-regular fa-circle-question" />
-                                        </Tooltip>
-                                    </InputDecoration>
-                                ),
-                            }}
-                        />
-                    </div>
-                    <div className="w-full">
-                        <Dropdown
-                            label="Auth Mode"
-                            options={[
-                                { value: "none", label: "none" },
-                                { value: "key", label: "key" },
-                                { value: "password", label: "password" },
-                                { value: "key+password", label: "key+passphrase" },
-                            ]}
-                            value={tempAuthMode}
-                            onChange={setTempAuthMode}
-                            decoration={{
-                                endDecoration: (
-                                    <InputDecoration>
-                                        <Tooltip
-                                            message={
-                                                <ul>
-                                                    <li>
-                                                        <b>none</b> - no authentication details are stored.
-                                                    </li>
-                                                    <li>
-                                                        <b>key</b> - provide a custom private key for authentication.
-                                                    </li>
-                                                    <li>
-                                                        <b>password</b> - provide a password (to save) for
-                                                        authentication.
-                                                    </li>
-                                                    <li>
-                                                        <b>key+passphrase</b> - provide a custom private key with a
-                                                        passphrase (to save) for authentication.
-                                                    </li>
-                                                </ul>
-                                            }
-                                            icon={<i className="fa-sharp fa-regular fa-circle-question" />}
-                                        >
-                                            <i className="fa-sharp fa-regular fa-circle-question" />
-                                        </Tooltip>
-                                    </InputDecoration>
-                                ),
-                            }}
-                        />
-                    </div>
-                    {(tempAuthMode === "key" || tempAuthMode === "key+password") && (
-                        <TextField
-                            label="SSH Keyfile"
-                            placeholder="keyfile path"
-                            onChange={setTempKeyFile}
-                            value={tempKeyFile}
-                            maxLength={400}
-                            required={true}
-                            decoration={{
-                                endDecoration: (
-                                    <InputDecoration>
-                                        <Tooltip
-                                            message={`(Required) The path to your ssh private key file.`}
-                                            icon={<i className="fa-sharp fa-regular fa-circle-question" />}
-                                        >
-                                            <i className="fa-sharp fa-regular fa-circle-question" />
-                                        </Tooltip>
-                                    </InputDecoration>
-                                ),
-                            }}
-                        />
-                    )}
-                    {(tempAuthMode === "password" || tempAuthMode === "key+password") && (
-                        <PasswordField
-                            label={tempAuthMode === "password" ? "SSH Password" : "Key Passphrase"}
-                            placeholder="password"
-                            onChange={setTempPassword}
-                            value={tempPassword}
-                            maxLength={400}
-                        />
-                    )}
-                    <div className="w-full">
-                        <Dropdown
-                            label="Connect Mode"
-                            options={[
-                                { value: "startup", label: "startup" },
-                                { value: "auto", label: "auto" },
-                                { value: "manual", label: "manual" },
-                            ]}
-                            value={tempConnectMode}
-                            onChange={setTempConnectMode}
-                        />
-                    </div>
-                    <div className="w-full">
-                        <Dropdown
-                            label="Shell Preference"
-                            options={[
-                                { value: "detect", label: "detect" },
-                                { value: "bash", label: "bash" },
-                                { value: "zsh", label: "zsh" },
-                            ]}
-                            value={tempShellPref}
-                            onChange={setTempShellPref}
-                        />
-                    </div>
-                    {!util.isBlank(getErrorStr() as string) && (
-                        <div className="settings-field settings-error">Error: {getErrorStr()}</div>
-                    )}
                 </div>
-            </div>
-            <Modal.Footer
-                onCancel={model.closeModal}
-                onOk={handleSubmitRemote}
-                okLabel="Connect"
-                keybindings={true}
-            />
-        </Modal>
+                <DialogFooter>
+                    <Button variant="outline" onClick={model.closeModal}>
+                        Cancel
+                    </Button>
+                    <Button onClick={handleSubmitRemote}>Connect</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     );
 });
 

@@ -845,3 +845,16 @@
   border-radius: 6px !important;
   overflow: hidden !important;
 }
+
+/* Thread mode styles for lines */
+.thread-mode .line.threaded {
+  @apply relative;
+  background-color: rgba(0, 128, 255, 0.15);
+}
+
+.thread-mode .line.threaded::before {
+  content: "";
+  @apply absolute left-0 top-0 bottom-0 w-1;
+  background-color: #0080ff;
+  opacity: 0.8;
+}

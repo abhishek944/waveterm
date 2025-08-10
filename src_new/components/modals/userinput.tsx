@@ -1,6 +1,18 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { GlobalModel } from "@/models";
-import { Modal, PasswordField, TextField, Markdown, Checkbox } from "@/elements";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogFooter,
+    DialogTitle,
+    DialogDescription,
+} from "@/components/ui/modal";
+import { PasswordField } from "@/components/ui/passwordfield";
+import { TextField } from "@/components/ui/textfield";
+import { Markdown } from "@/components/ui/markdown";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
 
 export const UserInputModal: React.FC<{ userInputRequest: UserInputRequest }> = ({ userInputRequest }) => {
     const [responseText, setResponseText] = useState("");
@@ -55,61 +67,68 @@ export const UserInputModal: React.FC<{ userInputRequest: UserInputRequest }> = 
     }, [countdown]);
 
     return (
-        <Modal className="w-[500px]">
-            <Modal.Header onClose={handleSendCancel} title={userInputRequest.title + ` (${countdown}s)`} />
-            <div className="px-5 pb-0">
-                <div className="py-5">
-                    <div className="mb-2.5">
-                        {userInputRequest.markdown ? (
-                            <Markdown text={userInputRequest.querytext} className="mb-4" />
-                        ) : (
-                            userInputRequest.querytext
+        <Dialog open={true} onOpenChange={handleSendCancel}>
+            <DialogContent className="w-[500px]">
+                <DialogHeader>
+                    <DialogTitle>{userInputRequest.title + ` (${countdown}s)`}</DialogTitle>
+                </DialogHeader>
+                <div className="px-5 pb-0">
+                    <div className="py-5">
+                        <div className="mb-2.5">
+                            {userInputRequest.markdown ? (
+                                <Markdown text={userInputRequest.querytext} className="mb-4" />
+                            ) : (
+                                userInputRequest.querytext
+                            )}
+                        </div>
+                        {userInputRequest.responsetype === "text" && (
+                            <>
+                                {userInputRequest.publictext ? (
+                                    <TextField
+                                        onChange={(e) => setResponseText(e.target.value)}
+                                        value={responseText}
+                                        maxLength={400}
+                                        autoFocus={true}
+                                    />
+                                ) : (
+                                    <PasswordField
+                                        onChange={(e) => setResponseText(e.target.value)}
+                                        value={responseText}
+                                        maxLength={400}
+                                        autoFocus={true}
+                                    />
+                                )}
+                            </>
                         )}
                     </div>
-                    {userInputRequest.responsetype === "text" && (
-                        <>
-                            {userInputRequest.publictext ? (
-                                <TextField
-                                    onChange={setResponseText}
-                                    value={responseText}
-                                    maxLength={400}
-                                    autoFocus={true}
-                                />
-                            ) : (
-                                <PasswordField
-                                    onChange={setResponseText}
-                                    value={responseText}
-                                    maxLength={400}
-                                    autoFocus={true}
-                                />
-                            )}
-                        </>
+                    {userInputRequest.checkboxmsg !== "" && (
+                        <div className="flex items-center space-x-2">
+                            <Checkbox
+                                onCheckedChange={() => (checkboxStatus.current = !checkboxStatus.current)}
+                                id="user-input-checkbox"
+                            />
+                            <label htmlFor="user-input-checkbox">{userInputRequest.checkboxmsg}</label>
+                        </div>
                     )}
                 </div>
-                {userInputRequest.checkboxmsg !== "" && (
-                    <Checkbox
-                        onChange={() => (checkboxStatus.current = !checkboxStatus.current)}
-                        label={userInputRequest.checkboxmsg}
-                        className="checkbox-text"
-                    />
-                )}
-            </div>
-            {userInputRequest.responsetype === "text" ? (
-                <Modal.Footer
-                    onCancel={handleSendCancel}
-                    onOk={handleSendText}
-                    okLabel="Continue"
-                    keybindings={true}
-                />
-            ) : userInputRequest.responsetype === "confirm" ? (
-                <Modal.Footer
-                    onCancel={() => handleSendConfirm(false)}
-                    onOk={() => handleSendConfirm(true)}
-                    okLabel="Yes"
-                    cancelLabel="No"
-                    keybindings={true}
-                />
-            ) : null}
-        </Modal>
+                <DialogFooter>
+                    {userInputRequest.responsetype === "text" ? (
+                        <>
+                            <Button variant="outline" onClick={handleSendCancel}>
+                                Cancel
+                            </Button>
+                            <Button onClick={handleSendText}>Continue</Button>
+                        </>
+                    ) : userInputRequest.responsetype === "confirm" ? (
+                        <>
+                            <Button variant="outline" onClick={() => handleSendConfirm(false)}>
+                                No
+                            </Button>
+                            <Button onClick={() => handleSendConfirm(true)}>Yes</Button>
+                        </>
+                    ) : null}
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     );
 };

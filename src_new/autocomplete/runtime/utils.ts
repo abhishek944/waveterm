@@ -7,7 +7,7 @@
 
 import { Shell } from "../utils/shell";
 import { GlobalModel, getApi } from "@/models";
-import { MemCache } from "@/util/memcache";
+import { MemCache } from "@/utils/memcache";
 import log from "../utils/log";
 import { Token, TokenType } from "./model";
 
@@ -169,7 +169,7 @@ export function matchAny<T>(values: Fig.SingleOrArray<T>, comparator: (a: T) => 
  * @returns True if any of the values start with the input
  */
 export function startsWithAny(values: Fig.SingleOrArray<string>, input: string) {
-    return matchAny(values, (a) => a.startsWith(input));
+    return matchAny(values, (a: string) => a.startsWith(input));
 }
 
 /**
@@ -189,7 +189,7 @@ export function equalsAny<T>(values: Fig.SingleOrArray<T>, input: T) {
  * @returns True if any of the values are not in the array
  */
 export function notInAny<T>(values: Fig.SingleOrArray<T>, arr: T[]) {
-    return matchAny(values, (a) => !arr.includes(a));
+    return matchAny(values, (a: T) => !arr.includes(a));
 }
 
 /**
@@ -314,7 +314,7 @@ export function sortSuggestions(suggestions: Fig.Suggestion[]) {
         if (a.priority == b.priority) {
             if (a.name) {
                 if (b.name) {
-                    return getFirst(a.name).trim().localeCompare(getFirst(b.name));
+                    return (getFirst(a.name) as string).trim().localeCompare(getFirst(b.name) as string);
                 } else {
                     return -1;
                 }

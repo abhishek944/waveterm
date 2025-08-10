@@ -7,8 +7,7 @@ import { observer } from "mobx-react";
 import { debounce } from "throttle-debounce";
 import { boundMethod } from "autobind-decorator";
 import { PacketDataBuffer } from "../core/ptydata";
-import { Markdown } from "@/elements";
-import { GlobalModel } from "@/models/global";
+import { Markdown } from "@/components/ui/markdown";
 
 type OpenAIOutputType = {
     model: string;
@@ -196,7 +195,7 @@ export const OpenAIRenderer: React.FC<{ model: OpenAIRendererModel }> = observer
                 <div className="text-primary w-25 flex-shrink-0 font-sans">[assistant]</div>
                 <div className="text-main">
                     <div style={{ maxHeight: opts.maxSize.height, paddingRight: 5 }}>
-                        <Markdown text={message} style={{ maxHeight: opts.maxSize.height }} />
+                        <Markdown text={message} />
                     </div>
                 </div>
             </div>

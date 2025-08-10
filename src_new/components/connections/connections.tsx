@@ -3,13 +3,13 @@
 
 import * as React from "react";
 import { observer } from "mobx-react";
-import * as mobx from "mobx";
 import { If, For } from "tsx-control-statements/components";
 import { clsx } from "clsx";
 import { GlobalModel, RemotesModel, GlobalCommandRunner } from "@/models";
-import { Button, Status } from "@/common/elements";
-import * as util from "@/util/util";
-import { MainView } from "@/app/common/elements/mainview";
+import { Button } from "@/components/ui/button";
+import { Status } from "@/components/ui/status";
+import * as util from "@/utils/util";
+import { MainView } from "@/components/ui/mainview";
 import { OverlayScrollbarsComponent } from "overlayscrollbars-react";
 
 const ConnectionsKeybindings: React.FC = () => {
@@ -117,46 +117,39 @@ export const ConnectionsView: React.FC<{ model: RemotesModel }> = observer(({ mo
                         </tr>
                     </thead>
                     <tbody>
-                        <For index="idx" each="item" of={items}>
+                        {items.map((item, idx) => (
                             <tr
-                                <tr
-                                    key={item.remoteid}
-                                    className={clsx("border-b border-gray-700 text-main cursor-pointer hover:bg-hover", {
-                                        "bg-hover": hoveredItemId === item.remoteid,
-                                    })}
-                                    onMouseEnter={() => setHoveredItemId(item.remoteid)}
-                                    onClick={() => handleRead(item.remoteid)}
-                                >
-                                    <td className="h-10 px-2.5 py-1.25 align-middle flex flex-row items-center">
-                                        <Status status={getStatus(item.status)} text="" />
-                                        {getName(item)}&nbsp;{getImportSymbol(item)}
-                                    </td>
-                                    <td className="h-10 px-2.5 py-1.25 align-middle">
-                                        <div>{item.remotetype}</div>
-                                    </td>
-                                    <td className="h-10 px-2.5 py-1.25 align-middle">
-                                        <div>
-                                            <Status status={getStatus(item.status)} text={item.status} />
-                                        </div>
-                                    </td>
-                                </tr>
-                        </For>
+                                key={item.remoteid}
+                                className={clsx("border-b border-gray-700 text-main cursor-pointer hover:bg-hover", {
+                                    "bg-hover": hoveredItemId === item.remoteid,
+                                })}
+                                onMouseEnter={() => setHoveredItemId(item.remoteid)}
+                                onClick={() => handleRead(item.remoteid)}
+                            >
+                                <td className="h-10 px-2.5 py-1.25 align-middle flex flex-row items-center">
+                                    <Status status={getStatus(item.status)} text="" />
+                                    {getName(item)}&nbsp;{getImportSymbol(item)}
+                                </td>
+                                <td className="h-10 px-2.5 py-1.25 align-middle">
+                                    <div>{item.remotetype}</div>
+                                </td>
+                                <td className="h-10 px-2.5 py-1.25 align-middle">
+                                    <div>
+                                        <Status status={getStatus(item.status)} text={item.status} />
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
                     </tbody>
                 </table>
             </OverlayScrollbarsComponent>
             <footer className="ml-2.5 mt-2.5 flex flex-row flex-shrink-0 gap-2">
-                <Button
-                    className="secondary"
-                    leftIcon={<i className="fa-sharp fa-solid fa-plus" />}
-                    onClick={handleAddConnection}
-                >
+                <Button className="secondary" onClick={handleAddConnection}>
+                    <i className="fa-sharp fa-solid fa-plus" />
                     New Connection
                 </Button>
-                <Button
-                    className="secondary"
-                    leftIcon={<i className="fa-sharp fa-solid fa-fw fa-file-import" />}
-                    onClick={handleImportSshConfig}
-                >
+                <Button className="secondary" onClick={handleImportSshConfig}>
+                    <i className="fa-sharp fa-solid fa-fw fa-file-import" />
                     Import Config
                 </Button>
             </footer>

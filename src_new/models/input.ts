@@ -3,7 +3,7 @@
 
 import type React from "react";
 import * as mobx from "mobx";
-import { isBlank } from "@/util/util";
+import { isBlank } from "@/utils/util";
 import * as appconst from "@/app/appconst";
 import type { Model } from "./model";
 import { GlobalCommandRunner, GlobalModel } from "./global";

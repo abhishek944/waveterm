@@ -9,14 +9,13 @@ import { clsx } from "clsx";
 import dayjs from "dayjs";
 import localizedFormat from "dayjs/plugin/localizedFormat";
 import { GlobalModel, GlobalCommandRunner, Screen } from "@/models";
-import { Button } from "@/elements";
 import { TextAreaInput } from "@/components/workspace";
 import { InfoMsg } from "@/components/workspace";
 import { HistoryInfo } from "@/components/workspace";
-import { Prompt } from "@/common/prompt/prompt";
-import { CenteredIcon, RotateIcon } from "@/common/icons/icons";
-import * as util from "@/util/util";
-import * as appconst from "@/app/appconst";
+import { Prompt } from "@/components/prompt/prompt";
+import { CenteredIcon, RotateIcon } from "@/components/icons/icons";
+import * as util from "@/utils/util";
+import * as appconst from "@/appconst";
 import { AutocompleteSuggestionView } from "@/components/workspace";
 import { AIProviderDropdown } from "@/components/workspace";
 

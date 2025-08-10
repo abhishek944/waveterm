@@ -3,13 +3,22 @@
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { observer } from "mobx-react";
-import { action, computed } from "mobx";
 import { clsx } from "clsx";
 import { GlobalModel, GlobalCommandRunner } from "@/models";
-import { Modal, TextField, InputDecoration, Tooltip } from "@/elements";
-import * as util from "@/util/util";
+import * as util from "@/utils/util";
 import { Screen } from "@/models";
-import { TabIcon } from "@/elements/tabicon";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogFooter,
+    DialogTitle,
+    DialogDescription,
+} from "@/components/ui/modal";
+import { TextField } from "@/components/ui/textfield";
+import { InputDecoration } from "@/components/ui/inputdecoration";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { TabIcon } from "@/components/ui/tabicon";
 
 type ViewDataType = {
     label: string;
@@ -271,44 +280,50 @@ const TabSwitcherModal: React.FC = observer(() => {
     };
 
     return (
-        <Modal className="w-[452px] min-h-[384px]">
-            <div className="flex flex-col p-0 w-full">
-                <div className="px-5 pt-5 pb-0">
-                    <TextField
-                        onChange={handleSearch}
-                        maxLength={400}
-                        autoFocus={true}
-                        decoration={{
-                            startDecoration: (
-                                <InputDecoration position="start">
-                                    <div className="opacity-50 text-[13px]">Go to:</div>
-                                </InputDecoration>
-                            ),
-                            endDecoration: (
-                                <InputDecoration>
-                                    <Tooltip
-                                        message={`Type to filter workspaces, tabs and views.`}
-                                        icon={<i className="fa-sharp fa-regular fa-circle-question" />}
-                                    >
-                                        <i className="fa-sharp fa-regular fa-circle-question" />
-                                    </Tooltip>
-                                </InputDecoration>
-                            ),
-                        }}
-                    />
-                </div>
-                <div className="overflow-hidden py-2.5 pb-5 w-full">
-                    <div 
-                        ref={listWrapperRef} 
-                        className="w-full max-h-[300px] overflow-y-auto px-5 pr-4 scrollbar-hide hover:scrollbar-default"
-                    >
-                        <div className="w-full">
-                            {sOptions.map((option, index) => renderOption(option, index))}
+        <Dialog open={true} onOpenChange={closeModal}>
+            <DialogContent className="w-[452px] min-h-[384px]">
+                <div className="flex flex-col p-0 w-full">
+                    <div className="px-5 pt-5 pb-0">
+                        <TextField
+                            onChange={(e) => handleSearch(e.target.value)}
+                            maxLength={400}
+                            autoFocus={true}
+                            decoration={{
+                                startDecoration: (
+                                    <InputDecoration position="start">
+                                        <div className="opacity-50 text-sm">Go to:</div>
+                                    </InputDecoration>
+                                ),
+                                endDecoration: (
+                                    <InputDecoration>
+                                        <TooltipProvider>
+                                            <Tooltip>
+                                                <TooltipTrigger>
+                                                    <i className="fa-sharp fa-regular fa-circle-question" />
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                    Type to filter workspaces, tabs and views.
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
+                                    </InputDecoration>
+                                ),
+                            }}
+                        />
+                    </div>
+                    <div className="overflow-hidden py-2.5 pb-5 w-full">
+                        <div
+                            ref={listWrapperRef}
+                            className="w-full max-h-[300px] overflow-y-auto px-5 pr-4 scrollbar-hide hover:scrollbar-default"
+                        >
+                            <div className="w-full">
+                                {sOptions.map((option, index) => renderOption(option, index))}
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </Modal>
+            </DialogContent>
+        </Dialog>
     );
 });
 

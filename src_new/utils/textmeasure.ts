@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { boundInt } from "./util";
-import { MagicLayout } from "@/app/magiclayout";
+import { MagicLayout } from "@/components/ui/magiclayout";
 
 const MinTermCols = 10;
 const MaxTermCols = 1024;

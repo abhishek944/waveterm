@@ -10,9 +10,8 @@ import { windowWidthToCols, windowHeightToRows, termWidthFromCols, termHeightFro
 import { getRendererContext } from "@/app/line/lineutil";
 import { MagicLayout } from "@/app/magiclayout";
 import * as appconst from "@/app/appconst";
-import { checkKeyPressed, adaptFromReactOrNativeKeyEvent } from "@/util/keyutil";
 import { Model } from "./model";
-import { GlobalCommandRunner, GlobalModel } from "./global";
+import { GlobalCommandRunner } from "./global";
 import { Cmd } from "./cmd";
 import { ScreenLines } from "./screenlines";
 import { getTermPtyData } from "@/util/modelutil";

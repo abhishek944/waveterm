@@ -5,8 +5,7 @@ import React, { useState, useEffect } from "react";
 import { observer } from "mobx-react";
 import { action } from "mobx";
 import { GlobalModel, GlobalCommandRunner, RemotesModel } from "@/models";
-import { Modal, TextField, InputDecoration, Dropdown, PasswordField, Tooltip } from "@/elements";
-import * as util from "@/util/util";
+import * as util from "@/utils/util";
 
 const PasswordUnchangedSentinel = "--unchanged--";
 

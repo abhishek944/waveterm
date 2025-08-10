@@ -2,10 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import * as React from "react";
-import * as mobx from "mobx";
 import { observer } from "mobx-react";
 import { sprintf } from "sprintf-js";
-import { Markdown } from "@/elements";
+import { Markdown } from "@/components/ui/markdown";
 
 const MaxMarkdownSize = 200000;
 const DefaultMaxMarkdownWidth = 1000;
@@ -62,7 +61,7 @@ export const SimpleMarkdownRenderer: React.FC<{
     return (
         <div className="text-main">
             <div className="overflow-y-auto" style={{ maxHeight: opts.maxSize.height }}>
-                <Markdown text={markdownText} style={{ maxHeight: opts.maxSize.height, maxWidth: DefaultMaxMarkdownWidth }} />
+                <Markdown text={markdownText} />
             </div>
         </div>
     );

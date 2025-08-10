@@ -1,5 +1,6 @@
 dist/
 dist-dev/
+dist-dev-new/
 node_modules/
 *~
 *.log

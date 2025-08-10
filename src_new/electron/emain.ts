@@ -10,11 +10,11 @@ import * as child_process from "node:child_process";
 import { debounce } from "throttle-debounce";
 import * as winston from "winston";
 import * as util from "util";
-import * as waveutil from "../util/util";
+import * as waveutil from "../utils/util";
 import { sprintf } from "sprintf-js";
-import { handleJsonFetchResponse, fireAndForget } from "@/util/util";
+import { handleJsonFetchResponse, fireAndForget } from "@/utils/util";
 import { v4 as uuidv4 } from "uuid";
-import { adaptFromElectronKeyEvent, setKeyUtilPlatform } from "@/util/keyutil";
+import { adaptFromElectronKeyEvent, setKeyUtilPlatform } from "@/utils/keyutil";
 import { platform } from "os";
 
 const WaveAppPathVarName = "WAVETERM_APP_PATH";

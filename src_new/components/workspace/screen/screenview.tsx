@@ -4,20 +4,18 @@
 import * as React from "react";
 import { observer } from "mobx-react";
 import * as mobx from "mobx";
-import { sprintf } from "sprintf-js";
 import { If } from "tsx-control-statements/components";
 import { clsx } from "clsx";
 import { debounce } from "throttle-debounce";
 import dayjs from "dayjs";
 import { GlobalCommandRunner, ForwardLineContainer, GlobalModel, ScreenLines, Screen, Session } from "@/models";
 import localizedFormat from "dayjs/plugin/localizedFormat";
-import { Button } from "@/elements";
-import { Line } from "@/app/line/linecomps";
-import { LinesView } from "@/app/line/linesview";
-import * as util from "@/util/util";
+import { Line } from "@/components/line/linecomps";
+import { LinesView } from "@/components/line/linesview";
+import * as util from "@/utils/util";
 import * as appconst from "@/app/appconst";
-import * as textmeasure from "@/util/textmeasure";
-import { MagicLayout } from "../../magiclayout";
+import * as textmeasure from "@/utils/textmeasure";
+import { MagicLayout } from "@/components/ui/magiclayout";
 
 dayjs.extend(localizedFormat);
 
@@ -172,7 +170,7 @@ const ScreenWindowView: React.FC<{ session: Session; screen: Screen; width: stri
                 const rszObs = new ResizeObserver((entries) => {
                     if (entries.length > 0) {
                         const entry = entries[0];
-                        setSize_debounced(entry.target.offsetWidth, entry.target.offsetHeight);
+                        setSize_debounced((entry.target as HTMLElement).offsetWidth, (entry.target as HTMLElement).offsetHeight);
                     }
                 });
                 rszObs.observe(wvElem);

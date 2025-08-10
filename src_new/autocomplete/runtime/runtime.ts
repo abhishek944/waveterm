@@ -1,6 +1,6 @@
 import { Shell } from "../utils/shell";
 import { Newton } from "./newton";
-import { MemCache } from "@/util/memcache";
+import { MemCache } from "@/utils/memcache";
 import log from "../utils/log";
 import { Token, whitespace } from "./model";
 import { determineTokenType } from "./utils";

@@ -3,15 +3,14 @@
 
 import * as React from "react";
 import { observer } from "mobx-react";
-import * as mobx from "mobx";
 import { sprintf } from "sprintf-js";
 import { If, For } from "tsx-control-statements/components";
 import { clsx } from "clsx";
 import dayjs from "dayjs";
 import localizedFormat from "dayjs/plugin/localizedFormat";
 import { GlobalModel } from "@/models";
-import { isBlank } from "@/util/util";
-import { AuxiliaryCmdView } from "@/components/workspace";
+import { isBlank } from "@/utils/util";
+import { AuxiliaryCmdView } from "./auxview";
 
 dayjs.extend(localizedFormat);
 
@@ -110,11 +109,11 @@ const HItem: React.FC<{
             <div className="history-line whitespace-pre">
                 {infoText} {lines[0]}
             </div>
-            <For each="line" index="idx" of={lines.slice(1)}>
+            {lines.slice(1).map((line, idx) => (
                 <div key={idx} className="history-line whitespace-pre">
                     {infoTextSpacer} {line}
                 </div>
-            </For>
+            ))}
         </div>
     );
 });
@@ -217,7 +216,7 @@ export const HistoryInfo: React.FC = observer(() => {
             >
                 <If condition={hitems.length === 0}>[no history]</If>
                 <If condition={hitems.length > 0}>
-                    <For each="hitem" index="idx" of={hitems}>
+                    {hitems.map((hitem, idx) => (
                         <HItem
                             key={hitem.historyid}
                             hitem={hitem}
@@ -227,7 +226,7 @@ export const HistoryInfo: React.FC = observer(() => {
                             scrNames={scrNames}
                             onClick={handleItemClick}
                         />
-                    </For>
+                    ))}
                 </If>
             </div>
         </AuxiliaryCmdView>

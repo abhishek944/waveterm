@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { TermWrap } from "@/plugins/terminal/term";
-import { windowWidthToCols } from "@/util/textmeasure";
-import { getRendererContext } from "@/app/line/lineutil";
-import { getTermPtyData } from "@/util/modelutil";
+import { windowWidthToCols } from "@/utils/textmeasure";
+import { getRendererContext } from "@/components/line/lineutil";
+import { getTermPtyData } from "@/utils/modelutil";
 import { Cmd } from "./cmd";
 import { Model } from "./model";
 

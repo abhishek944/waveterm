@@ -3,9 +3,18 @@
 
 import React, { useCallback } from "react";
 import { observer } from "mobx-react";
-import { Markdown, Modal, Button, Checkbox } from "@/elements";
+import { Markdown } from "@/components/ui/markdown";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogFooter,
+    DialogTitle,
+    DialogDescription,
+} from "@/components/ui/modal";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { GlobalModel, GlobalCommandRunner } from "@/models";
-import { ModalKeybindings } from "../elements/modal";
 
 const AlertModal: React.FC = observer(() => {
     const closeModal = useCallback(() => {
@@ -29,43 +38,47 @@ const AlertModal: React.FC = observer(() => {
     const isConfirm = message?.confirm ?? false;
 
     return (
-        <Modal className="w-[500px]">
-            <Modal.Header onClose={closeModal} title={title} keybindings={true} />
-            <div className="px-5 py-10">
-                {message?.markdown ? (
-                    <Markdown text={message?.message ?? ""} extraClassName="mb-4" />
-                ) : (
-                    <div>{message?.message}</div>
-                )}
-                {message?.confirmflag && (
-                    <Checkbox
-                        onChange={handleDontShowAgain}
-                        label="Don't show me this again"
-                        className="text-sm"
-                    />
-                )}
-            </div>
-            <div className="flex justify-end gap-2 px-5 py-4 border-t border-gray-200">
-                {isConfirm ? (
-                    <>
-                        <ModalKeybindings onOk={handleOK} onCancel={closeModal} />
-                        <Button className="secondary" onClick={closeModal}>
-                            Cancel
-                        </Button>
+        <Dialog open={true} onOpenChange={closeModal}>
+            <DialogContent className="w-[500px]">
+                <DialogHeader>
+                    <DialogTitle>{title}</DialogTitle>
+                </DialogHeader>
+                <div className="px-5 py-10">
+                    {message?.markdown ? (
+                        <Markdown text={message?.message ?? ""} className="mb-4" />
+                    ) : (
+                        <div>{message?.message}</div>
+                    )}
+                    {message?.confirmflag && (
+                        <div className="flex items-center space-x-2 mt-4">
+                            <Checkbox
+                                onCheckedChange={handleDontShowAgain}
+                                id="dont-show-again"
+                            />
+                            <label htmlFor="dont-show-again" className="text-sm">
+                                Don't show me this again
+                            </label>
+                        </div>
+                    )}
+                </div>
+                <DialogFooter>
+                    {isConfirm ? (
+                        <>
+                            <Button variant="outline" onClick={closeModal}>
+                                Cancel
+                            </Button>
+                            <Button autoFocus={true} onClick={handleOK}>
+                                Ok
+                            </Button>
+                        </>
+                    ) : (
                         <Button autoFocus={true} onClick={handleOK}>
                             Ok
                         </Button>
-                    </>
-                ) : (
-                    <>
-                        <ModalKeybindings onOk={handleOK} onCancel={null} />
-                        <Button autoFocus={true} onClick={handleOK}>
-                            Ok
-                        </Button>
-                    </>
-                )}
-            </div>
-        </Modal>
+                    )}
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     );
 });
 

@@ -3,15 +3,22 @@
 
 import React, { useRef, useEffect } from "react";
 import { observer } from "mobx-react";
-import { computed } from "mobx";
 import { clsx } from "clsx";
-import { GlobalModel, GlobalCommandRunner, RemotesModel } from "@/models";
-import { Modal, Tooltip, Button, Status } from "@/elements";
-import * as util from "@/util/util";
-import * as textmeasure from "@/util/textmeasure";
-import * as appconst from "@/app/appconst";
-import { ModalKeybindings } from "../elements/modal";
+import { GlobalModel, GlobalCommandRunner } from "@/models";
+import * as util from "@/utils/util";
+import * as textmeasure from "@/utils/textmeasure";
+import * as appconst from "@/appconst";
 import { OverlayScrollbarsComponent } from "overlayscrollbars-react";
+import { Button } from "@/components/ui/button";
+import {
+    Dialog,
+    DialogHeader,
+    DialogTitle,
+    DialogContent,
+    DialogFooter,
+} from "@/components/ui/modal";
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { Status } from "@/components/ui/status";
 
 const ViewRemoteConnDetailModal: React.FC = observer(() => {
     const termRef = useRef<HTMLDivElement>(null);
@@ -185,26 +192,28 @@ const ViewRemoteConnDetailModal: React.FC = observer(() => {
         
         if (remote.local) {
             installNowButton = <></>;
-            cancelInstallButton = <></>;
+            // cancelInstallButton = <></>;
         }
         
         if (remote.sshconfigsrc === "sshconfig-import") {
             archiveButton = (
-                <Button className="secondary danger" onClick={() => clickArchive()}>
-                    Delete
-                    <Tooltip
-                        message={
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button className="secondary danger" onClick={() => clickArchive()}>
+                                Delete
+                                <i className="fa-sharp fa-regular fa-fw fa-triangle-exclamation" />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
                             <span>
                                 Connections imported from an ssh config file can be deleted, but will come back upon
                                 importing again. They will stay removed if you follow{" "}
                                 <a href="https://legacydocs.waveterm.dev/features/sshconfig-imports">this procedure</a>.
                             </span>
-                        }
-                        icon={<i className="fa-sharp fa-regular fa-fw fa-triangle-exclamation" />}
-                    >
-                        <i className="fa-sharp fa-regular fa-fw fa-triangle-exclamation" />
+                        </TooltipContent>
                     </Tooltip>
-                </Button>
+                </TooltipProvider>
             );
         }
         
@@ -276,24 +285,13 @@ const ViewRemoteConnDetailModal: React.FC = observer(() => {
     const selectedRemoteStatus = selectedRemote.status;
 
     return (
-        <Modal className="flex flex-col items-center flex-shrink-0 w-auto max-w-[80vw] max-h-[90vh]">
-            <ModalKeybindings
-                onOk={() => {
-                    if (selectedRemoteStatus === "connecting") {
-                        return;
-                    }
-                    handleClose();
-                }}
-                onCancel={() => {
-                    if (selectedRemoteStatus === "connecting") {
-                        return;
-                    }
-                    handleClose();
-                }}
-            />
-            <Modal.Header title="Connection" onClose={handleClose} />
-            <OverlayScrollbarsComponent
-                className="flex flex-col p-5 items-start w-full h-full overflow-y-auto"
+        <Dialog open={true} onOpenChange={() => handleClose()}>
+            <DialogContent className="w-auto max-w-[80vw] max-h-[90vh]">
+                <DialogHeader>
+                    <DialogTitle>Connection</DialogTitle>
+                </DialogHeader>
+                <OverlayScrollbarsComponent
+                    className="flex flex-col p-5 items-start w-full h-full overflow-y-auto"
                 options={{ scrollbars: { autoHide: "leave" } }}
                 defer={true}
             >
@@ -390,20 +388,25 @@ const ViewRemoteConnDetailModal: React.FC = observer(() => {
                         />
                     </div>
                 </div>
-            </OverlayScrollbarsComponent>
-        </Modal>
+                </OverlayScrollbarsComponent>
+            </DialogContent>
+        </Dialog>
     );
 });
 
 const GetImportTooltip: React.FC<{ remote: RemoteType }> = ({ remote }) => {
     if (remote.sshconfigsrc === "sshconfig-import") {
         return (
-            <Tooltip
-                message={`This remote was imported from an SSH config file.`}
-                icon={<i className="fa-sharp fa-solid fa-file-import" />}
-            >
-                <i className="fa-sharp fa-solid fa-file-import" />
-            </Tooltip>
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <i className="fa-sharp fa-solid fa-file-import" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>This remote was imported from an SSH config file.</p>
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
         );
     }
     return null;

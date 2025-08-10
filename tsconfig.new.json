@@ -1,0 +1,42 @@
+{
+    "include": ["src_new/**/*", "types/**/*"],
+    "compilerOptions": {
+        "target": "es6",
+        "module": "commonjs",
+        "jsx": "preserve",
+        "lib": ["ES2022", "DOM"],
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true,
+        "moduleResolution": "node",
+        "allowSyntheticDefaultImports": true,
+        "resolveJsonModule": true,
+        "isolatedModules": true,
+        "experimentalDecorators": true,
+        "downlevelIteration": true,
+        "baseUrl": "./", 
+        "types": [],
+        "typeRoots": ["types", "node_modules/@types"],
+        "paths": {
+            "@/*": ["src_new/*"],
+            "@/app": ["src_new/app"],
+            "@/app/*": ["src_new/*"],
+            "@/utils/*": ["src_new/utils/*"],
+            "@/models": ["src_new/models/index"],
+            "@/models/*": ["src_new/models/*"],
+            "@/components/*": ["src_new/components/*"],
+            "@/assets/*": ["src_new/components/assets/*"],
+            "@/plugins/*": ["src_new/plugins/*"],
+            "@/autocomplete": ["src_new/autocomplete/index"],
+            "@/autocomplete/*": ["src_new/autocomplete/*"],
+            "@/lib/*": ["src_new/lib/*"],
+            "@/hooks/*": ["src_new/hooks/*"],
+            "@/context/*": ["src_new/context/*"],
+            "@/types/*": ["src_new/types/*"],
+            
+            // Legacy paths for gradual migration
+            "@/modals": ["src_new/components/modals/index"],
+            "@/modals/*": ["src_new/components/modals/*"]
+        }
+    }
+}

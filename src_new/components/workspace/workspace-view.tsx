@@ -11,14 +11,14 @@ import { GlobalModel, GlobalCommandRunner } from "@/models";
 import { CmdInput } from "@/components/workspace";
 import { ScreenView } from "@/components/workspace";
 import { ScreenTabs } from "@/components/workspace";
-import { ErrorBoundary } from "@/common/error/errorboundary";
-import type { Screen } from "@/models";
-import { Button, Dropdown } from "@/elements";
-import { commandRtnHandler } from "@/util/util";
-import { getTermThemes } from "@/util/themeutil";
-import { getRemoteStrWithAlias } from "@/common/prompt/prompt";
+import { ErrorBoundary } from "@/components/error/errorboundary";
+import { commandRtnHandler } from "@/utils/util";
+import { getTermThemes } from "@/utils/themeutil";
 import { TabColorSelector, TabIconSelector, TabNameTextField, TabRemoteSelector } from "@/components/workspace";
-import * as util from "@/util/util";
+import * as util from "@/utils/util";
+import { getRemoteStrWithAlias } from "@/components/prompt/prompt";
+import { Button } from "@/components/ui/button";
+import { Select, SelectTrigger, SelectContent, SelectItem } from "@/components/ui/select";
 
 dayjs.extend(localizedFormat);
 
@@ -108,16 +108,17 @@ const TabSettingsPulldownKeybindings: React.FC = observer(() => {
     return null;
 });
 
-const TabSettings: React.FC<{ screen: Screen }> = observer(({ screen }) => {
+const TabSettings: React.FC = observer(() => {
     const errorMessage = React.useState<string | null>(null);
+    const activeScreen = GlobalModel.getActiveSession().getActiveScreen();
 
     const handleDeleteScreen = () => {
-        if (screen == null) {
+        if (activeScreen == null) {
             return;
         }
-        let numLines = screen.getScreenLines().lines.length;
+        let numLines = activeScreen.getScreenLines().lines.length;
         if (numLines < 10) {
-            GlobalCommandRunner.screenDelete(screen.screenId, false);
+            GlobalCommandRunner.screenDelete(activeScreen.screenId, false);
             GlobalModel.modalsModel.popModal();
             return;
         }
@@ -127,14 +128,14 @@ const TabSettings: React.FC<{ screen: Screen }> = observer(({ screen }) => {
             if (!result) {
                 return;
             }
-            const prtn = GlobalCommandRunner.screenDelete(screen.screenId, false);
+            const prtn = GlobalCommandRunner.screenDelete(activeScreen.screenId, false);
             util.commandRtnHandler(prtn, errorMessage);
             GlobalModel.modalsModel.popModal();
         });
     };
 
     const handleChangeTermTheme = (theme: string) => {
-        const { screenId } = screen;
+        const { screenId } = activeScreen;
         const currTheme = GlobalModel.getTermThemeSettings()[screenId];
         if (currTheme == theme) {
             return;
@@ -143,14 +144,14 @@ const TabSettings: React.FC<{ screen: Screen }> = observer(({ screen }) => {
         commandRtnHandler(prtn, errorMessage);
     };
 
-    const rptr = screen.curRemote.get();
+    const rptr = activeScreen.curRemote.get();
     const termThemes = getTermThemes(GlobalModel.termThemes.get());
-    const currTermTheme = GlobalModel.getTermThemeSettings()[screen.screenId] ?? termThemes[0]?.label;
+    const currTermTheme = GlobalModel.getTermThemeSettings()[activeScreen.screenId] ?? termThemes[0]?.label;
 
     return (
         <div className="m-2 mx-4">
             <div className="flex flex-col items-start gap-2 self-stretch py-2.5 px-4">
-                <TabNameTextField screen={screen} errorMessage={errorMessage} />
+                <TabNameTextField screen={activeScreen} errorMessage={errorMessage} />
             </div>
             <div className="h-px bg-gray-700" />
             <div className="flex flex-col items-start gap-2 self-stretch py-2.5 px-4">
@@ -158,7 +159,7 @@ const TabSettings: React.FC<{ screen: Screen }> = observer(({ screen }) => {
                     You're connected to "{getRemoteStrWithAlias(rptr)}". Do you want to change it?
                 </div>
                 <div>
-                    <TabRemoteSelector screen={screen} errorMessage={errorMessage} />
+                    <TabRemoteSelector screen={activeScreen} errorMessage={errorMessage} />
                 </div>
                 <div className="text-sm text-gray-400 ml-1.5 truncate">
                     To change connection from the command line use `cr [alias|user@host]`
@@ -167,22 +168,27 @@ const TabSettings: React.FC<{ screen: Screen }> = observer(({ screen }) => {
             <div className="h-px bg-gray-700" />
             <If condition={termThemes.length > 0}>
                 <div className="py-2.5 px-4">
-                    <Dropdown
-                        label="Terminal Theme"
-                        className="w-[412px]"
-                        options={termThemes}
-                        defaultValue={currTermTheme}
-                        onChange={handleChangeTermTheme}
-                    />
+                    <Select onValueChange={handleChangeTermTheme} defaultValue={currTermTheme}>
+                        <SelectTrigger className="w-[412px]">
+                            {currTermTheme}
+                        </SelectTrigger>
+                        <SelectContent>
+                            {termThemes.map((theme) => (
+                                <SelectItem key={theme.value} value={theme.value}>
+                                    {theme.label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                 </div>
             </If>
             <div className="h-px bg-gray-700" />
             <div className="py-2.5 px-4">
-                <TabIconSelector screen={screen} errorMessage={errorMessage} />
+                <TabIconSelector screen={activeScreen} errorMessage={errorMessage} />
             </div>
             <div className="h-px bg-gray-700" />
             <div className="py-2.5 px-4">
-                <TabColorSelector screen={screen} errorMessage={errorMessage} />
+                <TabColorSelector screen={activeScreen} errorMessage={errorMessage} />
             </div>
             <div className="h-px bg-gray-700" />
             <div className="py-2.5 px-4">
@@ -205,7 +211,7 @@ export const WorkspaceView: React.FC = observer(() => {
     };
 
     const session = GlobalModel.getActiveSession();
-    let activeScreen: Screen | null = null;
+    let activeScreen: any | null = null;
     let sessionId: string = "none";
     if (session != null) {
         sessionId = session.sessionId;
@@ -241,7 +247,7 @@ export const WorkspaceView: React.FC = observer(() => {
                     <Button className="absolute top-2.5 right-2.5 p-1.5 rounded secondary ghost" onClick={toggleTabSettings}>
                         <i className="fa-solid fa-sharp fa-xmark-large" />
                     </Button>
-                    <TabSettings key={activeScreen.screenId} screen={activeScreen} />
+                    <TabSettings key={activeScreen.screenId} />
                     <If condition={showTabSettings && !isHidden}>
                         <TabSettingsPulldownKeybindings />
                     </If>

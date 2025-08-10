@@ -1,6 +1,39 @@
 # WaveTerm Commands
 
 ```bash
+# @scripthaus command clean-all
+# @scripthaus cd :playbook
+echo "Cleaning all build artifacts, caches, and dependencies..."
+rm -rf node_modules
+rm -rf dist/
+rm -rf dist-dev/
+rm -rf dist-new/
+rm -rf dist-dev-new/
+rm -rf bin/
+rm -rf build/
+rm -rf .webpack-cache
+rm -rf .yarn
+rm -rf .pnp.*
+echo "Clean complete. Run 'yarn install' to reinstall dependencies."
+```
+
+```bash
+# @scripthaus command fresh-start
+# @scripthaus cd :playbook
+echo "Starting fresh build..."
+scripthaus run clean-all
+echo "Creating yarn.lock to establish project boundary..."
+touch yarn.lock
+echo "Installing dependencies with Yarn..."
+yarn install
+echo "Rebuilding electron..."
+node_modules/.bin/electron-rebuild
+echo "Building webpack..."
+node_modules/.bin/webpack --config webpack.config.new.js --env dev
+echo "Fresh start complete! You can now run 'scripthaus run electron-new'"
+```
+
+```bash
 # @scripthaus command webpack-watch
 # @scripthaus cd :playbook
 node_modules/.bin/webpack --env dev --watch
@@ -19,6 +52,24 @@ node_modules/.bin/webpack --env prod
 ```
 
 ```bash
+# @scripthaus command webpack-watch-new
+# @scripthaus cd :playbook
+node_modules/.bin/webpack --config webpack.config.new.js --env dev --watch
+```
+
+```bash
+# @scripthaus command webpack-build-new
+# @scripthaus cd :playbook
+node_modules/.bin/webpack --config webpack.config.new.js --env dev
+```
+
+```bash
+# @scripthaus command webpack-build-prod-new
+# @scripthaus cd :playbook
+node_modules/.bin/webpack --config webpack.config.new.js --env prod
+```
+
+```bash
 # @scripthaus command electron-rebuild
 # @scripthaus cd :playbook
 node_modules/.bin/electron-rebuild
@@ -31,9 +82,21 @@ WAVETERM_DEV=1 PCLOUD_ENDPOINT="https://ot2e112zx5.execute-api.us-west-2.amazona
 ```
 
 ```bash
+# @scripthaus command electron-new
+# @scripthaus cd :playbook
+WAVETERM_DEV=1 PCLOUD_ENDPOINT="https://ot2e112zx5.execute-api.us-west-2.amazonaws.com/dev" PCLOUD_WS_ENDPOINT="wss://5lfzlg5crl.execute-api.us-west-2.amazonaws.com/dev/" node_modules/.bin/electron dist-dev-new/emain.js
+```
+
+```bash
 # @scripthaus command typecheck
 # @scripthaus cd :playbook
 node_modules/.bin/tsc --noEmit
+```
+
+```bash
+# @scripthaus command typecheck-new
+# @scripthaus cd :playbook
+node_modules/.bin/tsc -p tsconfig.new.json --noEmit
 ```
 
 ```bash

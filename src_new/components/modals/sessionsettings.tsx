@@ -5,10 +5,31 @@ import React, { useState } from "react";
 import { observer } from "mobx-react";
 import { action } from "mobx";
 import { GlobalModel, GlobalCommandRunner, Session } from "@/models";
-import { Toggle, InlineSettingsTextEdit, SettingsError, Modal, Tooltip, Button, Dropdown } from "@/elements";
-import { commandRtnHandler } from "@/util/util";
-import { getTermThemes } from "@/util/themeutil";
-import * as util from "@/util/util";
+import { commandRtnHandler } from "@/utils/util";
+import { getTermThemes } from "@/utils/themeutil";
+import * as util from "@/utils/util";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogFooter,
+    DialogTitle,
+    DialogDescription,
+} from "@/components/ui/modal";
+import {
+    Select,
+    SelectContent,
+    SelectGroup,
+    SelectItem,
+    SelectLabel,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Switch } from "@/components/ui/toggle";
+import { SettingsError } from "@/components/ui/settingserror";
+import { InlineSettingsTextEdit } from "@/components/ui/inlinesettingstextedit";
 
 const SessionDeleteMessage = `
 Are you sure you want to delete this workspace?
@@ -79,72 +100,92 @@ const SessionSettingsModal: React.FC = observer(() => {
     const currTermTheme = GlobalModel.getTermThemeSettings()[sessionId] ?? termThemes[0]?.label;
 
     return (
-        <Modal className="w-[640px]">
-            <Modal.Header onClose={closeModal} title={`Workspace Settings (${session.name.get()})`} />
-            <div className="flex flex-col px-5 gap-1 w-full">
-                <div className="settings-field">
-                    <div className="settings-label">Name</div>
-                    <div className="settings-input">
-                        <InlineSettingsTextEdit
-                            placeholder="name"
-                            text={session.name.get() ?? "(none)"}
-                            value={session.name.get() ?? ""}
-                            onChange={handleInlineChangeName}
-                            maxLength={50}
-                            showIcon={true}
-                        />
-                    </div>
-                </div>
-                {termThemes.length > 0 && (
-                    <div className="settings-field">
-                        <div className="settings-label">Terminal Theme</div>
-                        <div className="settings-input">
-                            <Dropdown
-                                className="terminal-theme-dropdown"
-                                options={termThemes}
-                                defaultValue={currTermTheme}
-                                onChange={handleChangeTermTheme}
+        <Dialog open={true} onOpenChange={closeModal}>
+            <DialogContent className="w-[640px]">
+                <DialogHeader>
+                    <DialogTitle>Workspace Settings ({session.name.get()})</DialogTitle>
+                </DialogHeader>
+                <div className="flex flex-col px-5 gap-4 w-full">
+                    <div className="grid grid-cols-3 items-center gap-4">
+                        <div className="col-span-1">Name</div>
+                        <div className="col-span-2">
+                            <InlineSettingsTextEdit
+                                placeholder="name"
+                                text={session.name.get() ?? "(none)"}
+                                value={session.name.get() ?? ""}
+                                onChange={handleInlineChangeName}
+                                maxLength={50}
+                                showIcon={true}
                             />
                         </div>
                     </div>
-                )}
-                <div className="settings-field">
-                    <div className="settings-label flex items-center">
-                        <div className="mr-[5px]">Archived</div>
-                        <Tooltip
-                            className="session-settings-tooltip"
-                            message="Archive will hide the workspace from the active menu. Commands and output will be
-                            retained, but hidden."
-                            icon={<i className="fa-sharp fa-regular fa-circle-question text-[12px] ml-[0.5px]" />}
-                        >
-                            <i className="fa-sharp fa-regular fa-circle-question text-[12px] ml-[0.5px]" />
-                        </Tooltip>
+                    {termThemes.length > 0 && (
+                        <div className="grid grid-cols-3 items-center gap-4">
+                            <div className="col-span-1">Terminal Theme</div>
+                            <div className="col-span-2">
+                                <Select onValueChange={handleChangeTermTheme} defaultValue={currTermTheme}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a theme" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {termThemes.map((theme) => (
+                                            <SelectItem key={theme.value} value={theme.value}>
+                                                {theme.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                    )}
+                    <div className="grid grid-cols-3 items-center gap-4">
+                        <div className="col-span-1 flex items-center">
+                            <div className="mr-2">Archived</div>
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger>
+                                        <i className="fa-sharp fa-regular fa-circle-question text-sm" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        Archive will hide the workspace from the active menu. Commands and output will
+                                        be retained, but hidden.
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        </div>
+                        <div className="col-span-2">
+                            <Switch checked={session.archived.get()} onCheckedChange={handleChangeArchived} />
+                        </div>
                     </div>
-                    <div className="settings-input">
-                        <Toggle checked={session.archived.get()} onChange={handleChangeArchived} />
+                    <div className="grid grid-cols-3 items-center gap-4">
+                        <div className="col-span-1 flex items-center">
+                            <div className="mr-2">Actions</div>
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger>
+                                        <i className="fa-sharp fa-regular fa-circle-question text-sm" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        Delete will remove the workspace, deleting all commands and output.
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        </div>
+                        <div className="col-span-2">
+                            <Button onClick={handleDeleteSession} variant="destructive" size="sm">
+                                Delete Workspace
+                            </Button>
+                        </div>
                     </div>
+                    <SettingsError errorMessage={errorMessage} onDismiss={dismissError} />
                 </div>
-                <div className="settings-field">
-                    <div className="settings-label flex items-center">
-                        <div className="mr-[5px]">Actions</div>
-                        <Tooltip
-                            className="session-settings-tooltip"
-                            message="Delete will remove the workspace, deleting all commands and output."
-                            icon={<i className="fa-sharp fa-regular fa-circle-question text-[12px] ml-[0.5px]" />}
-                        >
-                            <i className="fa-sharp fa-regular fa-circle-question text-[12px] ml-[0.5px]" />
-                        </Tooltip>
-                    </div>
-                    <div className="settings-input">
-                        <Button onClick={handleDeleteSession} className="secondary small danger">
-                            Delete Workspace
-                        </Button>
-                    </div>
-                </div>
-                <SettingsError errorMessage={errorMessage} />
-            </div>
-            <Modal.Footer cancelLabel="Close" onCancel={closeModal} keybindings={true} />
-        </Modal>
+                <DialogFooter>
+                    <Button variant="outline" onClick={closeModal}>
+                        Close
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     );
 });
 

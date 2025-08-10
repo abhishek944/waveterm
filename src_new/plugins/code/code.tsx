@@ -2,17 +2,18 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import * as React from "react";
-import * as mobx from "mobx";
-import { boundMethod } from "autobind-decorator";
 import Editor, { Monaco } from "@monaco-editor/react";
 import type * as MonacoTypes from "monaco-editor/esm/vs/editor/editor.api";
 import { clsx } from "clsx";
 import { If } from "tsx-control-statements/components";
-import { Markdown, Button } from "@/elements";
 import { GlobalModel, GlobalCommandRunner } from "@/models";
+import { Button } from "@/components/ui/button";
+import { Markdown } from "@/components/ui/markdown";
 import Split from "react-split-it";
 import loader from "@monaco-editor/loader";
-import { adaptFromReactOrNativeKeyEvent } from "@/util/keyutil";
+import { adaptFromReactOrNativeKeyEvent } from "@/utils/keyutil";
+
+const codeCache = new Map<string, string>();
 
 // TODO: need to update these on theme change (pull from CSS vars)
 document.addEventListener("DOMContentLoaded", () => {
@@ -45,7 +46,9 @@ function renderCmdText(text: string): any {
 // there is a global monaco variable (TODO get the correct TS type)
 declare var monaco: any;
 
-const CodeKeybindings: React.FC<{ codeObject: SourceCodeRenderer }> = ({ codeObject }) => {
+const CodeKeybindings: React.FC<{
+    codeObject: { registerKeybindings: () => void; unregisterKeybindings: () => void };
+}> = ({ codeObject }) => {
     React.useEffect(() => {
         codeObject.registerKeybindings();
         return () => codeObject.unregisterKeybindings();
@@ -91,14 +94,14 @@ export const SourceCodeRenderer: React.FC<{
     const cacheKey = `${context.screenId}-${context.lineId}-${filePath}`;
 
     React.useEffect(() => {
-        const cachedCode = SourceCodeRenderer.codeCache.get(cacheKey);
+        const cachedCode = codeCache.get(cacheKey);
         if (cachedCode) {
             setCode(cachedCode);
         } else {
             data.text().then((text) => {
                 originalCode.current = text;
                 setCode(text);
-                SourceCodeRenderer.codeCache.set(cacheKey, text);
+                codeCache.set(cacheKey, text);
             });
         }
     }, [data, cacheKey]);
@@ -164,7 +167,7 @@ export const SourceCodeRenderer: React.FC<{
                 setIsClosed(true);
                 setMessage({ status: "success", text: `Closed. This editor is now read-only` });
                 setShowReadonly(true);
-                setTimeout(() => setEditorHeight(), 100);
+                setTimeout(() => updateEditorHeight(), 100);
                 setTimeout(() => setMessage(null), 3000);
             })
             .catch((e) => {
@@ -207,7 +210,7 @@ export const SourceCodeRenderer: React.FC<{
     const handleEditorDidMount = (editor: MonacoTypes.editor.IStandaloneCodeEditor, monaco: Monaco) => {
         monacoEditor.current = editor;
         setInitialLanguage(editor);
-        setEditorHeight();
+        updateEditorHeight();
         setTimeout(() => {
             const opts = getEditorOptions();
             editor.updateOptions(opts);
@@ -273,18 +276,19 @@ export const SourceCodeRenderer: React.FC<{
     };
 
     const handleEditorChange = (newCode) => {
-        SourceCodeRenderer.codeCache.set(cacheKey, newCode);
+        codeCache.set(cacheKey, newCode);
         setCode(newCode);
-        setEditorHeight();
+        updateEditorHeight();
         setIsSave(newCode !== originalCode.current);
     };
 
     const getEditorHeightBuffer = () => GlobalModel.lineHeightEnv.lineHeight + 11;
 
-    const setEditorHeight = () => {
+    const updateEditorHeight = () => {
         const maxEditorHeight = opts.maxSize.height - getEditorHeightBuffer();
         let _editorHeight = maxEditorHeight;
         if (!getAllowEditing()) {
+            if (code == null) return;
             const noOfLines = Math.max(code.split("\n").length, 5);
             const lineHeight = Math.ceil(GlobalModel.lineHeightEnv.lineHeight);
             _editorHeight = Math.min(noOfLines * lineHeight + 10, maxEditorHeight);
@@ -346,9 +350,18 @@ export const SourceCodeRenderer: React.FC<{
             <If condition={isSelected}>
                 <CodeKeybindings codeObject={{ registerKeybindings, unregisterKeybindings }} />
             </If>
-            <Split sizes={[editorFraction, 1 - editorFraction]} onSetSizes={setSizes}>
+            <Split
+                sizes={[editorFraction, 1 - editorFraction]}
+                onSetSizes={setSizes}
+                className="split-horizontal"
+                gutterClassName="gutter gutter-horizontal"
+            >
                 <div className="editor-wrap relative" style={{ maxHeight: editorHeight }}>
-                    {showReadonly && <div className="absolute top-1 right-48 z-10 px-2 py-0 text-xs rounded bg-secondary text-disabled">read-only</div>}
+                    {showReadonly && (
+                        <div className="absolute top-1 right-48 z-10 px-2 py-0 text-xs rounded bg-secondary text-disabled">
+                            read-only
+                        </div>
+                    )}
                     <Editor
                         theme={theme}
                         height={editorHeight}
@@ -360,27 +373,41 @@ export const SourceCodeRenderer: React.FC<{
                     />
                 </div>
                 {isPreviewerAvailable && showPreview && (
-                    <div className="overflow-y-auto" style={{ maxHeight: editorHeight }} ref={markdownRef} onScroll={handleDivScroll}>
+                    <div
+                        className="overflow-y-auto"
+                        style={{ maxHeight: editorHeight }}
+                        ref={markdownRef}
+                        onScroll={handleDivScroll}
+                    >
                         <Markdown text={code} className="w-full p-4" />
                     </div>
                 )}
             </Split>
             <div className="flex-spacer" />
-            <div className="flex items-center gap-2 px-2 py-1 text-sm leading-6 bg-panel border-t border-gray-700">
+            <div className="code-statusbar">
                 <If condition={message != null}>
-                    <div className={clsx("overflow-hidden text-ellipsis whitespace-nowrap", message.status === "error" ? "text-red-500" : "text-green-500")}>
+                    <div
+                        className={clsx(
+                            "overflow-hidden text-ellipsis whitespace-nowrap",
+                            message.status === "error" ? "text-red-500" : "text-green-500"
+                        )}
+                    >
                         {message.text}
                     </div>
                 </If>
                 <div className="flex-spacer" />
                 <If condition={isPreviewerAvailable}>
-                    <Button className="primary" termInline={true} onClick={togglePreview}>
+                    <Button variant="ghost" size="sm" onClick={togglePreview}>
                         {`${showPreview ? "hide" : "show"} preview (`}
                         {renderCmdText("P")}
                         {`)`}
                     </Button>
                 </If>
-                <select className="dropdown max-w-[200px]" value={selectedLanguage} onChange={handleLanguageChange}>
+                <select
+                    className="dropdown max-w-[200px]"
+                    value={selectedLanguage}
+                    onChange={handleLanguageChange}
+                >
                     {languages.map((lang, index) => (
                         <option key={index} value={lang}>
                             {lang}
@@ -388,12 +415,12 @@ export const SourceCodeRenderer: React.FC<{
                     ))}
                 </select>
                 <If condition={allowEditing}>
-                    <Button className="primary" termInline={true} onClick={() => doSave()}>
+                    <Button variant="ghost" size="sm" onClick={() => doSave()}>
                         {`save (`}
                         {renderCmdText("S")}
                         {`)`}
                     </Button>
-                    <Button className="primary" termInline={true} onClick={doClose}>
+                    <Button variant="ghost" size="sm" onClick={doClose}>
                         {`close (`}
                         {renderCmdText("D")}
                         {`)`}
@@ -403,5 +430,3 @@ export const SourceCodeRenderer: React.FC<{
         </div>
     );
 };
-
-SourceCodeRenderer.codeCache = new Map();

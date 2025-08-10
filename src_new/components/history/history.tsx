@@ -10,16 +10,19 @@ import { GlobalModel, GlobalCommandRunner } from "@/models";
 import dayjs from "dayjs";
 import localizedFormat from "dayjs/plugin/localizedFormat";
 import customParseFormat from "dayjs/plugin/customParseFormat";
-import { Line } from "@/app/line/linecomps";
-import { checkKeyPressed, adaptFromReactOrNativeKeyEvent } from "@/util/keyutil";
-import { TextField, Dropdown, Button, CopyButton } from "@/elements";
+import { Line } from "@/components/line/linecomps";
+import { checkKeyPressed, adaptFromReactOrNativeKeyEvent } from "@/utils/keyutil";
 import { ReactComponent as ChevronLeftIcon } from "@/assets/icons/history/chevron-left.svg";
 import { ReactComponent as ChevronRightIcon } from "@/assets/icons/history/chevron-right.svg";
 import { ReactComponent as RightIcon } from "@/assets/icons/history/right.svg";
 import { ReactComponent as SearchIcon } from "@/assets/icons/history/search.svg";
 import { ReactComponent as TrashIcon } from "@/assets/icons/trash.svg";
 import { ReactComponent as CheckedCheckbox } from "@/assets/icons/checked-checkbox.svg";
-import { MainView } from "@/app/common/elements/mainview";
+import { MainView } from "@/components/ui/mainview";
+import { TextField } from "@/components/ui/textfield";
+import { Select, SelectTrigger, SelectContent, SelectItem } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { CopyButton } from "@/components/ui/copybutton";
 
 dayjs.extend(customParseFormat);
 dayjs.extend(localizedFormat);
@@ -111,7 +114,9 @@ const HistoryKeybindings: React.FC = () => {
             historyViewModel.handleUserClose();
             return true;
         });
-        return () => keybindManager.unregisterDomain("history");
+        return () => {
+            keybindManager.unregisterDomain("history");
+        };
     }, []);
     return null;
 };
@@ -123,7 +128,8 @@ export const HistoryView: React.FC = observer(() => {
 
     const handleNext = () => hvm.goNext();
     const handlePrev = () => hvm.goPrev();
-    const changeSearchText = (val: string) => mobx.action(() => hvm.searchText.set(val))();
+    const changeSearchText = (e: React.ChangeEvent<HTMLInputElement>) =>
+        mobx.action(() => hvm.searchText.set(e.target.value))();
     const searchKeyDown = (e: React.KeyboardEvent) => {
         const waveEvent = adaptFromReactOrNativeKeyEvent(e.nativeEvent);
         if (checkKeyPressed(waveEvent, "Enter")) {
@@ -211,27 +217,45 @@ export const HistoryView: React.FC = observer(() => {
                 <HistoryKeybindings />
             </If>
             <div className="p-2.5">
-                <div className="field">
+                <div className="flex items-center">
                     <TextField
                         placeholder="Exact String Search"
                         onChange={changeSearchText}
                         onKeyDown={searchKeyDown}
                         decoration={{ startDecoration: <SearchIcon className="w-6 h-4 pl-1 fill-main" /> }}
+                        className="w-full"
                     />
                 </div>
-                <div className="flex items-center">
-                    <Dropdown
-                        className="w-40"
-                        defaultValue={hvm.searchSessionId.get() ? formatSessionName(snames, hvm.searchSessionId.get()) : "Limit Workspace"}
-                        options={sessionIds.map(id => ({ label: `#${snames[id]}`, value: id }))}
-                        onChange={clickLimitSession}
-                    />
-                    <Dropdown
-                        className="w-40 ml-4"
-                        defaultValue={hvm.searchRemoteId.get() ? formatRemoteName(rnames, { remoteid: hvm.searchRemoteId.get() }) : "Limit Remote"}
-                        options={[{ label: "(all remotes)", value: null }].concat(remoteIds.map(id => ({ label: `[${rnames[id]}]`, value: id })))}
-                        onChange={clickLimitRemote}
-                    />
+                <div className="flex items-center mt-2.5">
+                    <Select onValueChange={clickLimitSession} defaultValue={hvm.searchSessionId.get() ?? ""}>
+                        <SelectTrigger className="w-40">
+                            {hvm.searchSessionId.get()
+                                ? formatSessionName(snames, hvm.searchSessionId.get())
+                                : "Limit Workspace"}
+                        </SelectTrigger>
+                        <SelectContent>
+                            {sessionIds.map((id) => (
+                                <SelectItem key={id} value={id}>
+                                    #{snames[id]}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <Select onValueChange={clickLimitRemote} defaultValue={hvm.searchRemoteId.get() ?? ""}>
+                        <SelectTrigger className="w-40 ml-4">
+                            {hvm.searchRemoteId.get()
+                                ? formatRemoteName(rnames, { remoteid: hvm.searchRemoteId.get() })
+                                : "Limit Remote"}
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="">(all remotes)</SelectItem>
+                            {remoteIds.map((id) => (
+                                <SelectItem key={id} value={id}>
+                                    [{rnames[id]}]
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                     <div className="ml-4 p-1.5 bg-secondary rounded flex items-center h-8.5">
                         <input
                             onChange={toggleFilterCmds}
@@ -247,7 +271,12 @@ export const HistoryView: React.FC = observer(() => {
                     </Button>
                 </div>
             </div>
-            <div className={clsx("flex items-center h-9 mb-1.25 mx-2.5", { "hidden": items.length === 0 })}>
+            <div
+                className={clsx(
+                    "flex items-center h-9 mb-1.25 mx-2.5 border-b-2 border-bright-blue border-t",
+                    { "hidden": items.length === 0 }
+                )}
+            >
                 <div className="ml-4" onClick={handleControlCheckbox} title="Toggle Selection">
                     <HistoryCheckbox
                         checked={numSelected > 0 && numSelected === items.length}
@@ -288,57 +317,89 @@ export const HistoryView: React.FC = observer(() => {
             </If>
             <div className="flex-grow min-h-[200px] overflow-y-auto h-[calc(100vh-186px)]">
                 <div className="m-2.5 flex flex-col w-[calc(100%-20px)] flex-grow min-h-[200px]">
-                    <For index="idx" each="item" of={items}>
-                        <div
-                            key={item.historyid}
-                            className={clsx("flex items-center border-b border-gray-700 p-2.5 text-main font-sans", {
-                                "bg-selected": hvm.selectedItems.get(item.historyid),
-                                "hover:bg-hover": !hvm.selectedItems.get(item.historyid),
-                            })}
-                        >
-                            <div className="w-8 flex-shrink-0 cursor-pointer" onClick={() => handleSelect(item.historyid)}>
-                                <HistoryCheckbox checked={hvm.selectedItems.get(item.historyid)} />
-                            </div>
-                            <div className="flex-grow min-w-[300px] relative">
-                                <HistoryCmdStr
-                                    cmdstr={item.cmdstr}
-                                    onUse={() => handleUse(item)}
-                                    onCopy={() => handleCopy(item)}
-                                    fontSize="normal"
-                                    limitHeight={true}
-                                />
-                                <div
-                                    className="flex-grow cursor-pointer"
-                                    onClick={() => activateItem(item.historyid)}
-                                />
-                            </div>
-                            <div className="w-30 flex-shrink-0 truncate ml-6">{formatSSName(snames, scrnames, item)}</div>
-                            <div className="w-40 flex-shrink-0 truncate pr-1.25 max-w-[150px] ml-6">{formatRemoteName(rnames, item.remote)}</div>
-                            <div className="w-20 flex-shrink-0 ml-6">{getHistoryViewTs(nowDate, item.ts)}</div>
-                            <div className="w-8 flex-shrink-0 flex justify-center items-center self-stretch cursor-pointer" onClick={() => activateItem(item.historyid)}>
-                                {activeItemId !== item.historyid ? (
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                                        <path d="M12.1297 6.62492C12.3999 6.93881 12.3645 7.41237 12.0506 7.68263L8.48447 10.7531C8.20296 10.9955 7.78645 10.9952 7.50519 10.7526L3.94636 7.68213C3.63274 7.41155 3.59785 6.93796 3.86843 6.62434C4.13901 6.31072 4.6126 6.27583 4.92622 6.54641L7.99562 9.19459L11.0719 6.54591C11.3858 6.27565 11.8594 6.31102 12.1297 6.62492Z" fill="#C3C8C2" />
-                                    </svg>
-                                ) : (
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                                        <path d="M3.87035 9.37508C3.60009 9.06119 3.63546 8.58763 3.94936 8.31737L7.51553 5.24692C7.79704 5.00455 8.21355 5.00476 8.49481 5.24742L12.0536 8.31787C12.3673 8.58845 12.4022 9.06204 12.1316 9.37566C11.861 9.68928 11.3874 9.72417 11.0738 9.45359L8.00438 6.80541L4.92806 9.45409C4.61416 9.72435 4.14061 9.68898 3.87035 9.37508Z" fill="#C3C8C2" />
-                                    </svg>
+                    {items.map((item, idx) => (
+                        <React.Fragment key={item.historyid}>
+                            <div
+                                className={clsx(
+                                    "flex items-center border-b border-gray-700 p-2.5 text-main font-sans",
+                                    {
+                                        "bg-selected": hvm.selectedItems.get(item.historyid),
+                                        "hover:bg-hover": !hvm.selectedItems.get(item.historyid),
+                                    }
                                 )}
-                            </div>
-                        </div>
-                        <If condition={activeItemId === item.historyid}>
-                            <div className="flex items-center border-b border-gray-700 p-2.5">
-                                <div className="pr-2.5">
-                                    <LineContainer
-                                        key={activeItemId}
-                                        historyId={activeItemId}
-                                        width={1000} // TODO
+                            >
+                                <div
+                                    className="w-8 flex-shrink-0 cursor-pointer"
+                                    onClick={() => handleSelect(item.historyid)}
+                                >
+                                    <HistoryCheckbox checked={hvm.selectedItems.get(item.historyid)} />
+                                </div>
+                                <div className="flex-grow min-w-[300px] relative">
+                                    <HistoryCmdStr
+                                        cmdstr={item.cmdstr}
+                                        onUse={() => handleUse(item)}
+                                        onCopy={() => handleCopy(item)}
+                                        fontSize="normal"
+                                        limitHeight={true}
+                                    />
+                                    <div
+                                        className="flex-grow cursor-pointer"
+                                        onClick={() => activateItem(item.historyid)}
                                     />
                                 </div>
+                                <div className="w-30 flex-shrink-0 truncate ml-6">
+                                    {formatSSName(snames, scrnames, item)}
+                                </div>
+                                <div className="w-40 flex-shrink-0 truncate pr-1.25 max-w-[150px] ml-6">
+                                    {formatRemoteName(rnames, item.remote)}
+                                </div>
+                                <div className="w-20 flex-shrink-0 ml-6">{getHistoryViewTs(nowDate, item.ts)}</div>
+                                <div
+                                    className="w-8 flex-shrink-0 flex justify-center items-center self-stretch cursor-pointer"
+                                    onClick={() => activateItem(item.historyid)}
+                                >
+                                    {activeItemId !== item.historyid ? (
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            width="16"
+                                            height="16"
+                                            viewBox="0 0 16 16"
+                                            fill="none"
+                                        >
+                                            <path
+                                                d="M12.1297 6.62492C12.3999 6.93881 12.3645 7.41237 12.0506 7.68263L8.48447 10.7531C8.20296 10.9955 7.78645 10.9952 7.50519 10.7526L3.94636 7.68213C3.63274 7.41155 3.59785 6.93796 3.86843 6.62434C4.13901 6.31072 4.6126 6.27583 4.92622 6.54641L7.99562 9.19459L11.0719 6.54591C11.3858 6.27565 11.8594 6.31102 12.1297 6.62492Z"
+                                                fill="#C3C8C2"
+                                            />
+                                        </svg>
+                                    ) : (
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            width="16"
+                                            height="16"
+                                            viewBox="0 0 16 16"
+                                            fill="none"
+                                        >
+                                            <path
+                                                d="M3.87035 9.37508C3.60009 9.06119 3.63546 8.58763 3.94936 8.31737L7.51553 5.24692C7.79704 5.00455 8.21355 5.00476 8.49481 5.24742L12.0536 8.31787C12.3673 8.58845 12.4022 9.06204 12.1316 9.37566C11.861 9.68928 11.3874 9.72417 11.0738 9.45359L8.00438 6.80541L4.92806 9.45409C4.61416 9.72435 4.14061 9.68898 3.87035 9.37508Z"
+                                                fill="#C3C8C2"
+                                            />
+                                        </svg>
+                                    )}
+                                </div>
                             </div>
-                        </If>
-                    </For>
+                            <If condition={activeItemId === item.historyid}>
+                                <div className="flex items-center border-b border-gray-700 p-2.5">
+                                    <div className="pr-2.5">
+                                        <LineContainer
+                                            key={activeItemId}
+                                            historyId={activeItemId}
+                                            width={1000} // TODO
+                                        />
+                                    </div>
+                                </div>
+                            </If>
+                        </React.Fragment>
+                    ))}
                 </div>
             </div>
             <div className={clsx("flex items-center h-9 border-t-2 border-bright-blue", { "hidden": items.length === 0 || !hasMore })}>
@@ -406,7 +467,7 @@ const LineContainer: React.FC<{ historyId: string; width: number }> = observer((
                 <div className="h-2.5" />
             </If>
             <Line
-                screen={hvm.specialLineContainer}
+                screen={hvm.specialLineContainer as any}
                 line={line}
                 width={width - 50 < 400 ? 400 : width - 50}
                 staticRender={false}

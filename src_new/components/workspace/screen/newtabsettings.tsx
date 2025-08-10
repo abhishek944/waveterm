@@ -1,20 +1,19 @@
 import * as React from "react";
 import { observer } from "mobx-react";
-import * as mobx from "mobx";
-import { For } from "tsx-control-statements/components";
 import { clsx } from "clsx";
+import { getRemoteStrWithAlias } from "@/components/prompt/prompt";
+import * as util from "@/utils/util";
+import * as appconst from "@/appconst";
+import { ReactComponent as GlobeIcon } from "@/components/assets/icons/globe.svg";
+import { TextField } from "@/components/ui/textfield";
+import { TabIcon } from "@/components/ui/tabicon";
+import { Select, SelectTrigger, SelectContent, SelectItem } from "@/components/ui/select";
 import { GlobalCommandRunner, GlobalModel, Screen } from "@/models";
-import { TextField, Dropdown } from "@/elements";
-import { getRemoteStrWithAlias } from "@/common/prompt/prompt";
-import * as util from "@/util/util";
-import { TabIcon } from "@/elements/tabicon";
-import { ReactComponent as GlobeIcon } from "@/assets/icons/globe.svg";
-import { ReactComponent as StatusCircleIcon } from "@/assets/icons/statuscircle.svg";
-import * as appconst from "@/app/appconst";
 
 export const TabNameTextField: React.FC<{ screen: Screen; errorMessage?: OV<string> }> = observer(
     ({ screen, errorMessage }) => {
-        const updateName = (val: string) => {
+        const updateName = (e: React.ChangeEvent<HTMLInputElement>) => {
+            const val = e.target.value;
             if (util.isStrEq(val, screen.name.get())) {
                 return;
             }
@@ -46,11 +45,11 @@ export const TabColorSelector: React.FC<{ screen: Screen; errorMessage?: OV<stri
                 </div>
                 <div className="text-gray-500">|</div>
                 <div className="flex space-x-1">
-                    <For each="color" of={appconst.TabColors}>
+                    {appconst.TabColors.map((color) => (
                         <div key={color} className="cursor-pointer" onClick={() => selectTabColor(color)}>
                             <TabIcon icon="square" color={color} />
                         </div>
-                    </For>
+                    ))}
                 </div>
             </div>
         );
@@ -78,11 +77,11 @@ export const TabIconSelector: React.FC<{ screen: Screen; errorMessage?: OV<strin
                 </div>
                 <div className="text-gray-500">|</div>
                 <div className="flex space-x-1">
-                    <For each="icon" of={appconst.TabIcons}>
+                    {appconst.TabIcons.map((icon) => (
                         <div key={icon} className="cursor-pointer" onClick={() => selectTabIcon(icon)}>
                             <TabIcon icon={icon} color={curColor} />
                         </div>
-                    </For>
+                    ))}
                 </div>
             </div>
         );
@@ -104,7 +103,7 @@ export const TabRemoteSelector: React.FC<{ screen: Screen; errorMessage?: OV<str
             prtn.then(() => GlobalModel.inputModel.giveFocus());
         };
 
-        const getOptions = (): DropdownItem[] => {
+        const getOptions = () => {
             const remotes = GlobalModel.remotes
                 .filter((r) => !r.archived)
                 .map((remote) => ({
@@ -142,21 +141,21 @@ export const TabRemoteSelector: React.FC<{ screen: Screen; errorMessage?: OV<str
         const curRemote = GlobalModel.getRemoteByName(selectedRemote);
 
         return (
-            <Dropdown
-                label="Connection"
-                className="w-full"
-                options={getOptions()}
-                defaultValue={curRemote.remotecanonicalname}
-                onChange={selectRemote}
-                decoration={{
-                    startDecoration: (
-                        <div className="flex items-center">
-                            <GlobeIcon className="w-4 h-4" />
-                            <StatusCircleIcon className={clsx("w-4 h-4", `status-${curRemote.status}`)} />
-                        </div>
-                    ),
-                }}
-            />
+            <Select onValueChange={selectRemote} defaultValue={curRemote.remotecanonicalname}>
+                <SelectTrigger className="w-full">
+                    <div className="flex items-center">
+                        <GlobeIcon className="w-4 h-4" />
+                        <span className="ml-2">{curRemote.remotecanonicalname}</span>
+                    </div>
+                </SelectTrigger>
+                <SelectContent>
+                    {getOptions().map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                        </SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
         );
     }
 );

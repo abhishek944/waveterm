@@ -4,19 +4,36 @@
 import React, { useState } from "react";
 import { observer } from "mobx-react";
 import { action } from "mobx";
-import { clsx } from "clsx";
 import { GlobalModel, GlobalCommandRunner, Screen } from "@/models";
-import { SettingsError, Modal, Dropdown, Tooltip } from "@/elements";
-import * as util from "@/util/util";
-import { Button } from "@/elements";
-import { commandRtnHandler } from "@/util/util";
-import { getTermThemes } from "@/util/themeutil";
+import * as util from "@/utils/util";
+import { commandRtnHandler } from "@/utils/util";
+import { getTermThemes } from "@/utils/themeutil";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogFooter,
+    DialogTitle,
+    DialogDescription,
+} from "@/components/ui/modal";
+import {
+    Select,
+    SelectContent,
+    SelectGroup,
+    SelectItem,
+    SelectLabel,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { SettingsError } from "@/components/ui/settingserror";
 import {
     TabColorSelector,
     TabIconSelector,
     TabNameTextField,
     TabRemoteSelector,
-} from "@/app/workspace/screen/newtabsettings";
+} from "@/components/workspace/screen/newtabsettings";
 
 const ScreenDeleteMessage = `
 Are you sure you want to delete this tab?
@@ -146,67 +163,96 @@ const ScreenSettingsModal: React.FC = observer(() => {
     const currTermTheme = GlobalModel.getTermThemeSettings()[screenId] ?? termThemes[0]?.label;
 
     return (
-        <Modal className="w-[640px]">
-            <Modal.Header onClose={closeModal} title={`Tab Settings (${screen.name.get()})`} />
-            <div className="flex flex-col px-5 gap-1 w-full">
-                <div className="settings-field">
-                    <div className="settings-label">Name</div>
-                    <div className="settings-input">
-                        <TabNameTextField screen={screen} errorMessage={{ get: () => errorMessage, set: setErrorMessage } as any} />
-                    </div>
-                </div>
-                <div className="settings-field">
-                    <div className="settings-label">Connection</div>
-                    <div className="settings-input">
-                        <TabRemoteSelector screen={screen} errorMessage={{ get: () => errorMessage, set: setErrorMessage } as any} />
-                    </div>
-                </div>
-                <div className="settings-field">
-                    <div className="settings-label">Tab Color</div>
-                    <div className="settings-input">
-                        <TabColorSelector screen={screen} errorMessage={{ get: () => errorMessage, set: setErrorMessage } as any} />
-                    </div>
-                </div>
-                <div className="settings-field">
-                    <div className="settings-label">Tab Icon</div>
-                    <div className="settings-input">
-                        <TabIconSelector screen={screen} errorMessage={{ get: () => errorMessage, set: setErrorMessage } as any} />
-                    </div>
-                </div>
-                {termThemes.length > 0 && (
-                    <div className="settings-field">
-                        <div className="settings-label">Terminal Theme</div>
-                        <div className="settings-input">
-                            <Dropdown
-                                className="terminal-theme-dropdown"
-                                options={termThemes}
-                                defaultValue={currTermTheme}
-                                onChange={handleChangeTermTheme}
+        <Dialog open={true} onOpenChange={closeModal}>
+            <DialogContent className="w-[640px]">
+                <DialogHeader>
+                    <DialogTitle>Tab Settings ({screen.name.get()})</DialogTitle>
+                </DialogHeader>
+                <div className="flex flex-col px-5 gap-4 w-full">
+                    <div className="grid grid-cols-3 items-center gap-4">
+                        <div className="col-span-1">Name</div>
+                        <div className="col-span-2">
+                            <TabNameTextField
+                                screen={screen}
+                                errorMessage={{ get: () => errorMessage, set: setErrorMessage } as any}
                             />
                         </div>
                     </div>
-                )}
-                <div className="settings-field">
-                    <div className="settings-label flex items-center">
-                        <div className="mr-[5px]">Actions</div>
-                        <Tooltip
-                            message={`Delete will remove the tab, removing all commands and output.`}
-                            icon={<i className="fa-sharp fa-regular fa-circle-question text-[13px]" />}
-                            className="screen-settings-tooltip"
-                        >
-                            <i className="fa-sharp fa-regular fa-circle-question text-[13px]" />
-                        </Tooltip>
+                    <div className="grid grid-cols-3 items-center gap-4">
+                        <div className="col-span-1">Connection</div>
+                        <div className="col-span-2">
+                            <TabRemoteSelector
+                                screen={screen}
+                                errorMessage={{ get: () => errorMessage, set: setErrorMessage } as any}
+                            />
+                        </div>
                     </div>
-                    <div className="settings-input">
-                        <Button onClick={handleDeleteScreen} className="secondary small danger">
-                            Delete Tab
-                        </Button>
+                    <div className="grid grid-cols-3 items-center gap-4">
+                        <div className="col-span-1">Tab Color</div>
+                        <div className="col-span-2">
+                            <TabColorSelector
+                                screen={screen}
+                                errorMessage={{ get: () => errorMessage, set: setErrorMessage } as any}
+                            />
+                        </div>
                     </div>
+                    <div className="grid grid-cols-3 items-center gap-4">
+                        <div className="col-span-1">Tab Icon</div>
+                        <div className="col-span-2">
+                            <TabIconSelector
+                                screen={screen}
+                                errorMessage={{ get: () => errorMessage, set: setErrorMessage } as any}
+                            />
+                        </div>
+                    </div>
+                    {termThemes.length > 0 && (
+                        <div className="grid grid-cols-3 items-center gap-4">
+                            <div className="col-span-1">Terminal Theme</div>
+                            <div className="col-span-2">
+                                <Select onValueChange={handleChangeTermTheme} defaultValue={currTermTheme}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a theme" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {termThemes.map((theme) => (
+                                            <SelectItem key={theme.value} value={theme.value}>
+                                                {theme.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                    )}
+                    <div className="grid grid-cols-3 items-center gap-4">
+                        <div className="col-span-1 flex items-center">
+                            <div className="mr-2">Actions</div>
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger>
+                                        <i className="fa-sharp fa-regular fa-circle-question text-sm" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        Delete will remove the tab, removing all commands and output.
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        </div>
+                        <div className="col-span-2">
+                            <Button onClick={handleDeleteScreen} variant="destructive" size="sm">
+                                Delete Tab
+                            </Button>
+                        </div>
+                    </div>
+                    <SettingsError errorMessage={errorMessage} onDismiss={dismissError} />
                 </div>
-                <SettingsError errorMessage={errorMessage} />
-            </div>
-            <Modal.Footer cancelLabel="Close" onCancel={closeModal} keybindings={true} />
-        </Modal>
+                <DialogFooter>
+                    <Button variant="outline" onClick={closeModal}>
+                        Close
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     );
 });
 

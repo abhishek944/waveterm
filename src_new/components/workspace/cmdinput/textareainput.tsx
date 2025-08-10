@@ -4,11 +4,11 @@
 import * as React from "react";
 import { observer } from "mobx-react";
 import * as mobx from "mobx";
-import * as util from "@/util/util";
+import * as util from "@/utils/util";
 import { If } from "tsx-control-statements/components";
 import { clsx } from "clsx";
 import { GlobalModel, GlobalCommandRunner, Screen } from "@/models";
-import { getMonoFontSize } from "@/util/textmeasure";
+import { getMonoFontSize } from "@/utils/textmeasure";
 import * as appconst from "@/app/appconst";
 
 type OV<T> = mobx.IObservableValue<T>;

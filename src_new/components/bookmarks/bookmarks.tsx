@@ -6,14 +6,14 @@ import * as mobxReact from "mobx-react";
 import * as mobx from "mobx";
 import { clsx } from "clsx";
 import { GlobalModel } from "@/models";
-import { CmdStrCode, Markdown } from "@/common/elements";
 
 import { ReactComponent as CopyIcon } from "@/assets/icons/favourites/copy.svg";
 import { ReactComponent as PenIcon } from "@/assets/icons/favourites/pen.svg";
 import { ReactComponent as TrashIcon } from "@/assets/icons/favourites/trash.svg";
 import { ReactComponent as FavoritesIcon } from "@/assets/icons/favourites.svg";
-
-import { MainView } from "@/common/elements/mainview";
+import { Markdown } from "@/components/ui/markdown";
+import { CmdStrCode } from "@/components/ui/cmdstrcode";
+import { MainView } from "@/components/ui/mainview";
 
 interface BookmarkProps {
     bookmark: BookmarkType;
@@ -177,7 +177,7 @@ const Bookmark: React.FC<BookmarkProps> = mobxReact.observer(({ bookmark }) => {
             <div className="bookmark-id-div">{bookmark.bookmarkid.substr(0, 8)}</div>
             <div className="bookmark-content">
                 {hasDesc && (
-                    <Markdown text={markdown} extraClassName="bottom-margin" />
+                    <Markdown text={markdown} className="bottom-margin" />
                 )}
                 <CmdStrCode
                     cmdstr={bookmark.cmdstr}

@@ -17,7 +17,6 @@ function isBlank(s: string | null | undefined): boolean {
 import { BookmarksView } from "@/components/bookmarks/bookmarks";
 import { HistoryView } from "@/components/history/history";
 import { ConnectionsView } from "@/components/connections/connections";
-import { ClientSettingsView } from "@/components/elements/clientsettings";
 // TODO: MainSideBar and RightSideBar need to be migrated from src/app/sidebar/
 import { DisconnectedModal, ClientStopModal } from "@/components/modals";
 import { ModalsProvider } from "@/components/modals/provider";
@@ -26,6 +25,7 @@ import { Button } from "@/components/ui/button";
 // TODO: TermStyleList needs to be migrated from src/app/common/elements/
 
 import "./globals.css";
+import { ClientSettingsView } from "./components/clientsettings/clientsettings";
 
 const App: React.FC = mobxReact.observer(() => {
     const [dcWait, setDcWait] = React.useState(false);

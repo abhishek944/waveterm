@@ -12,12 +12,12 @@ import {
     genMergeSimpleData,
     isModKeyPress,
     isBlank,
-} from "@/util/util";
+} from "@/utils/util";
 import { WSControl } from "./ws";
-import { cmdStatusIsRunning } from "@/app/line/lineutil";
+import { cmdStatusIsRunning } from "@/components/line/lineutil";
 import * as appconst from "@/app/appconst";
-import { remotePtrToString, cmdPacketString } from "@/util/modelutil";
-import { KeybindManager, adaptFromReactOrNativeKeyEvent, setKeyUtilPlatform } from "@/util/keyutil";
+import { remotePtrToString, cmdPacketString } from "@/utils/modelutil";
+import { KeybindManager, adaptFromReactOrNativeKeyEvent, setKeyUtilPlatform } from "@/utils/keyutil";
 import { Session } from "./session";
 import { ScreenLines } from "./screenlines";
 import { InputModel } from "./input";
@@ -35,9 +35,9 @@ import { Screen } from "./screen";
 import { Cmd } from "./cmd";
 import { ContextMenuModel } from "./contextmenu";
 import { GlobalCommandRunner } from "./global";
-import { clearMonoFontCache, getMonoFontSize } from "@/util/textmeasure";
+import { clearMonoFontCache, getMonoFontSize } from "@/utils/textmeasure";
 import type { TermWrap } from "@/plugins/terminal/term";
-import * as util from "@/util/util";
+import * as util from "@/utils/util";
 import { AutocompleteModel } from "./autocomplete";
 
 type SWLinePtr = {

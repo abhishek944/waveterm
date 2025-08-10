@@ -1,37 +1,3 @@
 {
-    "include": ["src/**/*", "src_new/**/*", "types/**/*"],
-    "compilerOptions": {
-        "target": "es6",
-        "module": "commonjs",
-        "jsx": "preserve",
-        "lib": ["ES2022"],
-        "esModuleInterop": true,
-        "skipLibCheck": true,
-        "forceConsistentCasingInFileNames": true,
-        "moduleResolution": "node",
-        "allowSyntheticDefaultImports": true,
-        "resolveJsonModule": true,
-        "isolatedModules": true,
-        "experimentalDecorators": true,
-        "downlevelIteration": true,
-        "baseUrl": "./", 
-        "types": ["@withfig/autocomplete-types"],
-        "paths": {
-            "@/app/*": ["src/app/*"], // Points to the app folder
-            "@/util/*": ["src/util/*"], // Points to the util folder
-            "@/models": ["src/models/index"], // Points directly to the models index file
-            "@/models/*": ["src/models/*"], // For everything else inside models
-            "@/common/*": ["src/app/common/*"], // For everything else inside common
-            "@/elements": ["src/app/common/elements/index"], // Points directly to the elements index file
-            "@/elements/*": ["src/app/common/elements/*"], // For everything else inside elements
-            "@/modals": ["src/app/common/modals/index"], // Points directly to the modals index file
-            "@/modals/*": ["src/app/common/modals/*"], // For everything else inside modals
-            "@/assets/*": ["src/app/assets/*"], // For everything else inside assets
-            "@/plugins/*": ["src/plugins/*"], // For everything else inside plugins
-            "@/autocomplete": ["src/autocomplete/index"], // Points directly to the autocomplete index file
-            "@/autocomplete/*": ["src/autocomplete/*"], // For everything else inside autocomplete
-           "@/components/*": ["src_new/components/*"],
-           "@/plugins/*": ["src_new/plugins/*"]
-        }
-    }
+  "extends": "./tsconfig.new.json"
 }
