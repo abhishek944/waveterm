@@ -5,6 +5,7 @@ package openai
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/openai/openai-go/v2"
@@ -42,7 +43,16 @@ func ConvertPromptMessages(prompt []packet.OpenAIPromptMessageType) []openai.Cha
 	return messages
 }
 
+// Wrapper functions that delegate to the WithFormat versions
 func RunCompletion(ctx context.Context, opts *sstore.OpenAIOptsType, prompt []packet.OpenAIPromptMessageType) ([]*packet.OpenAIPacketType, error) {
+	return RunCompletionWithFormat(ctx, opts, prompt, nil)
+}
+
+func RunCompletionStream(ctx context.Context, opts *sstore.OpenAIOptsType, prompt []packet.OpenAIPromptMessageType) (chan *packet.OpenAIPacketType, error) {
+	return RunCompletionStreamWithFormat(ctx, opts, prompt, nil)
+}
+
+func RunCompletionWithFormat(ctx context.Context, opts *sstore.OpenAIOptsType, prompt []packet.OpenAIPromptMessageType, responseFormat *openai.ChatCompletionNewParamsResponseFormatUnion) ([]*packet.OpenAIPacketType, error) {
 	if opts == nil {
 		return nil, fmt.Errorf("no openai opts found")
 	}
@@ -74,6 +84,11 @@ func RunCompletion(ctx context.Context, opts *sstore.OpenAIOptsType, prompt []pa
 	
 	if opts.MaxChoices > 1 {
 		params.N = param.NewOpt(int64(opts.MaxChoices))
+	}
+	
+	// Add response format if provided
+	if responseFormat != nil {
+		params.ResponseFormat = *responseFormat
 	}
 	
 	completion, err := client.Chat.Completions.New(ctx, params)
@@ -84,7 +99,7 @@ func RunCompletion(ctx context.Context, opts *sstore.OpenAIOptsType, prompt []pa
 	return marshalResponse(completion), nil
 }
 
-func RunCompletionStream(ctx context.Context, opts *sstore.OpenAIOptsType, prompt []packet.OpenAIPromptMessageType) (chan *packet.OpenAIPacketType, error) {
+func RunCompletionStreamWithFormat(ctx context.Context, opts *sstore.OpenAIOptsType, prompt []packet.OpenAIPromptMessageType, responseFormat *openai.ChatCompletionNewParamsResponseFormatUnion) (chan *packet.OpenAIPacketType, error) {
 	if opts == nil {
 		return nil, fmt.Errorf("no openai opts found")
 	}
@@ -116,6 +131,11 @@ func RunCompletionStream(ctx context.Context, opts *sstore.OpenAIOptsType, promp
 	
 	if opts.MaxChoices > 1 {
 		params.N = param.NewOpt(int64(opts.MaxChoices))
+	}
+	
+	// Add response format if provided
+	if responseFormat != nil {
+		params.ResponseFormat = *responseFormat
 	}
 	
 	stream := client.Chat.Completions.NewStreaming(ctx, params)
@@ -188,4 +208,35 @@ func CreateTextPacket(text string) *packet.OpenAIPacketType {
 	pk := packet.MakeOpenAIPacket()
 	pk.Text = text
 	return pk
+}
+
+// CreateThreadModeResponseFormat creates the response format for thread mode structured output
+func CreateThreadModeResponseFormat() *openai.ChatCompletionNewParamsResponseFormatUnion {
+	schema := json.RawMessage(`{
+		"type": "object",
+		"properties": {
+			"explanation": {
+				"type": "string",
+				"description": "Brief explanation of what the command does and any important considerations"
+			},
+			"command": {
+				"type": "string",
+				"description": "The exact command to execute (empty string if no command is needed)"
+			}
+		},
+		"required": ["explanation", "command"],
+		"additionalProperties": false
+	}`)
+	
+	return &openai.ChatCompletionNewParamsResponseFormatUnion{
+		OfJSONSchema: &shared.ResponseFormatJSONSchemaParam{
+			Type: "json_schema",
+			JSONSchema: shared.ResponseFormatJSONSchemaJSONSchemaParam{
+				Name:        "thread_mode_response",
+				Description: param.NewOpt("Response format for thread mode containing explanation and command"),
+				Schema:      schema,
+				Strict:      param.NewOpt(true),
+			},
+		},
+	}
 }

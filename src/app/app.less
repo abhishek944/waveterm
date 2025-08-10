@@ -24,7 +24,7 @@ body .sidebar.ai-chat-gradient {
     /* AI chat sidebar gradient background */
     background: #0e131f;
     position: relative;
-    overflow: hidden;
+    overflow: visible;
 }
 
 body .sidebar.ai-chat-gradient::before {
@@ -40,7 +40,7 @@ body .sidebar.ai-chat-gradient::before {
     z-index: 0;
 }
 
-body .sidebar.ai-chat-gradient > * {
+body .sidebar.ai-chat-gradient * {
     position: relative;
     z-index: 1;
 }
@@ -48,7 +48,7 @@ body .sidebar.ai-chat-gradient > * {
 
 body textarea,
 body textarea.textarea {
-    overflow: hidden;
+    overflow: visible;
     font: var(--base-font);
     line-height: 1.5;
     color: var(--app-text-color);

@@ -6,6 +6,8 @@ interface ResizableSidebarProps extends React.HTMLAttributes<HTMLDivElement> {
     initialWidth?: number;
     minWidth?: number;
     maxWidth?: number;
+    /** Collapse sidebar completely */
+    collapsed?: boolean;
     children: React.ReactNode;
 }
 
@@ -18,6 +20,7 @@ const ResizableSidebar = React.forwardRef<HTMLDivElement, ResizableSidebarProps>
             initialWidth = 300,
             minWidth = 200,
             maxWidth = 500,
+            collapsed = false,
             ...props
         },
         ref
@@ -63,13 +66,13 @@ const ResizableSidebar = React.forwardRef<HTMLDivElement, ResizableSidebarProps>
             <div
                 ref={ref}
                 className={cn("flex h-full relative", className)}
-                style={{ width }}
+                style={{ width: collapsed ? 0 : width, transition: "width 0.2s ease", overflow: "visible" }}
                 {...props}
             >
                 <div className="flex flex-col h-full w-full">{children}</div>
                 <div
                     className={cn(
-                        "absolute top-0 h-full w-1.5 cursor-col-resize",
+                        "absolute top-0 h-full w-3 cursor-col-resize z-20 bg-transparent hover:bg-white/20",
                         position === "left" ? "-right-0.5" : "-left-0.5"
                     )}
                     onMouseDown={handleMouseDown}

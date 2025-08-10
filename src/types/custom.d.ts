@@ -391,6 +391,9 @@ declare global {
         agentmodetoggle?: {
             enabled: boolean;
         };
+        threadmodetoggle?: {
+            enabled: boolean;
+        };
     };
 
     type TermThemesType = {

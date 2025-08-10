@@ -37,7 +37,16 @@ func convertUsage(resp *genai.GenerateContentResponse) *packet.OpenAIUsageType {
 	}
 }
 
+// Wrapper functions that delegate to the WithSchema versions
 func RunCompletion(ctx context.Context, opts *sstore.GeminiOptsType, prompt []packet.OpenAIPromptMessageType) ([]*packet.OpenAIPacketType, error) {
+	return RunCompletionWithSchema(ctx, opts, prompt, nil)
+}
+
+func RunCompletionStream(ctx context.Context, opts *sstore.GeminiOptsType, prompt []packet.OpenAIPromptMessageType) (chan *packet.OpenAIPacketType, error) {
+	return RunCompletionStreamWithSchema(ctx, opts, prompt, nil)
+}
+
+func RunCompletionWithSchema(ctx context.Context, opts *sstore.GeminiOptsType, prompt []packet.OpenAIPromptMessageType, responseSchema *genai.Schema) ([]*packet.OpenAIPacketType, error) {
 	if opts == nil {
 		return nil, fmt.Errorf("no gemini opts found")
 	}
@@ -60,6 +69,12 @@ func RunCompletion(ctx context.Context, opts *sstore.GeminiOptsType, prompt []pa
 	if opts.MaxTokens > 0 {
 		model.SetMaxOutputTokens(int32(opts.MaxTokens))
 	}
+	
+	// Add response schema if provided
+	if responseSchema != nil {
+		model.GenerationConfig.ResponseMIMEType = "application/json"
+		model.GenerationConfig.ResponseSchema = responseSchema
+	}
 
 	// Convert prompt messages to parts
 	parts := ConvertPromptMessages(prompt)
@@ -76,7 +91,7 @@ func RunCompletion(ctx context.Context, opts *sstore.GeminiOptsType, prompt []pa
 	return marshalResponse(resp, opts.Model), nil
 }
 
-func RunCompletionStream(ctx context.Context, opts *sstore.GeminiOptsType, prompt []packet.OpenAIPromptMessageType) (chan *packet.OpenAIPacketType, error) {
+func RunCompletionStreamWithSchema(ctx context.Context, opts *sstore.GeminiOptsType, prompt []packet.OpenAIPromptMessageType, responseSchema *genai.Schema) (chan *packet.OpenAIPacketType, error) {
 	if opts == nil {
 		return nil, fmt.Errorf("no gemini opts found")
 	}
@@ -97,6 +112,12 @@ func RunCompletionStream(ctx context.Context, opts *sstore.GeminiOptsType, promp
 	// Configure the model
 	if opts.MaxTokens > 0 {
 		model.SetMaxOutputTokens(int32(opts.MaxTokens))
+	}
+	
+	// Add response schema if provided
+	if responseSchema != nil {
+		model.GenerationConfig.ResponseMIMEType = "application/json"
+		model.GenerationConfig.ResponseSchema = responseSchema
 	}
 
 	// Convert prompt messages to parts
@@ -189,4 +210,22 @@ func CreateErrorPacket(errStr string) *packet.OpenAIPacketType {
 	pk.Error = errStr
 	pk.FinishReason = "error"
 	return pk
+}
+
+// CreateThreadModeResponseSchema creates the response schema for thread mode structured output
+func CreateThreadModeResponseSchema() *genai.Schema {
+	return &genai.Schema{
+		Type: genai.TypeObject,
+		Properties: map[string]*genai.Schema{
+			"explanation": {
+				Type:        genai.TypeString,
+				Description: "Brief explanation of what the command does and any important considerations",
+			},
+			"command": {
+				Type:        genai.TypeString,
+				Description: "The exact command to execute (empty string if no command is needed)",
+			},
+		},
+		Required: []string{"explanation", "command"},
+	}
 }

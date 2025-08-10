@@ -1119,7 +1119,7 @@ class Line extends React.Component<
         if (line.linetype == "text") {
             return <LineText {...this.props} />;
         }
-        if (line.linetype == "cmd" || line.linetype == "agent_mode") {
+        if (line.linetype == "cmd" || line.linetype == "agent_mode" || line.linetype == "thread_mode") {
             return <LineCmd {...this.props} />;
         }
         return <div className="line line-invalid">[invalid line type '{line.linetype}']</div>;

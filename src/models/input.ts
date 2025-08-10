@@ -743,8 +743,7 @@ class InputModel {
         if (isAgentMode && !commandStr.startsWith("/agent ")) {
             commandStr = "/agent " + commandStr;
         } else if (isThreadMode && !commandStr.startsWith("/thread ")) {
-            // Thread mode is not implemented yet, just submit the command as-is
-            // commandStr = "/thread " + commandStr;
+            commandStr = "/thread " + commandStr;
         }
         
         mobx.action(() => {

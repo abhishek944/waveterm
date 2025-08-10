@@ -5,15 +5,19 @@ package cmdrunner
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"runtime"
 	"strings"
 	"time"
 
+	"github.com/google/generative-ai-go/genai"
+	openaiapi "github.com/openai/openai-go/v2"
 	"github.com/abhishek944/waveterm/waveshell/pkg/base"
 	"github.com/abhishek944/waveterm/waveshell/pkg/packet"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/prompts"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/remote"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/remote/azureopenai"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/remote/gemini"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/remote/openai"
@@ -119,14 +123,20 @@ func runOpenAICompletion(ctx context.Context, opts *sstore.OpenAIOptsType, reque
 		opts.MaxTokens = openai.DefaultMaxTokens
 	}
 
+	// Determine if we need structured output for thread mode
+	var responseFormat *openaiapi.ChatCompletionNewParamsResponseFormatUnion
+	if request.Mode == AIModeThread {
+		responseFormat = openai.CreateThreadModeResponseFormat()
+	}
+
 	if request.Streaming {
-		ch, err := openai.RunCompletionStream(ctx, opts, request.Prompt)
+		ch, err := openai.RunCompletionStreamWithFormat(ctx, opts, request.Prompt, responseFormat)
 		if err != nil {
 			return nil, err
 		}
 		return &AIResponse{Stream: ch}, nil
 	} else {
-		packets, err := openai.RunCompletion(ctx, opts, request.Prompt)
+		packets, err := openai.RunCompletionWithFormat(ctx, opts, request.Prompt, responseFormat)
 		if err != nil {
 			return nil, err
 		}
@@ -143,14 +153,20 @@ func runGeminiCompletion(ctx context.Context, opts *sstore.GeminiOptsType, reque
 		opts.MaxTokens = gemini.DefaultMaxTokens
 	}
 
+	// Determine if we need structured output for thread mode
+	var responseSchema *genai.Schema
+	if request.Mode == AIModeThread {
+		responseSchema = gemini.CreateThreadModeResponseSchema()
+	}
+
 	if request.Streaming {
-		ch, err := gemini.RunCompletionStream(ctx, opts, request.Prompt)
+		ch, err := gemini.RunCompletionStreamWithSchema(ctx, opts, request.Prompt, responseSchema)
 		if err != nil {
 			return nil, err
 		}
 		return &AIResponse{Stream: ch}, nil
 	} else {
-		packets, err := gemini.RunCompletion(ctx, opts, request.Prompt)
+		packets, err := gemini.RunCompletionWithSchema(ctx, opts, request.Prompt, responseSchema)
 		if err != nil {
 			return nil, err
 		}
@@ -160,14 +176,20 @@ func runGeminiCompletion(ctx context.Context, opts *sstore.GeminiOptsType, reque
 
 // runAzureOpenAICompletion handles Azure OpenAI completions
 func runAzureOpenAICompletion(ctx context.Context, opts *sstore.AzureOpenAIOptsType, request *AIRequest) (*AIResponse, error) {
+	// Determine if we need structured output for thread mode
+	var responseFormat *openaiapi.ChatCompletionNewParamsResponseFormatUnion
+	if request.Mode == AIModeThread {
+		responseFormat = azureopenai.CreateThreadModeResponseFormat()
+	}
+
 	if request.Streaming {
-		ch, err := azureopenai.RunCompletionStream(ctx, opts, request.Prompt)
+		ch, err := azureopenai.RunCompletionStreamWithFormat(ctx, opts, request.Prompt, responseFormat)
 		if err != nil {
 			return nil, err
 		}
 		return &AIResponse{Stream: ch}, nil
 	} else {
-		packets, err := azureopenai.RunCompletion(ctx, opts, request.Prompt)
+		packets, err := azureopenai.RunCompletionWithFormat(ctx, opts, request.Prompt, responseFormat)
 		if err != nil {
 			return nil, err
 		}
@@ -204,15 +226,37 @@ func RunAgentMode(ctx context.Context, pk *scpacket.FeCommandPacketType, clientD
 // Thread Mode Implementation
 
 // RunThreadMode handles thread mode AI requests
-func RunThreadMode(ctx context.Context, pk *scpacket.FeCommandPacketType, clientData *sstore.ClientData, conversation []packet.OpenAIPromptMessageType) (*AIResponse, error) {
+func RunThreadMode(ctx context.Context, pk *scpacket.FeCommandPacketType, clientData *sstore.ClientData, conversation []packet.OpenAIPromptMessageType, provider string) (*AIResponse, error) {
+	// Add system prompt for thread mode at the beginning if not already present
+	if len(conversation) == 0 || conversation[0].Role != "system" {
+		threadPrompt := []packet.OpenAIPromptMessageType{
+			{
+				Role:    "system",
+				Content: prompts.ThreadSystemPrompt,
+			},
+		}
+		conversation = append(threadPrompt, conversation...)
+	}
+
 	request := &AIRequest{
 		Mode:      AIModeThread,
 		Prompt:    conversation,
 		Streaming: true,
 		Context:   ctx,
+		Provider:  provider, // Use the provider from UI
 	}
 
 	return RunAICompletion(ctx, clientData, request)
+}
+
+// ParseThreadModeResponse parses the JSON response from thread mode
+func ParseThreadModeResponse(jsonStr string) (*remote.ThreadModeResponse, error) {
+	var response remote.ThreadModeResponse
+	err := json.Unmarshal([]byte(jsonStr), &response)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse thread mode response: %v", err)
+	}
+	return &response, nil
 }
 
 // Helper functions moved from cmdrunner.go

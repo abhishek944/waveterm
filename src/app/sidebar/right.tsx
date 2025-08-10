@@ -57,6 +57,7 @@ const RightSideBar: React.FC<{ parentRef: React.RefObject<HTMLElement> }> = mobx
     return (
         <ResizableSidebar
             position="right"
+            collapsed={isCollapsed}
             className={cn("sidebar ai-chat-gradient", {
                 "w-0": isCollapsed,
             })}

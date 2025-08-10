@@ -1147,6 +1147,14 @@ class Model {
                             this.isThreadMode.set(false);
                         }
                     })();
+                } else if (update.threadmodetoggle != null) {
+                    mobx.action(() => {
+                        this.isThreadMode.set(update.threadmodetoggle.enabled);
+                        // If enabling thread mode and agent mode is active, turn off agent mode
+                        if (update.threadmodetoggle.enabled && this.isAgentMode.get()) {
+                            this.isAgentMode.set(false);
+                        }
+                    })();
                 } else if (update.screenstatusindicator != null) {
                     this.updateScreenStatusIndicators([update.screenstatusindicator]);
                 } else if (update.screennumrunningcommands != null) {
