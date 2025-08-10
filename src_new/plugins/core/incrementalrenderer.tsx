@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import * as React from "react";
-import { observer } from "mobx-react";
 import { debounce } from "throttle-debounce";
 
 export const IncrementalRenderer: React.FC<{

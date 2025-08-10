@@ -25,7 +25,7 @@ const ProdServerEndpoint = "http://127.0.0.1:1619";
 
 const isDev = process.env[WaveDevVarName] != null;
 const waveHome = getWaveHomeDir();
-const DistDir = isDev ? "dist-dev" : "dist";
+const DistDir = isDev ? "dist-dev-new" : "dist-new";
 const instanceId = uuidv4();
 const oldConsoleLog = console.log;
 
@@ -347,7 +347,18 @@ function createWindow(clientData: ClientDataType | null): Electron.BrowserWindow
         win.show();
     });
     const indexHtml = isDev ? "index-dev.html" : "index.html";
-    win.loadFile(path.join(getElectronAppBasePath(), "public", indexHtml));
+    
+    // Check if hot reload is enabled
+    if (isDev && process.env.WAVETERM_HOT_RELOAD) {
+        // Load from webpack dev server for hot reload
+        win.loadURL("http://localhost:9001");
+        
+        // Open DevTools in development with hot reload
+        win.webContents.openDevTools();
+    } else {
+        // Load from file system
+        win.loadFile(path.join(getElectronAppBasePath(), "public", indexHtml));
+    }
     win.webContents.on("before-input-event", (e, input) => {
         const waveEvent = adaptFromElectronKeyEvent(input);
         if (win.isFocused()) {

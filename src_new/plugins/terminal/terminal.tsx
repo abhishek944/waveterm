@@ -8,9 +8,9 @@ import dayjs from "dayjs";
 import localizedFormat from "dayjs/plugin/localizedFormat";
 import { If } from "tsx-control-statements/components";
 import { GlobalModel } from "@/models";
-import { termHeightFromRows } from "@/util/textmeasure";
+import { termHeightFromRows } from "@/utils/textmeasure";
 import { clsx } from "clsx";
-import * as lineutil from "@/app/line/lineutil";
+import * as lineutil from "@/components/line/lineutil";
 
 dayjs.extend(localizedFormat);
 
@@ -52,7 +52,7 @@ const TerminalKeybindings: React.FC<{ termWrap: any; lineid: string }> = ({ term
             return true;
         });
 
-        return () => keybindManager.unregisterDomain(domain);
+        keybindManager.unregisterDomain(domain);
     }, [termWrap, lineid]);
 
     return null;
@@ -95,7 +95,7 @@ export const TerminalRenderer: React.FC<{
 
     React.useEffect(() => {
         if (!staticRender) {
-            const vis = visible?.get() && !collapsed;
+            const vis = visible && !collapsed;
             if (vis && !termLoaded) {
                 loadTerminal();
             } else if (!vis && termLoaded) {

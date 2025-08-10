@@ -17,7 +17,6 @@ function isBlank(s: string | null | undefined): boolean {
 import { BookmarksView } from "@/components/bookmarks/bookmarks";
 import { HistoryView } from "@/components/history/history";
 import { ConnectionsView } from "@/components/connections/connections";
-// TODO: MainSideBar and RightSideBar need to be migrated from src/app/sidebar/
 import { DisconnectedModal, ClientStopModal } from "@/components/modals";
 import { ModalsProvider } from "@/components/modals/provider";
 import { Button } from "@/components/ui/button";
@@ -26,6 +25,7 @@ import { Button } from "@/components/ui/button";
 
 import "./globals.css";
 import { ClientSettingsView } from "./components/clientsettings/clientsettings";
+import { MainSideBar, RightSideBar } from "./components/sidebar";
 
 const App: React.FC = mobxReact.observer(() => {
     const [dcWait, setDcWait] = React.useState(false);
@@ -102,7 +102,7 @@ const App: React.FC = mobxReact.observer(() => {
         return (
             <div id="main" className={`platform-${platform}`} onContextMenu={handleContextMenu}>
                 <div ref={mainContentRef} className="main-content">
-                    {/* <MainSideBar parentRef={mainContentRef} /> */}
+                    <MainSideBar parentRef={mainContentRef} />
                     <div className="session-view" />
                 </div>
                 {dcWait && (
@@ -164,7 +164,7 @@ const App: React.FC = mobxReact.observer(() => {
                             </div>
                         )}
                         <div ref={mainContentRef} className="main-content">
-                            {/* <MainSideBar parentRef={mainContentRef} /> */}
+                            <MainSideBar parentRef={mainContentRef} />
                             {/* <ErrorBoundary> */}
                                 {/* <PluginsView /> */}
                                 <WorkspaceView />
@@ -173,7 +173,7 @@ const App: React.FC = mobxReact.observer(() => {
                                 <ConnectionsView model={remotesModel} />
                                 <ClientSettingsView model={remotesModel} />
                             {/* </ErrorBoundary> */}
-                            {/* <RightSideBar parentRef={mainContentRef} /> */}
+                            <RightSideBar />
                         </div>
                         <ModalsProvider />
                     </>

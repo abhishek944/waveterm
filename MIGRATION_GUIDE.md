@@ -72,9 +72,6 @@ scripthaus run webpack-watch-new
 - Path aliases are updated to point to `src_new/`
 - Some legacy aliases remain for gradual migration
 
-## Next Steps
+## Debugging issues
 
-1. Continue migrating remaining components
-2. Update electron configuration to use new build output
-3. Test thoroughly before switching over completely
-4. Remove old `src/` directory once migration is complete
+- Always take reference of the old files in src/ folder to debug any issues in the new files.

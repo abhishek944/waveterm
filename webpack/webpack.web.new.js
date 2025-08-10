@@ -56,7 +56,18 @@ var webCommon = {
             },
             {
                 test: /\.css$/,
-                use: [{ loader: MiniCssExtractPlugin.loader }, "css-loader", "postcss-loader"],
+                use: [
+                    { loader: MiniCssExtractPlugin.loader }, 
+                    "css-loader", 
+                    {
+                        loader: "postcss-loader",
+                        options: {
+                            postcssOptions: {
+                                config: path.resolve(__dirname, "../postcss.config.new.js"),
+                            },
+                        },
+                    }
+                ],
             },
             {
                 test: /\.less$/,

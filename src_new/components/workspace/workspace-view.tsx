@@ -169,9 +169,7 @@ const TabSettings: React.FC = observer(() => {
             <If condition={termThemes.length > 0}>
                 <div className="py-2.5 px-4">
                     <Select onValueChange={handleChangeTermTheme} defaultValue={currTermTheme}>
-                        <SelectTrigger className="w-[412px]">
-                            {currTermTheme}
-                        </SelectTrigger>
+                        <SelectTrigger className="w-[412px]">{currTermTheme}</SelectTrigger>
                         <SelectContent>
                             {termThemes.map((theme) => (
                                 <SelectItem key={theme.value} value={theme.value}>
@@ -192,10 +190,7 @@ const TabSettings: React.FC = observer(() => {
             </div>
             <div className="h-px bg-gray-700" />
             <div className="py-2.5 px-4">
-                <Button
-                    onClick={handleDeleteScreen}
-                    className="py-1 primary greyoutlined greytext hover:danger"
-                >
+                <Button onClick={handleDeleteScreen} className="py-1 primary greyoutlined greytext hover:danger">
                     Delete Tab
                 </Button>
             </div>
@@ -241,10 +236,17 @@ export const WorkspaceView: React.FC = observer(() => {
                     key="pulldown"
                     className={clsx(
                         "absolute w-full transition-height duration-200 ease-in-out overflow-hidden z-10 border-b-3 border-gray-700 bg-gray-800 rounded-b-md",
-                        { "h-0 border-b-0": !showTabSettings, "top-[calc(var(--screentabs-height)+60px)]": inputPosition === "top", "top-[var(--screentabs-height)]": inputPosition !== "top" }
+                        {
+                            "h-0 border-b-0": !showTabSettings,
+                            "top-[calc(var(--screentabs-height)+60px)]": inputPosition === "top",
+                            "top-[var(--screentabs-height)]": inputPosition !== "top",
+                        }
                     )}
                 >
-                    <Button className="absolute top-2.5 right-2.5 p-1.5 rounded secondary ghost" onClick={toggleTabSettings}>
+                    <Button
+                        className="absolute top-2.5 right-2.5 p-1.5 rounded secondary ghost"
+                        onClick={toggleTabSettings}
+                    >
                         <i className="fa-solid fa-sharp fa-xmark-large" />
                     </Button>
                     <TabSettings key={activeScreen.screenId} />

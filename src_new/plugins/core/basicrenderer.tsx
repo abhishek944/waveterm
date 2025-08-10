@@ -4,7 +4,7 @@
 import * as React from "react";
 import * as mobx from "mobx";
 import { debounce } from "throttle-debounce";
-import * as util from "@/util/util";
+import * as util from "@/utils/util";
 import { GlobalModel } from "@/models";
 import { clsx } from "clsx";
 

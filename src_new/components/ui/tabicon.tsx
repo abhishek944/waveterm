@@ -1,6 +1,5 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { Cloud, Square } from "lucide-react";
 
 interface TabIconProps {
     icon: string;

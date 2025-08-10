@@ -10,20 +10,7 @@ import { ActionsIcon, StatusIndicator, CenteredIcon } from "@/components/icons/i
 import { Reorder } from "framer-motion";
 import { MagicLayout } from "@/components/ui/magiclayout";
 import * as appconst from "@/appconst";
-
-const colorMapping = {
-    green: "text-green-500",
-    default: "text-green-500",
-    orange: "text-orange-500",
-    red: "text-red-500",
-    yellow: "text-yellow-500",
-    blue: "text-blue-500",
-    mint: "text-mint-500",
-    cyan: "text-cyan-500",
-    white: "text-white",
-    violet: "text-violet-500",
-    pink: "text-pink-500",
-};
+import { TabIcon } from "@/components/ui/tabicon";
 
 export const ScreenTab: React.FC<{
     screen: Screen;

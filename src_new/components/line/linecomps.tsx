@@ -6,7 +6,7 @@ import * as mobx from "mobx";
 import { observer } from "mobx-react";
 import dayjs from "dayjs";
 import localizedFormat from "dayjs/plugin/localizedFormat";
-import { Choose, If, When } from "tsx-control-statements/components";
+import { Choose, If, When, Otherwise } from "tsx-control-statements/components";
 import { GlobalModel, GlobalCommandRunner, Cmd } from "@/models";
 import { clsx } from "clsx";
 import { getTermPtyData } from "@/utils/modelutil";
@@ -16,6 +16,12 @@ import * as lineutil from "@/components/line/lineutil";
 import * as appconst from "@/appconst";
 import { RotateIcon } from "@/components/icons/icons";
 import { Markdown } from "@/components/ui/markdown";
+import { Prompt } from "@/components/prompt/prompt";
+import * as util from "@/utils/util";
+import { ErrorBoundary } from "@/components/error/errorboundary";
+import { TerminalRenderer } from "@/plugins/terminal/terminal";
+import { SimpleBlobRenderer } from "@/plugins/core/basicrenderer";
+import { IncrementalRenderer } from "@/plugins/core/incrementalrenderer";
 
 dayjs.extend(localizedFormat);
 
@@ -348,19 +354,394 @@ const Line: React.FC<{
     );
 });
 
-// TODO: Complete migration of LineCmd component
-// LineCmd is a complex component that includes:
-// - LineHeader component (needs migration)
-// - RtnState component (needs migration)
-// - Terminal rendering logic
-// - Context menu handling
-// - Copy/paste functionality
-// - Signal handling for running commands
-// - Height change tracking
-// - Focus management
-// The component should be converted from class to functional component with hooks
-const LineCmd: React.FC<any> = () => {
-    return <div>LineCmd component needs to be migrated</div>;
-};
+const LineCmd: React.FC<{
+    screen: LineContainerType;
+    line: LineType;
+    width: number;
+    staticRender: boolean;
+    visible: OV<boolean>;
+    onHeightChange: LineHeightChangeCallbackType;
+    renderMode: RenderModeType;
+    overrideCollapsed: OV<boolean>;
+    noSelect?: boolean;
+    showHints?: boolean;
+}> = observer(
+    ({
+        screen,
+        line,
+        width,
+        staticRender,
+        visible,
+        onHeightChange,
+        renderMode,
+        overrideCollapsed,
+        noSelect,
+        showHints,
+    }) => {
+        const lineRef = React.useRef<HTMLDivElement>(null);
+        const lastHeight = React.useRef<number>(0);
+
+        const handleHeightChange = React.useCallback(() => {
+            if (onHeightChange == null) {
+                return;
+            }
+            let curHeight = 0;
+            const elem = lineRef.current;
+            if (elem != null) {
+                curHeight = elem.offsetHeight;
+            }
+            if (lastHeight.current == curHeight) {
+                return;
+            }
+            const oldHeight = lastHeight.current;
+            lastHeight.current = curHeight;
+            onHeightChange(line.linenum, curHeight, oldHeight);
+        }, [line.linenum, onHeightChange]);
+
+        React.useEffect(() => {
+            handleHeightChange();
+        });
+
+        const handleClick = React.useCallback(
+            (e: React.MouseEvent) => {
+                if (noSelect) {
+                    return;
+                }
+                const sel = window.getSelection();
+                if (lineRef.current != null) {
+                    const selText = sel.toString();
+                    if (sel.anchorNode != null && lineRef.current.contains(sel.anchorNode) && !isBlank(selText)) {
+                        return;
+                    }
+                }
+                if (e.metaKey) {
+                    screen.toggleLineSelect(line.linenum);
+                } else {
+                    GlobalCommandRunner.screenSelectLine(String(line.linenum), "cmd");
+                }
+            },
+            [line.linenum, noSelect, screen]
+        );
+
+        const cmd = screen.getCmd(line);
+        if (cmd == null) {
+            return (
+                <div
+                    className="line line-invalid"
+                    ref={lineRef}
+                    data-lineid={line.lineid}
+                    data-linenum={line.linenum}
+                    data-screenid={line.screenid}
+                >
+                    [cmd not found '{line.lineid}']
+                </div>
+            );
+        }
+
+        const isSelected = screen.getSelectedLines().includes(line.linenum);
+        const cmdError = cmdShouldMarkError(cmd);
+        const isThreaded = threadedLinesObs.has(line.lineid);
+
+        const mainDivCn = clsx(
+            "line",
+            "line-cmd",
+            { selected: isSelected },
+            { "cmd-done": !cmd.isRunning() },
+            { "has-error": cmdError },
+            { threaded: isThreaded }
+        );
+
+        return (
+            <div
+                className={mainDivCn}
+                ref={lineRef}
+                onClick={handleClick}
+                data-lineid={line.lineid}
+                data-linenum={line.linenum}
+                data-screenid={line.screenid}
+            >
+                <If condition={isSelected || cmdError}>
+                    <div className={clsx("line-mask", { "error-mask": cmdError })}></div>
+                </If>
+                <LineActions screen={screen} line={line} cmd={cmd} />
+                <LineHeader line={line} cmd={cmd} />
+                <LineContent
+                    screen={screen}
+                    line={line}
+                    cmd={cmd}
+                    width={width}
+                    onHeightChange={handleHeightChange}
+                />
+            </div>
+        );
+    }
+);
+
+const LineHeader: React.FC<{ line: LineType; cmd: Cmd }> = observer(({ line, cmd }) => {
+    const hidePrompt = getIsHidePrompt(line);
+
+    const renderMeta1 = () => {
+        let formattedTime: string = "";
+        const restartTs = cmd.getRestartTs();
+        let timeTitle: string = null;
+        if (restartTs != null && restartTs > 0) {
+            formattedTime = "restarted @ " + lineutil.getLineDateTimeStr(restartTs);
+            timeTitle = "original start time " + lineutil.getLineDateTimeStr(line.ts);
+        } else {
+            formattedTime = lineutil.getLineDateTimeStr(line.ts);
+        }
+        const renderer = line.renderer;
+        const durationMs = cmd.getDurationMs();
+        return (
+            <div className="flex items-center text-xs text-gray-400">
+                <SmallLineAvatar line={line} cmd={cmd} />
+                <div className="mx-2">|</div>
+                <Prompt rptr={cmd.remote} festate={cmd.getRemoteFeState()} color={false} />
+                <div className="mx-2">|</div>
+                <div title={timeTitle} className="ts">
+                    {formattedTime} <If condition={durationMs > 0}>({util.formatDuration(durationMs)})</If>
+                </div>
+                <If condition={!isBlank(renderer) && renderer != "terminal"}>
+                    <div className="mx-2">|</div>
+                    <div className="renderer">
+                        <i className="fa-sharp fa-solid fa-fill mr-2" />
+                        {renderer}
+                    </div>
+                </If>
+            </div>
+        );
+    };
+
+    const renderCmdText = () => {
+        if (cmd == null) {
+            return (
+                <div className="font-mono text-green-400">
+                    (cmd not found)
+                </div>
+            );
+        }
+        const isMultiLine = lineutil.isMultiLineCmdText(cmd.getCmdStr());
+        return (
+            <div
+                className={clsx(
+                    "overflow-auto max-h-24 whitespace-pre text-gray-300 font-bold w-full",
+                    {
+                        "border-l-2 border-gray-600 ml-1 pl-2": isMultiLine,
+                    }
+                )}
+            >
+                {lineutil.getFullCmdText(cmd.getCmdStr())}
+            </div>
+        );
+    };
+
+    return (
+        <div className={clsx("flex flex-col w-full font-normal font-mono text-sm leading-5", { "hide-prompt": hidePrompt })}>
+            {renderMeta1()}
+            <If condition={!hidePrompt}>{renderCmdText()}</If>
+        </div>
+    );
+});
+
+const RtnState: React.FC<{ cmd: Cmd; line: LineType }> = observer(({ cmd, line }) => {
+    const [rtnStateDiff, setRtnStateDiff] = React.useState<string>(null);
+    const rtnStateDiffFetched = React.useRef(false);
+
+    React.useEffect(() => {
+        const checkStateDiffLoad = () => {
+            if (cmd == null || !cmd.getRtnState() || rtnStateDiffFetched.current) {
+                return;
+            }
+            if (cmd.getStatus() != "done") {
+                return;
+            }
+            fetchRtnStateDiff();
+        };
+
+        const fetchRtnStateDiff = () => {
+            if (rtnStateDiffFetched.current) {
+                return;
+            }
+            rtnStateDiffFetched.current = true;
+            const usp = new URLSearchParams({
+                linenum: String(line.linenum),
+                screenid: line.screenid,
+                lineid: line.lineid,
+            });
+            const url = GlobalModel.getBaseHostPort() + "/api/rtnstate?" + usp.toString();
+            const fetchHeaders = GlobalModel.getFetchHeaders();
+            fetch(url, { headers: fetchHeaders })
+                .then((resp) => {
+                    if (!resp.ok) {
+                        throw new Error(
+                            `Bad fetch response for /api/rtnstate: ${resp.status} ${resp.statusText}`
+                        );
+                    }
+                    return resp.text();
+                })
+                .then((text) => {
+                    setRtnStateDiff(text ?? "");
+                })
+                .catch((err) => {
+                    setRtnStateDiff("ERROR " + err.toString());
+                });
+        };
+
+        checkStateDiffLoad();
+    }, [cmd, line]);
+
+    const termFontSize = GlobalModel.getTermFontSize();
+    let rtnStateDiffSize = termFontSize - 2;
+    if (rtnStateDiffSize < 10) {
+        rtnStateDiffSize = Math.max(termFontSize, 10);
+    }
+
+    return (
+        <div
+            className="relative"
+            style={{
+                visibility: cmd.getStatus() == "done" ? "visible" : "hidden",
+            }}
+        >
+            <If condition={rtnStateDiff == null || rtnStateDiff == ""}>
+                <div className="text-xs text-gray-400 bg-gray-800 px-2 py-1 inline-block z-10 relative">state unchanged</div>
+                <div className="h-px bg-gray-700 absolute top-1/2 w-1/2 min-w-[300px]"></div>
+            </If>
+            <If condition={rtnStateDiff != null && rtnStateDiff != ""}>
+                <div className="text-xs text-gray-400 bg-gray-800 px-2 py-1 inline-block z-10 relative">new state</div>
+                <div className="h-px bg-gray-700 absolute top-1/2 w-1/2 min-w-[300px]"></div>
+                <div className="font-mono text-gray-300 whitespace-pre ml-2 pl-2 pb-px text-xs max-h-12 overflow-y-auto rtl">
+                    <div className="ltr">{rtnStateDiff}</div>
+                </div>
+            </If>
+        </div>
+    );
+});
+
+const LineContent: React.FC<{
+    screen: LineContainerType;
+    line: LineType;
+    cmd: Cmd;
+    width: number;
+    onHeightChange: LineHeightChangeCallbackType;
+}> = observer(({ screen, line, cmd, width, onHeightChange }) => {
+    const rendererPlugin = !isBlank(line.renderer) && line.renderer !== "terminal" && line.renderer !== "none"
+        ? PluginModel.getRendererPluginByName(line.renderer)
+        : null;
+    const isMinimized = line.linestate["wave:min"] && screen.getContainerType() === appconst.LineContainer_Main;
+
+    const makeRendererModelInitializeParams = (): RendererModelInitializeParams => {
+        const context = lineutil.getRendererContext(line);
+        let savedHeight = screen.getContentHeight(context);
+        if (savedHeight == null) {
+            if (line.contentheight != null && line.contentheight != -1) {
+                savedHeight = line.contentheight;
+            } else {
+                savedHeight = 0;
+            }
+        }
+        const api = {
+            saveHeight: (height: number) => {
+                screen.setContentHeight(lineutil.getRendererContext(line), height);
+            },
+            onFocusChanged: (focus: boolean) => {
+                screen.setLineFocus(line.linenum, focus);
+            },
+            dataHandler: (data: string, model: RendererModel) => {
+                cmd.handleDataFromRenderer(data, model);
+            },
+        };
+        return {
+            context: context,
+            isDone: !cmd.isRunning(),
+            savedHeight: savedHeight,
+            opts: {
+                maxSize: screen.getMaxContentSize(),
+                idealSize: screen.getIdealContentSize(),
+                termOpts: cmd.getTermOpts(),
+                termFontSize: GlobalModel.getTermFontSize(),
+                termFontFamily: GlobalModel.getTermFontFamily(),
+            },
+            ptyDataSource: getTermPtyData,
+            lineState: line.linestate,
+            api: api,
+            rawCmd: cmd.getAsWebCmd(line.lineid),
+        };
+    };
+
+    if (isMinimized) {
+        return null;
+    }
+
+    return (
+        <ErrorBoundary
+            plugin={rendererPlugin?.name}
+            lineContext={lineutil.getRendererContext(line)}
+        >
+            <Choose>
+                <When condition={rendererPlugin == null && line.renderer !== "none"}>
+                    <Choose>
+                        <When condition={line.linetype == "agent_mode"}>
+                            <AgentModeRenderer
+                                screen={screen}
+                                line={line}
+                                width={width}
+                                onHeightChange={onHeightChange}
+                            />
+                        </When>
+                        <Otherwise>
+                            <TerminalRenderer
+                                screen={screen}
+                                line={line}
+                                width={width}
+                                staticRender={false}
+                                visible={mobx.observable.box(true)}
+                                onHeightChange={() => onHeightChange(line.linenum, 0, 0)}
+                                collapsed={false}
+                            />
+                        </Otherwise>
+                    </Choose>
+                </When>
+                <When condition={rendererPlugin != null && rendererPlugin.rendererType == "simple"}>
+                    <SimpleBlobRenderer
+                        rendererContainer={screen}
+                        lineId={line.lineid}
+                        plugin={rendererPlugin}
+                        onHeightChange={() => onHeightChange(line.linenum, 0, 0)}
+                        initParams={makeRendererModelInitializeParams()}
+                        scrollToBringIntoViewport={() => {
+                            const container = document.getElementsByClassName("lines")[0];
+                            const targetDiv = document.querySelector(`[data-lineid="${line.lineid}"]`);
+                            if (container && targetDiv) {
+                                const targetPosition = targetDiv.getBoundingClientRect();
+                                const containerPosition = container.getBoundingClientRect();
+                                if (targetPosition.top < containerPosition.top) {
+                                    container.scrollTop += targetPosition.top - containerPosition.top;
+                                } else if (targetPosition.bottom > containerPosition.bottom) {
+                                    container.scrollTop += targetPosition.bottom - containerPosition.bottom;
+                                }
+                            }
+                        }}
+                        isSelected={screen.getSelectedLines().includes(line.linenum)}
+                        shouldFocus={screen.getSelectedLines().includes(line.linenum) && screen.getFocusType() === "cmd"}
+                    />
+                </When>
+                <When condition={rendererPlugin != null && rendererPlugin.rendererType == "full"}>
+                    <IncrementalRenderer
+                        rendererContainer={screen}
+                        lineId={line.lineid}
+                        plugin={rendererPlugin}
+                        onHeightChange={() => onHeightChange(line.linenum, 0, 0)}
+                        initParams={makeRendererModelInitializeParams()}
+                        isSelected={screen.getSelectedLines().includes(line.linenum)}
+                    />
+                </When>
+            </Choose>
+            <If condition={cmd.getRtnState()}>
+                <RtnState cmd={cmd} line={line} />
+            </If>
+        </ErrorBoundary>
+    );
+});
 
 export { Line, LineActions, AgentModeRenderer };

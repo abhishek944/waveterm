@@ -3,6 +3,37 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --background: 0 0% 0%; /* black */
+    --foreground: 0 0% 100%; /* white */
+    
+    --card: 0 0% 0%;
+    --card-foreground: 0 0% 100%;
+    
+    --popover: 0 0% 0%;
+    --popover-foreground: 0 0% 100%;
+    
+    --primary: 106 55% 51%; /* green accent */
+    --primary-foreground: 0 0% 0%;
+    
+    --secondary: 0 0% 20%;
+    --secondary-foreground: 0 0% 100%;
+    
+    --muted: 0 0% 20%;
+    --muted-foreground: 0 0% 76%;
+    
+    --accent: 106 55% 51%;
+    --accent-foreground: 0 0% 0%;
+    
+    --destructive: 9 81% 54%;
+    --destructive-foreground: 0 0% 100%;
+    
+    --border: 0 0% 20%;
+    --input: 0 0% 9%;
+    --ring: 106 55% 51%;
+    
+    --radius: 0.5rem;
+  }
   html,
   body {
     @apply overflow-hidden bg-black text-white;
@@ -379,7 +410,7 @@
 
   /* Focus Indicator */
   .focus-indicator {
-    @apply absolute hidden w-[5px] rounded-[3px] top-[10px] left-0 z-8;
+    @apply absolute hidden w-[5px] rounded-[3px] top-[10px] left-0 z-[8];
     height: calc(100% - 20px);
   }
 

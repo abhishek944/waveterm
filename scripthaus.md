@@ -70,6 +70,12 @@ node_modules/.bin/webpack --config webpack.config.new.js --env prod
 ```
 
 ```bash
+# @scripthaus command webpack-serve-new
+# @scripthaus cd :playbook
+node_modules/.bin/webpack serve --config webpack.config.new.js --env dev
+```
+
+```bash
 # @scripthaus command electron-rebuild
 # @scripthaus cd :playbook
 node_modules/.bin/electron-rebuild
@@ -85,6 +91,12 @@ WAVETERM_DEV=1 PCLOUD_ENDPOINT="https://ot2e112zx5.execute-api.us-west-2.amazona
 # @scripthaus command electron-new
 # @scripthaus cd :playbook
 WAVETERM_DEV=1 PCLOUD_ENDPOINT="https://ot2e112zx5.execute-api.us-west-2.amazonaws.com/dev" PCLOUD_WS_ENDPOINT="wss://5lfzlg5crl.execute-api.us-west-2.amazonaws.com/dev/" node_modules/.bin/electron dist-dev-new/emain.js
+```
+
+```bash
+# @scripthaus command electron-new-hot
+# @scripthaus cd :playbook
+WAVETERM_DEV=1 WAVETERM_HOT_RELOAD=1 PCLOUD_ENDPOINT="https://ot2e112zx5.execute-api.us-west-2.amazonaws.com/dev" PCLOUD_WS_ENDPOINT="wss://5lfzlg5crl.execute-api.us-west-2.amazonaws.com/dev/" node_modules/.bin/electron dist-dev-new/emain.js
 ```
 
 ```bash
