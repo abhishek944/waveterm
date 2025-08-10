@@ -16,6 +16,7 @@ import * as util from "@/utils/util";
 import * as appconst from "@/app/appconst";
 import * as textmeasure from "@/utils/textmeasure";
 import { MagicLayout } from "@/components/ui/magiclayout";
+import { Button } from "@/components/ui/button";
 
 dayjs.extend(localizedFormat);
 

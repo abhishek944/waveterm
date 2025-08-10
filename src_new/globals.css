@@ -3,889 +3,100 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --background: 0 0% 0%; /* black */
-    --foreground: 0 0% 100%; /* white */
-    
-    --card: 0 0% 0%;
-    --card-foreground: 0 0% 100%;
-    
-    --popover: 0 0% 0%;
-    --popover-foreground: 0 0% 100%;
-    
-    --primary: 106 55% 51%; /* green accent */
-    --primary-foreground: 0 0% 0%;
-    
-    --secondary: 0 0% 20%;
-    --secondary-foreground: 0 0% 100%;
-    
-    --muted: 0 0% 20%;
-    --muted-foreground: 0 0% 76%;
-    
-    --accent: 106 55% 51%;
-    --accent-foreground: 0 0% 0%;
-    
-    --destructive: 9 81% 54%;
-    --destructive-foreground: 0 0% 100%;
-    
-    --border: 0 0% 20%;
-    --input: 0 0% 9%;
-    --ring: 106 55% 51%;
-    
-    --radius: 0.5rem;
-  }
-  html,
-  body {
-    @apply overflow-hidden bg-black text-white;
-    font: var(--base-font);
-    -webkit-font-smoothing: auto;
-  }
+    :root {
+        --background: 0 0% 0%; /* black */
+        --foreground: 0 0% 100%; /* white */
 
-  body.is-dev .sidebar {
-    --app-panel-bg-color: var(--app-panel-bg-color-dev);
-  }
+        --card: 0 0% 0%;
+        --card-foreground: 0 0% 100%;
 
-  body textarea,
-  body textarea.textarea {
-    @apply overflow-visible leading-relaxed;
-    font: var(--base-font);
-    color: var(--app-text-color);
-    background-color: var(--input-bg-color);
-  }
+        --popover: 0 0% 0%;
+        --popover-foreground: 0 0% 100%;
 
-  body textarea:focus,
-  body textarea.textarea:focus {
-    @apply shadow-none;
-  }
+        --primary: 106 55% 51%; /* green accent */
+        --primary-foreground: 0 0% 0%;
 
-  body textarea::placeholder,
-  body textarea.textarea::placeholder {
-    color: var(--input-placeholder-color);
-  }
+        --secondary: 0 0% 20%;
+        --secondary-foreground: 0 0% 100%;
 
-  body input,
-  body input.input {
-    font: var(--base-font);
-    @apply leading-relaxed;
-    color: var(--app-text-color);
-    background-color: var(--input-bg-color);
-  }
+        --muted: 0 0% 20%;
+        --muted-foreground: 0 0% 76%;
 
-  body input::placeholder,
-  body input.input::placeholder {
-    color: var(--input-placeholder-color);
-  }
+        --accent: 106 55% 51%;
+        --accent-foreground: 0 0% 0%;
 
-  body a {
-    color: var(--app-accent-color);
-    @apply cursor-pointer no-underline;
-  }
+        --destructive: 9 81% 54%;
+        --destructive-foreground: 0 0% 100%;
 
-  body a:hover {
-    color: var(--app-accent-color);
-  }
+        --border: 0 0% 20%;
+        --input: 0 0% 9%;
+        --ring: 106 55% 51%;
 
-  body code {
-    font-family: var(--termfontfamily);
-    @apply bg-transparent;
-  }
-
-  svg.icon {
-    fill: var(--app-text-color);
-    @apply w-full h-full inline-block;
-  }
-
-  input[type="checkbox"] {
-    @apply cursor-pointer;
-  }
-}
-
-@layer components {
-  /* Platform overrides */
-  .platform-darwin .logo-button-container {
-    width: var(--floating-logo-width-darwin);
-  }
-
-  /* Typography */
-  .text-s1 {
-    @apply text-[12.5px] font-light leading-5;
-    font-family: var(--text-s1-font);
-  }
-
-  .text-s1 .icon {
-    @apply w-4 h-4;
-  }
-
-  .text-primary {
-    @apply text-[15px] font-medium leading-5;
-    font-family: var(--text-s1-font);
-    color: var(--app-text-color);
-  }
-
-  .text-standard {
-    @apply text-[12.5px] font-light leading-5;
-    font-family: var(--text-s1-font);
-  }
-
-  .text-standard .icon {
-    @apply w-4 h-4;
-  }
-
-  .text-secondary {
-    font-family: var(--fixed-font);
-    @apply text-[11px] font-light leading-4;
-  }
-
-  .text-caption {
-    font-family: var(--fixed-font);
-    @apply text-[10px] font-light leading-[14px] select-none;
-  }
-
-  .text-s1.icon {
-    @apply w-4 h-4;
-  }
-
-  .bold {
-    @apply font-bold;
-  }
-
-  /* Hover Effects */
-  .hoverEffect:hover {
-    @apply cursor-pointer;
-  }
-
-  .hover-effect-base:hover {
-    @apply cursor-pointer;
-  }
-
-  /* Scrollbar Styles */
-  .scrollbar-hide-until-hover::-webkit-scrollbar-thumb,
-  .scrollbar-hide-until-hover::-webkit-scrollbar-track {
-    @apply hidden;
-  }
-
-  .scrollbar-hide-until-hover::-webkit-scrollbar-corner {
-    @apply hidden;
-  }
-
-  .scrollbar-hide-until-hover:hover::-webkit-scrollbar-thumb {
-    @apply block;
-  }
-
-  *::-webkit-scrollbar {
-    @apply w-1 h-1;
-  }
-
-  *::-webkit-scrollbar-track {
-    background-color: var(--scrollbar-background-color) !important;
-  }
-
-  *::-webkit-scrollbar-thumb {
-    background-color: var(--scrollbar-thumb-color) !important;
-    @apply rounded mx-[1px];
-  }
-
-  *::-webkit-scrollbar-thumb:hover {
-    background-color: var(--scrollbar-thumb-hover-color) !important;
-  }
-
-  .no-highlight-scrollbar::-webkit-scrollbar-thumb:hover {
-    background-color: var(--scrollbar-thumb-color) !important;
-  }
-
-  .hide-scrollbar::-webkit-scrollbar {
-    @apply hidden;
-  }
-
-  .wide-scrollbar::-webkit-scrollbar {
-    @apply w-3;
-  }
-
-  .wide-scrollbar::-webkit-scrollbar-thumb {
-    @apply rounded-[10px] border-2 border-transparent;
-    background-clip: padding-box;
-  }
-
-  /* Utility Classes */
-  .truncate {
-    @apply whitespace-nowrap overflow-hidden text-ellipsis;
-  }
-
-  .display-none {
-    @apply hidden;
-  }
-
-  .flex-spacer {
-    @apply flex-grow;
-  }
-
-  .flex-centered-row {
-    @apply flex flex-row items-center justify-center;
-  }
-
-  .flex-centered-column {
-    @apply flex flex-col items-center justify-center;
-  }
-
-  a.a-block {
-    @apply block;
-  }
-
-  .unselectable {
-    @apply select-none;
-  }
-
-  .text-selectable {
-    @apply select-text;
-  }
-
-  /* Dropdown and Button Styles */
-  .dropdown,
-  .button {
-    @apply inline-block rounded-[5px] cursor-pointer;
-    border: 1px solid var(--form-element-secondary-color) !important;
-    background-color: var(--form-element-secondary-color) !important;
-    color: var(--app-accent-color);
-  }
-
-  .dropdown:hover,
-  .button:hover {
-    color: var(--app-accent-color);
-  }
-
-  .dropdown.disabled,
-  .button.disabled {
-    color: var(--app-text-color);
-    background: var(--form-element-secondary-color);
-    @apply opacity-50 cursor-default;
-  }
-
-  .dropdown {
-    @apply pl-2 outline-none;
-  }
-
-  /* Main Layout */
-  #main {
-    @apply h-screen flex flex-col;
-    background-color: var(--app-maincontent-bg-color);
-  }
-
-  #main .main-content {
-    @apply flex flex-row h-full relative;
-  }
-
-  /* Logo Button Container */
-  .logo-button-container {
-    width: var(--floating-logo-width);
-    @apply flex-shrink-0 absolute z-[25] top-[7px] left-0 flex flex-row items-center pointer-events-none;
-    -webkit-app-region: drag;
-  }
-
-  .logo-button-spacer {
-    @apply flex-grow;
-  }
-
-  .logo-button {
-    @apply w-[25px] h-[25px] mr-[6px] cursor-pointer select-none pointer-events-auto;
-    -webkit-app-region: no-drag;
-  }
-
-  .logo-button:hover {
-    background-color: var(--logo-button-hover-bg-color);
-    @apply rounded;
-  }
-
-  /* Right Sidebar Triggers */
-  .right-sidebar-triggers {
-    @apply absolute z-[25] right-0 flex flex-row items-center pointer-events-none h-[38px] px-[5px];
-  }
-
-  .right-sidebar-trigger {
-    @apply cursor-pointer select-none pointer-events-auto;
-    -webkit-app-region: no-drag;
-  }
-
-  /* Copied Indicator */
-  .copied-indicator {
-    @apply absolute top-0 left-0 w-full h-full opacity-0 flex flex-row items-center justify-center pointer-events-none;
-    background-color: var(--app-text-color);
-    animation-name: fade-in-out;
-    animation-duration: 0.3s;
-  }
-
-  /* Loading Spinner */
-  .loading-spinner {
-    @apply inline-block absolute w-5 h-5;
-    top: calc(40% - 8px);
-    left: 30px;
-  }
-
-  .loading-spinner div {
-    @apply box-border block absolute w-4 h-4 m-[2px] border-2 border-[#777] rounded-full;
-    animation: loader-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
-    border-color: #777 transparent transparent transparent;
-  }
-
-  .loading-spinner div:nth-child(1) {
-    animation-delay: -0.45s;
-  }
-
-  .loading-spinner div:nth-child(2) {
-    animation-delay: -0.3s;
-  }
-
-  .loading-spinner div:nth-child(3) {
-    animation-delay: -0.15s;
-  }
-
-  /* Measure */
-  #measure {
-    @apply absolute -z-10 -top-[5000px] leading-normal;
-  }
-
-  #measure .pre {
-    @apply whitespace-pre;
-  }
-
-  #measure .mono {
-    font-family: var(--termfontfamily);
-  }
-
-  /* Text Button */
-  .text-button {
-    color: var(--app-text-color);
-    @apply cursor-pointer bg-[#171717] outline-[#171717] outline-2 outline;
-  }
-
-  .text-button:hover,
-  .text-button:focus {
-    color: var(--app-text-color);
-    @apply bg-[#333] outline-[#333];
-  }
-
-  .text-button.connect-button {
-    color: var(--form-element-primary-color);
-  }
-
-  .text-button.connect-button:hover {
-    color: var(--form-element-primary-color);
-  }
-
-  .text-button.disconnect-button {
-    color: var(--button-error-bg-color);
-  }
-
-  .text-button.disconnect-button:hover {
-    color: var(--button-error-bg-color);
-  }
-
-  .text-button.success-button {
-    color: var(--form-element-primary-color);
-  }
-
-  .text-button.success-button:hover {
-    color: var(--form-element-primary-color);
-  }
-
-  .text-button.error-button {
-    color: var(--button-error-bg-color);
-  }
-
-  .text-button.error-button:hover {
-    color: var(--button-error-bg-color);
-  }
-
-  .text-button.grey-button {
-    @apply text-[#666];
-  }
-
-  .text-button.grey-button:hover {
-    @apply text-[#666];
-  }
-
-  .text-button.disabled-button:hover,
-  .text-button.disabled-button:focus {
-    @apply outline-none bg-[#171717] cursor-default;
-  }
-
-  /* Focus Indicator */
-  .focus-indicator {
-    @apply absolute hidden w-[5px] rounded-[3px] top-[10px] left-0 z-[8];
-    height: calc(100% - 20px);
-  }
-
-  .focus-indicator.selected {
-    @apply block;
-    background-color: #666 !important;
-  }
-
-  .focus-indicator.active,
-  .focus-indicator.active.selected {
-    @apply block;
-    background-color: var(--tab-blue) !important;
-  }
-
-  .focus-indicator.active.selected.fg-focus {
-    @apply block;
-    background-color: var(--tab-green) !important;
-  }
-
-  .focus-parent:hover .focus-indicator {
-    @apply block bg-[#222];
-  }
-
-  /* Remote Status */
-  .remote-status {
-    @apply mr-[5px] relative -top-[3px] text-[#c4a000];
-  }
-
-  .remote-status.status-init,
-  .remote-status.status-disconnected {
-    @apply text-[#c4a000];
-  }
-
-  .remote-status.status-connecting {
-    @apply text-[#c4a000];
-  }
-
-  .remote-status.status-connected {
-    @apply text-[#4e9a06];
-  }
-
-  .remote-status.status-error {
-    @apply text-[#cc0000];
-  }
-
-  /* Error and Info Text */
-  .load-error-text {
-    color: var(--tab-red);
-    @apply pt-[5px];
-  }
-
-  .plugin-info-text {
-    color: var(--app-text-color);
-    @apply pt-[5px];
-  }
-
-  .view-error {
-    @apply px-5 py-[10px];
-  }
-
-  /* Tab Colors */
-  .tab-color-cur,
-  .tab-icon-cur {
-    @apply flex flex-row;
-  }
-
-  .tabicon.color-default i,
-  .tabicon.color-green i {
-    color: var(--tab-green);
-  }
-
-  .tabicon.color-red i {
-    color: var(--tab-red);
-  }
-
-  .tabicon.color-orange i {
-    color: var(--tab-orange);
-  }
-
-  .tabicon.color-blue i {
-    color: var(--tab-blue);
-  }
-
-  .tabicon.color-yellow i {
-    color: var(--tab-yellow);
-  }
-
-  .tabicon.color-pink i {
-    color: var(--tab-pink);
-  }
-
-  .tabicon.color-mint i {
-    color: var(--tab-mint);
-  }
-
-  .tabicon.color-cyan i {
-    color: var(--tab-cyan);
-  }
-
-  .tabicon.color-violet i {
-    color: var(--tab-violet);
-  }
-
-  .tabicon.color-white i {
-    color: var(--tab-white);
-  }
-
-  /* Icon Colors */
-  .icon.color-default path,
-  .icon.color-default circle,
-  .icon.color-green path,
-  .icon.color-green circle {
-    fill: var(--tab-green);
-  }
-
-  .icon.color-default i,
-  .icon.color-green i {
-    color: var(--tab-green);
-  }
-
-  .icon.color-red path,
-  .icon.color-red circle {
-    fill: var(--tab-red);
-  }
-
-  .icon.color-red i {
-    color: var(--tab-green);
-  }
-
-  .icon.color-orange path,
-  .icon.color-orange circle {
-    fill: var(--tab-orange);
-  }
-
-  .icon.color-orange i {
-    color: var(--tab-orange);
-  }
-
-  .icon.color-blue path,
-  .icon.color-blue circle {
-    fill: var(--tab-blue);
-  }
-
-  .icon.color-blue i {
-    color: var(--tab-blue);
-  }
-
-  .icon.color-yellow path,
-  .icon.color-yellow circle {
-    fill: var(--tab-yellow);
-  }
-
-  .icon.color-yellow i {
-    color: var(--tab-yellow);
-  }
-
-  .icon.color-pink path,
-  .icon.color-pink circle {
-    fill: var(--tab-pink);
-  }
-
-  .icon.color-pink i {
-    color: var(--tab-pink);
-  }
-
-  .icon.color-mint path,
-  .icon.color-mint circle {
-    fill: var(--tab-mint);
-  }
-
-  .icon.color-mint i {
-    color: var(--tab-mint);
-  }
-
-  .icon.color-cyan path,
-  .icon.color-cyan circle {
-    fill: var(--tab-cyan);
-  }
-
-  .icon.color-cyan i {
-    color: var(--tab-cyan);
-  }
-
-  .icon.color-violet path,
-  .icon.color-violet circle {
-    fill: var(--tab-violet);
-  }
-
-  .icon.color-violet i {
-    color: var(--tab-violet);
-  }
-
-  .icon.color-white path,
-  .icon.color-white circle {
-    fill: var(--tab-white);
-  }
-
-  .icon.color-white i {
-    color: var(--tab-white);
-  }
-
-  /* Status Icons */
-  .status-icon.status-connected path,
-  .status-icon.status-connected circle {
-    fill: var(--app-success-color);
-  }
-
-  .status-icon.status-connecting path,
-  .status-icon.status-connecting circle {
-    fill: var(--app-warning-color);
-  }
-
-  .status-icon.status-disconnected path,
-  .status-icon.status-disconnected circle {
-    fill: var(--app-idle-color);
-  }
-
-  .status-icon.status-error path,
-  .status-icon.status-error circle {
-    fill: var(--app-error-color);
-  }
-
-  /* Spin Animation */
-  .spin {
-    animation: infiniteRotate 2s linear infinite;
-  }
-
-  /* Settings */
-  .settings-field + .settings-field {
-    @apply mt-[6px];
-  }
-
-  .conn-dropdown {
-    @apply w-[412px];
-  }
-
-  .conn-dropdown .lefticon {
-    @apply absolute top-1/2 left-4 -translate-y-1/2;
-  }
-
-  .conn-dropdown .lefticon .globe-icon {
-    @apply w-4 h-4 flex-shrink-0;
-    fill: var(--app-text-secondary-color);
-  }
-
-  .conn-dropdown .lefticon .status-icon {
-    @apply absolute left-[7px] top-2;
-  }
-
-  .conn-dropdown .lefticon .status-icon circle {
-    stroke: var(--app-bg-color);
-  }
-
-  .conn-dropdown .wave-dropdown-display {
-    @apply bottom-[7px];
-  }
-
-  /* Tab Colors and Icons */
-  .tab-colors,
-  .tab-icons {
-    @apply flex flex-row items-center;
-  }
-
-  .tab-color-sep,
-  .tab-icon-sep {
-    @apply pl-[10px] pr-[10px] font-bold select-none;
-  }
-
-  .tab-color-icon,
-  .tab-icon-icon {
-    @apply w-[1.1em] align-middle;
-  }
-
-  .tab-color-name,
-  .tab-icon-name {
-    @apply inline-block ml-4 min-w-[70px] select-none;
-  }
-
-  .tab-color-select,
-  .tab-icon-select {
-    @apply cursor-pointer m-[3px];
-  }
-
-  .tab-color-select:hover,
-  .tab-icon-select:hover {
-    @apply outline-2 outline-white outline;
-  }
-
-  /* Settings Field */
-  .settings-field {
-    @apply flex flex-row items-center;
-  }
-
-  .settings-field.settings-field.sub-field .settings-label {
-    @apply font-normal text-right pr-5;
-  }
-
-  .settings-field.settings-error {
-    color: var(--term-red);
-    @apply mt-5 p-[10px] rounded-[5px] bg-[#200707] border border-solid font-bold;
-    border-color: var(--term-red);
-  }
-
-  .settings-field.settings-error .error-dismiss {
-    @apply p-[2px] cursor-pointer;
-  }
-
-  .settings-field .settings-label {
-    @apply font-bold w-48 flex flex-row items-center select-none;
-  }
-
-  .settings-field .settings-label .info-message {
-    @apply ml-[5px];
-  }
-
-  .settings-field .settings-input {
-    @apply flex flex-row items-center;
-    color: var(--app-text-color);
-  }
-
-  .settings-field .settings-input.settings-clickable {
-    @apply cursor-pointer;
-  }
-
-  .settings-field .settings-input.inline-edit.edit-active input.input {
-    @apply p-0 h-5;
-  }
-
-  .settings-field .settings-input.inline-edit.edit-active .button {
-    @apply h-5;
-  }
-
-  .settings-field .settings-input input:not(.wave-input) {
-    @apply p-1 rounded-[3px];
-  }
-
-  .settings-field .settings-input .control .icon {
-    @apply m-0;
-  }
-
-  .settings-field .settings-input .action-text {
-    @apply ml-5;
-    color: var(--term-red);
-  }
-
-  .settings-field .settings-input .settings-share-link {
-    @apply w-40;
-  }
-
-  .settings-field:not(:first-child) {
-    @apply mt-[10px];
-  }
-}
-
-@layer utilities {
-  /* Animations */
-  @keyframes loader-ring {
-    0% {
-      transform: rotate(0deg);
+        --radius: 0.5rem;
     }
-    100% {
-      transform: rotate(360deg);
+    html,
+    body {
+        @apply overflow-hidden bg-black text-white;
+        font: var(--base-font);
+        -webkit-font-smoothing: auto;
     }
-  }
 
-  @keyframes fade-in {
-    0% {
-      opacity: 0;
+    body.is-dev .sidebar {
+        --app-panel-bg-color: var(--app-panel-bg-color-dev);
     }
-    80% {
-      opacity: 0;
+
+    body textarea,
+    body textarea.textarea {
+        @apply overflow-visible leading-relaxed;
+        font: var(--base-font);
+        color: var(--app-text-color);
+        background-color: var(--input-bg-color);
     }
-    100% {
-      opacity: 1;
+
+    body textarea:focus,
+    body textarea.textarea:focus {
+        @apply shadow-none;
     }
-  }
 
-  @keyframes fade-in-out {
-    0% {
-      opacity: 0;
+    body textarea::placeholder,
+    body textarea.textarea::placeholder {
+        color: var(--input-placeholder-color);
     }
-    50% {
-      opacity: 0.5;
+
+    body input,
+    body input.input {
+        font: var(--base-font);
+        @apply leading-relaxed;
+        color: var(--app-text-color);
+        background-color: var(--input-bg-color);
     }
-    100% {
-      opacity: 0;
+
+    body input::placeholder,
+    body input.input::placeholder {
+        color: var(--input-placeholder-color);
     }
-  }
 
-  @keyframes infiniteRotate {
-    from {
-      transform: rotate(0deg);
+    body a {
+        color: var(--app-accent-color);
+        @apply cursor-pointer no-underline;
     }
-    to {
-      transform: rotate(360deg);
+
+    body a:hover {
+        color: var(--app-accent-color);
     }
-  }
+
+    body code {
+        font-family: var(--termfontfamily);
+        @apply bg-transparent;
+    }
+
+    svg.icon {
+        fill: var(--app-text-color);
+        @apply w-full h-full inline-block;
+    }
+
+    input[type="checkbox"] {
+        @apply cursor-pointer;
+    }
 }
 
-/* Override Radix UI styles for our app */
-.ai-provider-wrapper {
-  display: inline-flex;
-  align-items: center;
-  margin-left: 10px;
-}
-
-/* Custom styles for the Select component to match Wave's theme */
-[data-radix-popper-content-wrapper] {
-  z-index: 10000 !important;
-}
-
-/* AI Provider Dropdown Custom Styles */
-.ai-provider-trigger {
-  transition: all 0.2s ease;
-}
-
-.ai-provider-trigger:hover {
-  background-color: var(--app-hover-bg-color, rgba(255, 255, 255, 0.1)) !important;
-  border-color: var(--app-hover-border-color, rgba(255, 255, 255, 0.3)) !important;
-}
-
-/* Hide ALL checkmark indicators */
-[role="option"] svg.lucide-check,
-[role="option"] .lucide-check,
-[data-radix-collection-item] svg.lucide-check {
-  display: none !important;
-}
-
-/* Remove checkmark container space */
-[role="option"] > span:first-child,
-[data-radix-collection-item] > span:first-child {
-  display: none !important;
-}
-
-/* Adjust item padding since we removed the checkmark space */
-[role="option"],
-[data-radix-collection-item] {
-  padding-left: 12px !important;
-}
-
-/* Custom selected state styling */
-.ai-provider-item[data-state="checked"] {
-  background-color: rgba(76, 175, 80, 0.15) !important;
-}
-
-.ai-provider-item[data-state="checked"] span {
-  color: #4ade80 !important;
-}
-
-/* Hover state for items */
-.ai-provider-item:hover:not([data-state="checked"]) {
-  background-color: rgba(255, 255, 255, 0.08) !important;
-}
-
-/* Focus state */
-.ai-provider-item[data-highlighted] {
-  background-color: rgba(255, 255, 255, 0.1) !important;
-  outline: none;
-}
-
-/* Dropdown content styling */
-[data-radix-select-content] {
-  border-radius: 6px !important;
-  overflow: hidden !important;
-}
-
-/* Thread mode styles for lines */
-.thread-mode .line.threaded {
-  @apply relative;
-  background-color: rgba(0, 128, 255, 0.15);
-}
-
-.thread-mode .line.threaded::before {
-  content: "";
-  @apply absolute left-0 top-0 bottom-0 w-1;
-  background-color: #0080ff;
-  opacity: 0.8;
-}

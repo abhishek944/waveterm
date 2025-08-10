@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import * as mobx from "mobx";
-import { MagicLayout } from "@/app/magiclayout";
 import { Model } from "./model";
-import { GlobalCommandRunner } from "@/models";
+import { MagicLayout } from "../app/magiclayout";
+import { GlobalCommandRunner } from "./global";
 
 interface SidebarModel {}
 
 class RightSidebarModel implements SidebarModel {
-    globalModel: Model = null;
+    globalModel: Model;
     tempWidth: OV<number> = mobx.observable.box(null, {
         name: "RightSidebarModel-tempWidth",
     });

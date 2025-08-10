@@ -187,10 +187,7 @@ const MainSideBar: React.FC<MainSideBarProps> = observer(({ parentRef }) => {
                     <div
                         className="close-button absolute right-0 h-full flex items-center p-2.5 cursor-pointer"
                         onClick={() =>
-                            GlobalModel.mainSidebarModel.setTempWidthAndTempCollapsed(
-                                GlobalModel.mainSidebarModel.getWidth(),
-                                !GlobalModel.mainSidebarModel.getCollapsed()
-                            )
+                            GlobalModel.mainSidebarModel.setCollapsed(!GlobalModel.mainSidebarModel.getCollapsed())
                         }
                     >
                         <i className="fa-sharp fa-solid fa-xmark-large" />

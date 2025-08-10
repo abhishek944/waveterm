@@ -18,6 +18,7 @@ import * as util from "@/utils/util";
 import * as appconst from "@/appconst";
 import { AutocompleteSuggestionView } from "@/components/workspace";
 import { AIProviderDropdown } from "@/components/workspace";
+import { Button } from "@/components/ui/button";
 
 dayjs.extend(localizedFormat);
 
