@@ -1,5 +1,5 @@
 {
-    "include": ["src/**/*", "types/**/*"],
+    "include": ["src/**/*", "src_new/**/*", "types/**/*"],
     "compilerOptions": {
         "target": "es6",
         "module": "commonjs",
@@ -30,6 +30,8 @@
             "@/plugins/*": ["src/plugins/*"], // For everything else inside plugins
             "@/autocomplete": ["src/autocomplete/index"], // Points directly to the autocomplete index file
             "@/autocomplete/*": ["src/autocomplete/*"], // For everything else inside autocomplete
+           "@/components/*": ["src_new/components/*"],
+           "@/plugins/*": ["src_new/plugins/*"]
         }
     }
 }

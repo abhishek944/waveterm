@@ -9,9 +9,7 @@ import { If } from "tsx-control-statements/components";
 
 import localizedFormat from "dayjs/plugin/localizedFormat";
 import { GlobalModel } from "@/models";
-// import { WaveBookDisplay } from "./wavebook";
 import { ChatSidebar } from "./aichat";
-// import { boundMethod } from "autobind-decorator";
 import { Button } from "../../components/ui/button";
 import { SidebarContent, SidebarFooter } from "../../components/ui/sidebar";
 import { ResizableSidebar } from "../../components/ui/resizable-sidebar";
@@ -58,11 +56,18 @@ const RightSideBar: React.FC<{ parentRef: React.RefObject<HTMLElement> }> = mobx
         <ResizableSidebar
             position="right"
             collapsed={isCollapsed}
-            className={cn("sidebar ai-chat-gradient", {
-                "w-0": isCollapsed,
-            })}
+            className={cn("flex h-full relative overflow-visible bg-[#0e131f]", { "w-0": isCollapsed })}
         >
-            <div className="flex flex-col h-full">
+            {/* Gradient background */}
+            <div
+                className="absolute bottom-0 left-0 right-0 h-[70%] z-0"
+                style={{
+                    background:
+                        "radial-gradient(ellipse at bottom right, rgba(172, 92, 255, 0.7) -10%, rgba(79, 70, 229, 0) 70%), radial-gradient(ellipse at bottom left, rgba(56, 189, 248, 0.7) -10%, rgba(79, 70, 229, 0) 70%)",
+                    filter: "blur(40px)",
+                }}
+            />
+            <div className="relative z-10 flex flex-col h-full">
                 <div className="absolute top-2 right-2 z-10">
                     <Button variant="ghost" size="icon" onClick={toggleCollapse} className="h-8 w-8 rounded-full bg-white/10 text-white hover:bg-white/20">
                         <i className="fa-sharp fa-solid fa-xmark" />

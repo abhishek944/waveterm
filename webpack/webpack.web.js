@@ -22,7 +22,7 @@ if (process.env.WEBPACK_ANALYZE) {
 
 var webCommon = {
     entry: {
-        waveterm: ["./src/index.ts", "./src/app/app.less"],
+        waveterm: ["./src/index.ts", "./src/app/app.less", "./src/app/globals.css"],
     },
     module: {
         rules: [
@@ -57,11 +57,7 @@ var webCommon = {
             },
             {
                 test: /\.css$/,
-                use: [
-                    { loader: MiniCssExtractPlugin.loader },
-                    "css-loader",
-                    "postcss-loader"
-                ],
+                use: [{ loader: MiniCssExtractPlugin.loader }, "css-loader", "postcss-loader"],
             },
             {
                 test: /\.less$/,

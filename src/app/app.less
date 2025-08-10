@@ -16,34 +16,9 @@ body {
     }
 }
 
-body .sidebar {
-    background-color: var(--app-panel-bg-color);
-}
 
-body .sidebar.ai-chat-gradient {
-    /* AI chat sidebar gradient background */
-    background: #0e131f;
-    position: relative;
-    overflow: visible;
-}
 
-body .sidebar.ai-chat-gradient::before {
-    content: "";
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 70%;
-    background: radial-gradient(ellipse at bottom right, rgba(172, 92, 255, 0.7) -10%, rgba(79, 70, 229, 0) 70%),
-                radial-gradient(ellipse at bottom left, rgba(56, 189, 248, 0.7) -10%, rgba(79, 70, 229, 0) 70%);
-    filter: blur(40px);
-    z-index: 0;
-}
 
-body .sidebar.ai-chat-gradient * {
-    position: relative;
-    z-index: 1;
-}
 
 
 body textarea,
