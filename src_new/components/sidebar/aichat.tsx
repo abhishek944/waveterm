@@ -496,7 +496,7 @@ const ChatSidebar: React.FC = observer(() => {
     const selectedProviderData = aiProviders.find(p => p.id === selectedProvider);
 
     return (
-        <div ref={sidebarRef} className="h-full flex flex-col bg-background text-foreground relative overflow-hidden">
+        <div ref={sidebarRef} className="h-full flex flex-col text-foreground relative overflow-hidden">
             <div className="absolute inset-0 w-full h-full -z-10" />
             <div className="relative z-10 flex flex-col flex-1 overflow-hidden">
                 <ChatWindow

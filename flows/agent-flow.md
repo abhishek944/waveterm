@@ -9,12 +9,12 @@ Agent Mode is a special input mode that allows users to interact with AI directl
 ## Key Components
 
 ### Frontend Files
-- **src/models/model.ts** - Main model containing agent mode state
-- **src/models/input.ts** - Handles input submission and command prefixing
-- **src/app/workspace/cmdinput/cmdinput.tsx** - UI component showing agent mode indicator
-- **src/app/line/linecomps.tsx** - Line rendering component that handles "agent_mode" line type
+- **src_new/models/model.ts** - Main model containing agent mode state
+- **src_new/models/input.ts** - Handles input submission and command prefixing
+- **src_new/components/workspace/cmdinput/cmdinput.tsx** - UI component showing agent mode indicator
+- **src_new/components/line/linecomps.tsx** - Line rendering component that handles "agent_mode" line type
 - **assets/default-keybindings.json** - Defines Cmd+O keybinding for agent mode
-- **src/types/custom.d.ts** - TypeScript type definitions
+- **src_new/types/custom.d.ts** - TypeScript type definitions
 
 ### Backend Files
 - **wavesrv/pkg/cmdrunner/cmdrunner.go** - Main command runner, contains AgentCommand function
@@ -28,7 +28,7 @@ Agent Mode is a special input mode that allows users to interact with AI directl
 
 ### 1. Activation (User presses Cmd+O)
 
-**File: src/models/model.ts**
+**File: src_new/models/model.ts**
 ```typescript
 // Line ~300: Keybinding registration
 keybindManager.registerKeybinding("pane", "app", "app:toggleAgentMode", (waveEvent) => {
@@ -49,7 +49,7 @@ toggleAgentMode(): void {
 
 ### 2. UI Updates
 
-**File: src/app/workspace/cmdinput/cmdinput.tsx**
+**File: src_new/components/workspace/cmdinput/cmdinput.tsx**
 ```typescript
 // Line ~201: Agent mode class applied to cmd-input
 <div className={clsx("cmd-input", { "agent-mode": isAgentMode })}>
@@ -62,7 +62,7 @@ toggleAgentMode(): void {
 
 ### 3. User Input Submission
 
-**File: src/models/input.ts**
+**File: src_new/models/input.ts**
 ```typescript
 // Lines ~735-756: uiSubmitCommand function
 uiSubmitCommand(): void {
@@ -90,7 +90,7 @@ uiSubmitCommand(): void {
 
 ### 4. Command Processing
 
-**File: src/models/model.ts**
+**File: src_new/models/model.ts**
 ```typescript
 // Lines ~1638-1669: submitRawCommand
 submitRawCommand(cmdStr: string, addToHistory: boolean, interactive: boolean, isAgentMode?: boolean, isThreadMode?: boolean): Promise<CommandRtnType> {
@@ -225,7 +225,7 @@ func RunAgentMode(ctx context.Context, pk *scpacket.FeCommandPacketType, clientD
 
 ### 9. Frontend Line Rendering
 
-**File: src/app/line/linecomps.tsx**
+**File: src_new/components/line/linecomps.tsx**
 ```typescript
 // Lines ~1008-1016: Line component routing
 render() {
@@ -257,7 +257,7 @@ func (AgentModeToggleType) GetType() string {
 }
 ```
 
-**File: src/models/model.ts**
+**File: src_new/models/model.ts**
 ```typescript
 // Lines ~1140-1147: Update handler
 } else if (update.agentmodetoggle != null) {
@@ -281,13 +281,13 @@ func (AgentModeToggleType) GetType() string {
 
 ## Data Flow Summary
 
-1. User activates agent mode (Cmd+O) ’ `isAgentMode` observable set to true
-2. User types and submits input ’ Input prefixed with "/agent"
-3. Command sent to backend ’ Routed to `AgentCommand` function
-4. Agent line created (type: "agent_mode") ’ Not shown as "running"
-5. AI provider called ’ Response streamed back
-6. Response written to PTY ’ Displayed in terminal
-7. On completion ’ Backend sends `agentmodetoggle` update
-8. Frontend receives update ’ Agent mode toggled off
+1. User activates agent mode (Cmd+O) ï¿½ `isAgentMode` observable set to true
+2. User types and submits input ï¿½ Input prefixed with "/agent"
+3. Command sent to backend ï¿½ Routed to `AgentCommand` function
+4. Agent line created (type: "agent_mode") ï¿½ Not shown as "running"
+5. AI provider called ï¿½ Response streamed back
+6. Response written to PTY ï¿½ Displayed in terminal
+7. On completion ï¿½ Backend sends `agentmodetoggle` update
+8. Frontend receives update ï¿½ Agent mode toggled off
 
 This architecture ensures a seamless experience where users can quickly get AI assistance without the command appearing as a traditional "running" command, and the mode automatically resets after each use.

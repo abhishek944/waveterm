@@ -7,9 +7,12 @@ import { action } from "mobx";
 import { GlobalModel, GlobalCommandRunner } from "@/models";
 import { PluginModel } from "@/plugins/plugins";
 import { commandRtnHandler } from "@/utils/util";
+import { SettingsError } from "@/components/ui/settingserror";
+import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle } from "@/components/ui/modal";
+import { Button } from "@/components/ui/button";
+import { Select, SelectTrigger, SelectContent, SelectItem } from "@/components/ui/select";
 
 const LineSettingsModal: React.FC = observer(() => {
-    const [rendererDropdownActive, setRendererDropdownActive] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string>(null);
     const linenum = GlobalModel.lineSettingsModal.get();
 
@@ -37,18 +40,14 @@ const LineSettingsModal: React.FC = observer(() => {
         commandRtnHandler(prtn, { set: setErrorMessage } as any);
     };
 
-    const toggleRendererDropdown = (): void => {
-        setRendererDropdownActive(!rendererDropdownActive);
-    };
-
     const clickSetRenderer = async (renderer: string): Promise<void> => {
         const line = getLine();
         if (line == null) {
             return;
         }
-        const prtn = GlobalCommandRunner.lineSet(line.lineid, { renderer: renderer });
+        const newRenderer = renderer === "terminal" ? null : renderer;
+        const prtn = GlobalCommandRunner.lineSet(line.lineid, { renderer: newRenderer });
         commandRtnHandler(prtn, { set: setErrorMessage } as any);
-        setRendererDropdownActive(false);
     };
 
     const getOptions = (plugins: RendererPluginType[]) => {
@@ -62,7 +61,7 @@ const LineSettingsModal: React.FC = observer(() => {
         // Create an additional object with label "terminal" and value null
         const terminalItem = {
             label: "terminal",
-            value: null,
+            value: "terminal",
             name: null,
             rendererType: null,
             heightType: null,
@@ -105,25 +104,40 @@ const LineSettingsModal: React.FC = observer(() => {
     const renderer = line.renderer ?? "terminal";
 
     return (
-        <Modal className="w-[640px]">
-            <Modal.Header onClose={closeModal} title={`Block Settings (#${line.linenum})`} />
-            <div className="flex flex-col px-5 gap-1 w-full">
-                <div className="settings-field">
-                    <div className="settings-label">Renderer</div>
-                    <div className="settings-input">
-                        <Dropdown
-                            className="renderer-dropdown"
-                            options={getOptions(plugins)}
-                            defaultValue={renderer}
-                            onChange={clickSetRenderer}
-                        />
+        <Dialog open={true} onOpenChange={closeModal}>
+            <DialogContent className="w-[640px]">
+                <DialogHeader>
+                    <DialogTitle>{`Block Settings (#${line.linenum})`}</DialogTitle>
+                </DialogHeader>
+                <div className="flex flex-col px-5 gap-1 w-full">
+                    <div className="settings-field">
+                        <div className="settings-label">Renderer</div>
+                        <div className="settings-input">
+                            <Select onValueChange={clickSetRenderer} defaultValue={renderer}>
+                                <SelectTrigger className="w-[412px]">{renderer}</SelectTrigger>
+                                <SelectContent>
+                                    {getOptions(plugins).map((opt) => (
+                                        <SelectItem
+                                            key={String(opt.value ?? "none")}
+                                            value={String(opt.value ?? "none")}
+                                        >
+                                            {opt.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
+                    <SettingsError errorMessage={errorMessage} onDismiss={() => setErrorMessage(null)} />
+                    <div className="h-[50px]" />
                 </div>
-                <SettingsError errorMessage={errorMessage} />
-                <div className="h-[50px]" />
-            </div>
-            <Modal.Footer cancelLabel="Close" onCancel={closeModal} keybindings={true} />
-        </Modal>
+                <DialogFooter>
+                    <Button variant="outline" onClick={closeModal}>
+                        Close
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     );
 });
 

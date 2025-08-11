@@ -95,7 +95,7 @@ const AgentModeRenderer: React.FC<{
 
     if (loading) {
         return (
-            <div className="bg-opacity-2 bg-white rounded-md my-1 p-2.5">
+            <div className="bg-white/2 rounded-md my-1 p-2.5">
                 <div className="text-white/50 italic">Loading...</div>
             </div>
         );
@@ -103,19 +103,16 @@ const AgentModeRenderer: React.FC<{
 
     if (!content) {
         return (
-            <div className="bg-opacity-2 bg-white rounded-md my-1 p-2.5">
+            <div className="bg-white/2 rounded-md my-1 p-2.5">
                 <div className="text-white/50 italic">No content available</div>
             </div>
         );
     }
 
     return (
-        <div className="bg-white/[0.02] rounded-md my-1">
+        <div className="bg-white/2 rounded-md my-1">
             <div className="p-2.5 agent-mode-content">
-                <Markdown
-                    text={content}
-                    onClickExecute={(cmd) => GlobalModel.submitRawCommand(cmd, false, true)}
-                />
+                <Markdown text={content} onClickExecute={(cmd) => GlobalModel.submitRawCommand(cmd, false, true)} />
             </div>
         </div>
     );
@@ -128,95 +125,165 @@ const cmdShouldMarkError = (cmd: Cmd): boolean => {
 };
 
 const getIsHidePrompt = (line: LineType): boolean => {
-    const rendererPlugin = !isBlank(line.renderer) && line.renderer !== "terminal" && line.renderer !== "none"
-        ? PluginModel.getRendererPluginByName(line.renderer)
-        : null;
+    const rendererPlugin =
+        !isBlank(line.renderer) && line.renderer !== "terminal" && line.renderer !== "none"
+            ? PluginModel.getRendererPluginByName(line.renderer)
+            : null;
     return rendererPlugin?.hidePrompt ?? false;
 };
 
-const LineActions: React.FC<{ screen: LineContainerType; line: LineType; cmd: Cmd }> = observer(({ screen, line, cmd }) => {
-    const clickAddToThread = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        setThreadedLine(line.lineid, !threadedLinesObs.has(line.lineid));
-    };
-    const clickStar = () => GlobalCommandRunner.lineStar(line.lineid, (line.star ?? 0) === 0 ? 1 : 0);
-    const clickPin = () => GlobalCommandRunner.linePin(line.lineid, !line.pinned);
-    const clickBookmark = () => GlobalCommandRunner.lineBookmark(line.lineid);
-    const clickDelete = () => GlobalCommandRunner.lineDelete(line.lineid, true);
-    const clickRestart = () => GlobalCommandRunner.lineRestart(line.lineid, true);
-    const clickChat = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        const termWrap = screen.getTermWrap(line.lineid);
-        if (termWrap && cmd) {
-            GlobalModel.sidebarchatModel.setCmdAndOutput(
-                cmd.getCmdStr(),
-                termWrap.getOutput(false),
-                screen.getUsedRows(lineutil.getRendererContext(line), line, cmd, 300) * 2,
-                cmdShouldMarkError(cmd)
-            );
-            GlobalModel.inputModel.setChatSidebarFocus();
-            GlobalModel.sidebarchatModel.resetSelectedCodeBlockIndex();
-        }
-    };
-    const clickMinimize = () => GlobalCommandRunner.lineMinimize(line.lineid, !line.linestate["wave:min"], true);
-    const clickMoveToSidebar = () => GlobalCommandRunner.screenSidebarAddLine(line.lineid);
-    const clickRemoveFromSidebar = () => GlobalCommandRunner.screenSidebarRemove();
-    const handleLineSettings = (e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        mobx.action(() => GlobalModel.lineSettingsModal.set(line.linenum))();
-        GlobalModel.modalsModel.pushModal(appconst.LINE_SETTINGS);
-    };
+const LineActions: React.FC<{ screen: LineContainerType; line: LineType; cmd: Cmd }> = observer(
+    ({ screen, line, cmd }) => {
+        const clickAddToThread = (e: React.MouseEvent) => {
+            e.stopPropagation();
+            setThreadedLine(line.lineid, !threadedLinesObs.has(line.lineid));
+        };
+        const clickStar = () => GlobalCommandRunner.lineStar(line.lineid, (line.star ?? 0) === 0 ? 1 : 0);
+        const clickPin = () => GlobalCommandRunner.linePin(line.lineid, !line.pinned);
+        const clickBookmark = () => GlobalCommandRunner.lineBookmark(line.lineid);
+        const clickDelete = () => GlobalCommandRunner.lineDelete(line.lineid, true);
+        const clickRestart = () => GlobalCommandRunner.lineRestart(line.lineid, true);
+        const clickChat = (e: React.MouseEvent) => {
+            e.stopPropagation();
+            const termWrap = screen.getTermWrap(line.lineid);
+            if (termWrap && cmd) {
+                GlobalModel.sidebarchatModel.setCmdAndOutput(
+                    cmd.getCmdStr(),
+                    termWrap.getOutput(false),
+                    screen.getUsedRows(lineutil.getRendererContext(line), line, cmd, 300) * 2,
+                    cmdShouldMarkError(cmd)
+                );
+                GlobalModel.inputModel.setChatSidebarFocus();
+                GlobalModel.sidebarchatModel.resetSelectedCodeBlockIndex();
+            }
+        };
+        const clickMinimize = () => GlobalCommandRunner.lineMinimize(line.lineid, !line.linestate["wave:min"], true);
+        const clickMoveToSidebar = () => GlobalCommandRunner.screenSidebarAddLine(line.lineid);
+        const clickRemoveFromSidebar = () => GlobalCommandRunner.screenSidebarRemove();
+        const handleLineSettings = (e: React.MouseEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+            mobx.action(() => GlobalModel.lineSettingsModal.set(line.linenum))();
+            GlobalModel.modalsModel.pushModal(appconst.LINE_SETTINGS);
+        };
 
-    const isMinimized = line.linestate["wave:min"];
-    const containerType = screen.getContainerType();
+        const isMinimized = line.linestate["wave:min"];
+        const containerType = screen.getContainerType();
 
-    return (
-        <div className="absolute top-2 right-2 flex items-center rounded bg-[var(--line-actions-bg-color)] backdrop-blur-sm p-1 text-[var(--line-actions-inactive-color)]">
-            <Choose>
-                <When condition={containerType === appconst.LineContainer_Main}>
-                    <div key="thread" title={threadedLinesObs.has(line.lineid) ? "Added to thread" : "Add to thread"} className="px-1 cursor-pointer hover:text-[var(--line-actions-active-color)]" onClick={clickAddToThread}>
-                        {threadedLinesObs.has(line.lineid) ? <i className="fa-sharp fa-solid fa-check fa-fw" /> : <i className="fa-sharp fa-regular fa-comment fa-fw" />}
-                    </div>
-                    <div key="chat" title="Ask Wave AI" className="px-1 cursor-pointer hover:text-[var(--line-actions-active-color)]" onClick={clickChat}>
-                        <i className="fa-sharp fa-regular fa-sparkles fa-fw" />
-                    </div>
-                    <div key="restart" title="Restart Command" className="px-1 cursor-pointer hover:text-[var(--line-actions-active-color)]" onClick={clickRestart}>
-                        <i className="fa-sharp fa-regular fa-arrows-rotate fa-fw" />
-                    </div>
-                    <div key="delete" title="Delete Line (&#x2318;D)" className="px-1 cursor-pointer hover:text-[var(--line-actions-active-color)]" onClick={clickDelete}>
-                        <i className="fa-sharp fa-regular fa-trash fa-fw" />
-                    </div>
-                    <div key="bookmark" title="Bookmark" className="px-1 cursor-pointer hover:text-[var(--line-actions-active-color)]" onClick={clickBookmark}>
-                        <i className="fa-sharp fa-regular fa-bookmark fa-fw" />
-                    </div>
-                    <div key="minimize" title={isMinimized ? "Show Output" : "Hide Output"} className={clsx("px-1 cursor-pointer hover:text-[var(--line-actions-active-color)]", isMinimized && "text-[var(--line-actions-active-color)]")} onClick={clickMinimize}>
-                        {isMinimized ? <i className="fa-sharp fa-regular fa-circle-plus fa-fw" /> : <i className="fa-sharp fa-regular fa-circle-minus fa-fw" />}
-                    </div>
-                    <div className="px-1 cursor-pointer hover:text-[var(--line-actions-active-color)]" onClick={clickMoveToSidebar} title="Move to Sidebar">
-                        <i className="fa-sharp fa-solid fa-right-to-line fa-fw" />
-                    </div>
-                    <div key="settings" title="Line Settings" className="px-1 cursor-pointer hover:text-[var(--line-actions-active-color)]" onClick={handleLineSettings}>
-                        <i className="fa-sharp fa-regular fa-ellipsis-vertical fa-fw" />
-                    </div>
-                </When>
-                <When condition={containerType === appconst.LineContainer_Sidebar}>
-                    <div key="delete" title="Delete Line (&#x2318;D)" className="px-1 cursor-pointer hover:text-[var(--line-actions-active-color)]" onClick={clickDelete}>
-                        <i className="fa-sharp fa-regular fa-trash fa-fw" />
-                    </div>
-                    <div key="bookmark" title="Bookmark" className="px-1 cursor-pointer hover:text-[var(--line-actions-active-color)]" onClick={clickBookmark}>
-                        <i className="fa-sharp fa-regular fa-bookmark fa-fw" />
-                    </div>
-                    <div className="px-1 cursor-pointer hover:text-[var(--line-actions-active-color)]" onClick={clickRemoveFromSidebar} title="Remove from Sidebar">
-                        <i className="fa-sharp fa-solid fa-left-to-line fa-fw" />
-                    </div>
-                </When>
-            </Choose>
-        </div>
-    );
-});
+        return (
+            <div
+                className={clsx(
+                    "absolute top-2 right-2 flex items-center rounded p-1 text-[var(--line-actions-inactive-color)]",
+                    // Hidden by default; reveal on parent .group hover
+                    "opacity-0 pointer-events-none bg-transparent transition-opacity duration-150",
+                    "group-hover:opacity-100 group-hover:pointer-events-auto group-hover:bg-[var(--line-actions-bg-color)] backdrop-blur-sm"
+                )}
+            >
+                <Choose>
+                    <When condition={containerType === appconst.LineContainer_Main}>
+                        <div
+                            key="thread"
+                            title={threadedLinesObs.has(line.lineid) ? "Added to thread" : "Add to thread"}
+                            className="px-1 cursor-pointer hover:text-[var(--line-actions-active-color)]"
+                            onClick={clickAddToThread}
+                        >
+                            {threadedLinesObs.has(line.lineid) ? (
+                                <i className="fa-sharp fa-solid fa-check fa-fw" />
+                            ) : (
+                                <i className="fa-sharp fa-regular fa-comment fa-fw" />
+                            )}
+                        </div>
+                        <div
+                            key="chat"
+                            title="Ask Wave AI"
+                            className="px-1 cursor-pointer hover:text-[var(--line-actions-active-color)]"
+                            onClick={clickChat}
+                        >
+                            <i className="fa-sharp fa-regular fa-sparkles fa-fw" />
+                        </div>
+                        <div
+                            key="restart"
+                            title="Restart Command"
+                            className="px-1 cursor-pointer hover:text-[var(--line-actions-active-color)]"
+                            onClick={clickRestart}
+                        >
+                            <i className="fa-sharp fa-regular fa-arrows-rotate fa-fw" />
+                        </div>
+                        <div
+                            key="delete"
+                            title="Delete Line (&#x2318;D)"
+                            className="px-1 cursor-pointer hover:text-[var(--line-actions-active-color)]"
+                            onClick={clickDelete}
+                        >
+                            <i className="fa-sharp fa-regular fa-trash fa-fw" />
+                        </div>
+                        <div
+                            key="bookmark"
+                            title="Bookmark"
+                            className="px-1 cursor-pointer hover:text-[var(--line-actions-active-color)]"
+                            onClick={clickBookmark}
+                        >
+                            <i className="fa-sharp fa-regular fa-bookmark fa-fw" />
+                        </div>
+                        <div
+                            key="minimize"
+                            title={isMinimized ? "Show Output" : "Hide Output"}
+                            className={clsx(
+                                "px-1 cursor-pointer hover:text-[var(--line-actions-active-color)]",
+                                isMinimized && "text-[var(--line-actions-active-color)]"
+                            )}
+                            onClick={clickMinimize}
+                        >
+                            {isMinimized ? (
+                                <i className="fa-sharp fa-regular fa-circle-plus fa-fw" />
+                            ) : (
+                                <i className="fa-sharp fa-regular fa-circle-minus fa-fw" />
+                            )}
+                        </div>
+                        <div
+                            className="px-1 cursor-pointer hover:text-[var(--line-actions-active-color)]"
+                            onClick={clickMoveToSidebar}
+                            title="Move to Sidebar"
+                        >
+                            <i className="fa-sharp fa-solid fa-right-to-line fa-fw" />
+                        </div>
+                        <div
+                            key="settings"
+                            title="Line Settings"
+                            className="px-1 cursor-pointer hover:text-[var(--line-actions-active-color)]"
+                            onClick={handleLineSettings}
+                        >
+                            <i className="fa-sharp fa-regular fa-ellipsis-vertical fa-fw" />
+                        </div>
+                    </When>
+                    <When condition={containerType === appconst.LineContainer_Sidebar}>
+                        <div
+                            key="bookmark"
+                            title="Bookmark"
+                            className="px-1 cursor-pointer hover:text-[var(--line-actions-active-color)]"
+                            onClick={clickBookmark}
+                        >
+                            <i className="fa-sharp fa-regular fa-bookmark fa-fw" />
+                        </div>
+                        <div
+                            className="px-1 cursor-pointer hover:text-[var(--line-actions-active-color)]"
+                            onClick={clickRemoveFromSidebar}
+                            title="Remove from Sidebar"
+                        >
+                            <i className="fa-sharp fa-solid fa-left-to-line fa-fw" />
+                        </div>
+                    </When>
+                </Choose>
+            </div>
+        );
+    }
+);
 
-const SmallLineAvatar: React.FC<{ line: LineType; cmd: Cmd; onRightClick?: (e: any) => void }> = ({ line, cmd, onRightClick }) => {
+const SmallLineAvatar: React.FC<{ line: LineType; cmd: Cmd; onRightClick?: (e: any) => void }> = ({
+    line,
+    cmd,
+    onRightClick,
+}) => {
     const lineNumStr = (line.linenumtemp ? "~" : "#") + String(line.linenum);
     const status = cmd != null ? cmd.getStatus() : "done";
     const exitcode = cmd != null ? cmd.getExitCode() : 0;
@@ -270,18 +337,21 @@ const LineText: React.FC<{
         GlobalCommandRunner.screenSelectLine(String(line.linenum));
     }, [line, noSelect]);
 
-    const onAvatarRightClick = React.useCallback((e: React.MouseEvent) => {
-        if (noSelect) {
-            return;
-        }
-        e.preventDefault();
-        e.stopPropagation();
-        if (line != null) {
-            mobx.action(() => {
-                GlobalModel.lineSettingsModal.set(line.linenum);
-            })();
-        }
-    }, [line, noSelect]);
+    const onAvatarRightClick = React.useCallback(
+        (e: React.MouseEvent) => {
+            if (noSelect) {
+                return;
+            }
+            e.preventDefault();
+            e.stopPropagation();
+            if (line != null) {
+                mobx.action(() => {
+                    GlobalModel.lineSettingsModal.set(line.linenum);
+                })();
+            }
+        },
+        [line, noSelect]
+    );
 
     const formattedTime = lineutil.getLineDateTimeStr(line.ts);
     const isSelected = mobx
@@ -289,25 +359,33 @@ const LineText: React.FC<{
             name: "computed-isSelected",
         })
         .get();
-    
+
     return (
         <div
             className={clsx(
                 "m-0 px-[calc(var(--termpad)*3)] py-[calc(var(--termpad)*2)] pb-[calc(var(--termpad)*2+1px)]",
                 "flex flex-col overflow-x-hidden overflow-y-visible flex-shrink-0 relative whitespace-pre",
                 "leading-[11px] font-normal font-[var(--termfontfamily)] scroll-mb-5",
-                "focus-parent",
-                { "selected": isSelected }
+                "focus-parent group",
+                { selected: isSelected }
             )}
             data-lineid={line.lineid}
             data-linenum={line.linenum}
             data-screenid={line.screenid}
             onClick={clickHandler}
         >
+            {/* subtle hover highlight for text-only line */}
+            <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 bg-gradient-to-r from-white/10 to-transparent" />
             <If condition={isSelected}>
-                <div key="mask" className="absolute top-0 left-0 w-full h-full bg-transparent z-10 pointer-events-none border-2 border-l-4 border-[var(--line-active-border-color)]"></div>
+                <div
+                    key="mask"
+                    className="absolute top-0 left-0 w-full h-full bg-transparent z-10 pointer-events-none border-2 border-l-4 border-[var(--line-active-border-color)]"
+                ></div>
             </If>
-            <div key="header" className="flex flex-col w-full font-normal font-[var(--termfontfamily)] text-[var(--termfontsize)] leading-[var(--termlineheight)]">
+            <div
+                key="header"
+                className="flex flex-col w-full font-normal font-[var(--termfontfamily)] text-[var(--termfontsize)] leading-[var(--termlineheight)]"
+            >
                 <div className="flex flex-row text-[var(--termfontsize-sm)] leading-[var(--termlineheight-sm)] text-[var(--term-gray)] items-center">
                     <SmallLineAvatar line={line} cmd={null} onRightClick={onAvatarRightClick} />
                     <div className="mx-[var(--termpad)]">|</div>
@@ -334,19 +412,19 @@ const Line: React.FC<{
     topBorder: boolean;
 }> = observer((props) => {
     const { line } = props;
-    
+
     if (line.archived) {
         return null;
     }
-    
+
     if (line.linetype == "text") {
         return <LineText {...props} />;
     }
-    
+
     if (line.linetype == "cmd" || line.linetype == "agent_mode" || line.linetype == "thread_mode") {
         return <LineCmd {...props} />;
     }
-    
+
     return (
         <div className="m-0 px-[calc(var(--termpad)*3)] py-[calc(var(--termpad)*2)] text-[var(--term-text-white)] ml-[5px]">
             [invalid line type '{line.linetype}']
@@ -462,13 +540,15 @@ const LineCmd: React.FC<{
                 `}
                 </style>
                 <div
-                    className={clsx(mainDivCn, "flex-shrink-0")}
+                    className={clsx(mainDivCn, "flex-shrink-0 group relative")}
                     ref={lineRef}
                     onClick={handleClick}
                     data-lineid={line.lineid}
                     data-linenum={line.linenum}
                     data-screenid={line.screenid}
                 >
+                    {/* subtle hover highlight for the whole line */}
+                    <div className="absolute inset-0 rounded-md pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 bg-gradient-to-r from-white/10 to-transparent" />
                     <If condition={isSelected || cmdError}>
                         <div className={clsx("line-mask", { "error-mask": cmdError })}></div>
                     </If>
@@ -524,21 +604,14 @@ const LineHeader: React.FC<{ line: LineType; cmd: Cmd }> = observer(({ line, cmd
 
     const renderCmdText = () => {
         if (cmd == null) {
-            return (
-                <div className="font-mono text-green-400">
-                    (cmd not found)
-                </div>
-            );
+            return <div className="font-mono text-green-400">(cmd not found)</div>;
         }
         const isMultiLine = lineutil.isMultiLineCmdText(cmd.getCmdStr());
         return (
             <div
-                className={clsx(
-                    "overflow-auto max-h-24 whitespace-pre text-gray-300 font-bold w-full",
-                    {
-                        "border-l-2 border-gray-600 ml-1 pl-2": isMultiLine,
-                    }
-                )}
+                className={clsx("overflow-auto max-h-24 whitespace-pre text-gray-300 font-bold w-full", {
+                    "border-l-2 border-gray-600 ml-1 pl-2": isMultiLine,
+                })}
             >
                 {lineutil.getFullCmdText(cmd.getCmdStr())}
             </div>
@@ -546,7 +619,11 @@ const LineHeader: React.FC<{ line: LineType; cmd: Cmd }> = observer(({ line, cmd
     };
 
     return (
-        <div className={clsx("flex flex-col w-full font-normal font-mono text-sm leading-5", { "hide-prompt": hidePrompt })}>
+        <div
+            className={clsx("flex flex-col w-full font-normal font-mono text-sm leading-5", {
+                "hide-prompt": hidePrompt,
+            })}
+        >
             {renderMeta1()}
             <If condition={!hidePrompt}>{renderCmdText()}</If>
         </div>
@@ -583,9 +660,7 @@ const RtnState: React.FC<{ cmd: Cmd; line: LineType }> = observer(({ cmd, line }
             fetch(url, { headers: fetchHeaders })
                 .then((resp) => {
                     if (!resp.ok) {
-                        throw new Error(
-                            `Bad fetch response for /api/rtnstate: ${resp.status} ${resp.statusText}`
-                        );
+                        throw new Error(`Bad fetch response for /api/rtnstate: ${resp.status} ${resp.statusText}`);
                     }
                     return resp.text();
                 })
@@ -614,7 +689,9 @@ const RtnState: React.FC<{ cmd: Cmd; line: LineType }> = observer(({ cmd, line }
             }}
         >
             <If condition={rtnStateDiff == null || rtnStateDiff == ""}>
-                <div className="text-xs text-gray-400 bg-gray-800 px-2 py-1 inline-block z-10 relative">state unchanged</div>
+                <div className="text-xs text-gray-400 bg-gray-800 px-2 py-1 inline-block z-10 relative">
+                    state unchanged
+                </div>
                 <div className="h-px bg-gray-700 absolute top-1/2 w-1/2 min-w-[300px]"></div>
             </If>
             <If condition={rtnStateDiff != null && rtnStateDiff != ""}>
@@ -635,9 +712,10 @@ const LineContent: React.FC<{
     width: number;
     onHeightChange: LineHeightChangeCallbackType;
 }> = observer(({ screen, line, cmd, width, onHeightChange }) => {
-    const rendererPlugin = !isBlank(line.renderer) && line.renderer !== "terminal" && line.renderer !== "none"
-        ? PluginModel.getRendererPluginByName(line.renderer)
-        : null;
+    const rendererPlugin =
+        !isBlank(line.renderer) && line.renderer !== "terminal" && line.renderer !== "none"
+            ? PluginModel.getRendererPluginByName(line.renderer)
+            : null;
     const isMinimized = line.linestate["wave:min"] && screen.getContainerType() === appconst.LineContainer_Main;
 
     const makeRendererModelInitializeParams = (): RendererModelInitializeParams => {
@@ -684,10 +762,7 @@ const LineContent: React.FC<{
     }
 
     return (
-        <ErrorBoundary
-            plugin={rendererPlugin?.name}
-            lineContext={lineutil.getRendererContext(line)}
-        >
+        <ErrorBoundary plugin={rendererPlugin?.name} lineContext={lineutil.getRendererContext(line)}>
             <Choose>
                 <When condition={rendererPlugin == null && line.renderer !== "none"}>
                     <Choose>
@@ -733,7 +808,9 @@ const LineContent: React.FC<{
                             }
                         }}
                         isSelected={screen.getSelectedLines().includes(line.linenum)}
-                        shouldFocus={screen.getSelectedLines().includes(line.linenum) && screen.getFocusType() === "cmd"}
+                        shouldFocus={
+                            screen.getSelectedLines().includes(line.linenum) && screen.getFocusType() === "cmd"
+                        }
                     />
                 </When>
                 <When condition={rendererPlugin != null && rendererPlugin.rendererType == "full"}>

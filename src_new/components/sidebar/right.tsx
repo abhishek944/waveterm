@@ -55,11 +55,11 @@ const RightSideBar: React.FC = observer(() => {
         <ResizableSidebar
             position="right"
             collapsed={isCollapsed}
-            className={cn("flex flex-col relative bg-[#0e131f]", { "w-0": isCollapsed })}
+            className={cn("flex flex-col relative", { "w-0": isCollapsed })}
         >
             {/* Gradient background */}
             <div
-                className="absolute bottom-0 left-0 right-0 h-[70%] z-0"
+                className="absolute inset-0 z-0"
                 style={{
                     background:
                         "radial-gradient(ellipse at bottom right, rgba(172, 92, 255, 0.7) -10%, rgba(79, 70, 229, 0) 70%), radial-gradient(ellipse at bottom left, rgba(56, 189, 248, 0.7) -10%, rgba(79, 70, 229, 0) 70%)",

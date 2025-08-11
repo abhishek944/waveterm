@@ -182,7 +182,6 @@ export const LinesView: React.FC<{
                 "flex flex-col overflow-auto p-0 flex-grow relative overflow-x-hidden flex-shrink-0",
                 "pb-[calc(var(--termlineheight)*5)]",
                 renderMode === "normal" ? "lines-expanded" : "lines-collapsed",
-                "wide-scrollbar",
                 {
                     "pt-[calc(var(--termpad)+2px)] pb-[calc(var(--termlineheight)*6)]": GlobalModel.inputPosition.get() === "top",
                     "hide-scrollbar": false, // TODO: implement hide scrollbar logic
