@@ -144,7 +144,7 @@ const MainSideBar: React.FC<MainSideBarProps> = observer(({ parentRef }) => {
     return (
         <ResizableSidebar
             collapsed={GlobalModel.mainSidebarModel.getCollapsed()}
-            className="flex flex-col bg-gray-900 border-r border-gray-800"
+            className="flex flex-col bg-gray-900 border-r border-gray-800 rounded-tr-md rounded-br-md mr-2"
             position="left"
             ref={parentRef}
         >

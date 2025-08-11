@@ -24,22 +24,19 @@ const ScreenSidebar: React.FC<{ screen: Screen; width: string }> = observer(({ s
     const sidebarRef = React.useRef<HTMLDivElement>(null);
     const [sidebarSize, setSidebarSize] = React.useState<WindowSize>({ height: 0, width: 0 });
 
-    const handleResize = React.useCallback(
-        (entries: ResizeObserverEntry[]) => {
-            const sidebarElem = sidebarRef.current;
-            if (sidebarElem) {
-                const newSize = {
-                    width: sidebarElem.offsetWidth,
-                    height:
-                        sidebarElem.offsetHeight -
-                        textmeasure.calcMaxLineChromeHeight(GlobalModel.lineHeightEnv) -
-                        MagicLayout.ScreenSidebarHeaderHeight,
-                };
-                setSidebarSize(newSize);
-            }
-        },
-        []
-    );
+    const handleResize = React.useCallback((entries: ResizeObserverEntry[]) => {
+        const sidebarElem = sidebarRef.current;
+        if (sidebarElem) {
+            const newSize = {
+                width: sidebarElem.offsetWidth,
+                height:
+                    sidebarElem.offsetHeight -
+                    textmeasure.calcMaxLineChromeHeight(GlobalModel.lineHeightEnv) -
+                    MagicLayout.ScreenSidebarHeaderHeight,
+            };
+            setSidebarSize(newSize);
+        }
+    }, []);
 
     React.useEffect(() => {
         const rszObs = new ResizeObserver(handleResize);
@@ -50,7 +47,13 @@ const ScreenSidebar: React.FC<{ screen: Screen; width: string }> = observer(({ s
         return () => rszObs.disconnect();
     }, [handleResize]);
 
-    const sidebarClose = () => GlobalCommandRunner.screenSidebarClose();
+    const sidebarClose = () => {
+        const curLineId = screen.viewOpts.get()?.sidebar?.sidebarlineid;
+        if (curLineId) {
+            GlobalCommandRunner.lineMinimize(curLineId, false, false);
+        }
+        GlobalCommandRunner.screenSidebarClose();
+    };
     const sidebarOpenHalf = () => GlobalCommandRunner.screenSidebarOpen("50%");
     const sidebarOpenPartial = () => GlobalCommandRunner.screenSidebarOpen("500px");
 
@@ -60,7 +63,11 @@ const ScreenSidebar: React.FC<{ screen: Screen; width: string }> = observer(({ s
     const sidebarOk = line != null;
 
     return (
-        <div className="absolute top-0 right-0 flex flex-col h-full overflow-y-auto transition-width duration-500 ease-in-out" style={{ width }} ref={sidebarRef}>
+        <div
+            className="absolute top-0 right-0 flex flex-col h-full overflow-y-auto transition-width duration-500 ease-in-out"
+            style={{ width }}
+            ref={sidebarRef}
+        >
             <If condition={sidebarOk}>
                 <SidebarLineContainer key={lineId} screen={screen} winSize={sidebarSize} lineId={lineId} />
             </If>
@@ -70,25 +77,47 @@ const ScreenSidebar: React.FC<{ screen: Screen; width: string }> = observer(({ s
 
 const SidebarLineContainer: React.FC<{ screen: Screen; winSize: WindowSize; lineId: string }> = observer(
     ({ screen, winSize, lineId }) => {
-        const container = React.useMemo(
-            () => new ForwardLineContainer(screen, winSize, appconst.LineContainer_Sidebar, lineId),
-            [screen, winSize, lineId]
-        );
+        const containerRef = React.useRef<ForwardLineContainer | null>(null);
+        const [ready, setReady] = React.useState(false);
         const overrideCollapsed = React.useRef(mobx.observable.box(false, { name: "overrideCollapsed" }));
         const visible = React.useRef(mobx.observable.box(true, { name: "visible" }));
 
         React.useEffect(() => {
-            container.screenSizeCallback(mobx.toJS(winSize));
-        }, [winSize, container]);
+            let timeoutId: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+                mobx.action(() => {
+                    containerRef.current = new ForwardLineContainer(
+                        screen,
+                        winSize,
+                        appconst.LineContainer_Sidebar,
+                        lineId
+                    );
+                    setReady(true);
+                })();
+            }, 100);
+            return () => {
+                if (timeoutId) {
+                    clearTimeout(timeoutId);
+                }
+                containerRef.current = null;
+                setReady(false);
+            };
+        }, [screen, lineId]);
+
+        React.useEffect(() => {
+            const container = containerRef.current;
+            if (container) {
+                container.screenSizeCallback(mobx.toJS(winSize));
+            }
+        }, [winSize]);
 
         const line = screen.getLineById(lineId);
-        if (!line) {
+        if (!ready || !containerRef.current || !line) {
             return null;
         }
 
         return (
             <Line
-                screen={container}
+                screen={containerRef.current}
                 line={line}
                 width={winSize.width}
                 staticRender={false}
@@ -128,7 +157,10 @@ const ScreenWindowView: React.FC<{ session: Session; screen: Screen; width: stri
                 const rszObs = new ResizeObserver((entries) => {
                     if (entries.length > 0) {
                         const entry = entries[0];
-                        setSize_debounced((entry.target as HTMLElement).offsetWidth, (entry.target as HTMLElement).offsetHeight);
+                        setSize_debounced(
+                            (entry.target as HTMLElement).offsetWidth,
+                            (entry.target as HTMLElement).offsetHeight
+                        );
                     }
                 });
                 rszObs.observe(wvElem);
@@ -150,9 +182,18 @@ const ScreenWindowView: React.FC<{ session: Session; screen: Screen; width: stri
         };
 
         const renderError = (message: string, fade: boolean) => (
-            <div className="flex flex-col absolute h-full overflow-x-hidden" ref={windowViewRef} data-screenid={screen.screenId} style={{ width }}>
+            <div
+                className="flex flex-col absolute h-full overflow-x-hidden"
+                ref={windowViewRef}
+                data-screenid={screen.screenId}
+                style={{ width }}
+            >
                 <div className="lines" />
-                <div className={clsx("flex items-center justify-center w-full p-2.5 h-full text-main", { "opacity-100 animate-fade-in": fade })}>
+                <div
+                    className={clsx("flex items-center justify-center w-full p-2.5 h-full text-main", {
+                        "opacity-100 animate-fade-in": fade,
+                    })}
+                >
                     <div>{message}</div>
                 </div>
             </div>
@@ -238,7 +279,6 @@ export const ScreenView: React.FC<{ session: Session; screen: Screen }> = observ
         return () => rszObs.disconnect();
     }, [handleResize]);
 
-
     const createWorkspace = () => GlobalCommandRunner.createNewSession();
     const createTab = () => GlobalCommandRunner.createNewScreen();
 
@@ -286,14 +326,21 @@ export const ScreenView: React.FC<{ session: Session; screen: Screen }> = observ
     let sidebarWidth = "0px";
     if (hasSidebar) {
         const realWidth = Math.floor(width / 2);
-        winWidth = `${width - realWidth}px`;
+        winWidth = `${width - realWidth - 8}px`;
         sidebarWidth = `${realWidth}px`;
     }
 
     return (
-        <div className="flex-grow relative border-t border-gray-700 flex flex-col" id={screen.screenId} data-screenid={screen.screenId} ref={screenViewRef}>
+        <div
+            className="flex-grow relative border-t border-gray-700 flex flex-col"
+            id={screen.screenId}
+            data-screenid={screen.screenId}
+            ref={screenViewRef}
+        >
             <ScreenWindowView
-                key={`${screen.screenId}:${GlobalModel.getTermFontSize()}:${GlobalModel.devicePixelRatio.get()}:${GlobalModel.termRenderVersion.get()}`}
+                key={`${
+                    screen.screenId
+                }:${GlobalModel.getTermFontSize()}:${GlobalModel.devicePixelRatio.get()}:${GlobalModel.termRenderVersion.get()}`}
                 session={session}
                 screen={screen}
                 width={winWidth}

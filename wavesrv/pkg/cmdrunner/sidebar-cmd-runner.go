@@ -16,13 +16,11 @@ func SidebarOpenCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (
 	if err != nil {
 		return nil, err
 	}
-	screen, err := sidebarSetOpen(ctx, GetCmdStr(pk), ids.ScreenId, true, pk.Kwargs["width"])
-	if err != nil {
+	if _, err := sidebarSetOpen(ctx, GetCmdStr(pk), ids.ScreenId, true, pk.Kwargs["width"]); err != nil {
 		return nil, err
 	}
-	update := scbus.MakeUpdatePacket()
-	update.AddUpdate(*screen)
-	return update, nil
+	// No update returned; frontend will optimistically update UI
+	return nil, nil
 }
 
 func sidebarSetOpen(ctx context.Context, cmdStr string, screenId string, open bool, width string) (*sstore.ScreenType, error) {
@@ -64,13 +62,11 @@ func SidebarCloseCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) 
 	if err != nil {
 		return nil, err
 	}
-	screen, err := sidebarSetOpen(ctx, GetCmdStr(pk), ids.ScreenId, false, "")
-	if err != nil {
+	if _, err := sidebarSetOpen(ctx, GetCmdStr(pk), ids.ScreenId, false, ""); err != nil {
 		return nil, err
 	}
-	update := scbus.MakeUpdatePacket()
-	update.AddUpdate(*screen)
-	return update, nil
+	// No update returned; frontend will optimistically update UI
+	return nil, nil
 }
 
 func SidebarAddCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {
@@ -98,9 +94,8 @@ func SidebarAddCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (s
 	if err != nil {
 		return nil, fmt.Errorf("/%s error updating screenviewopts: %v", GetCmdStr(pk), err)
 	}
-	update := scbus.MakeUpdatePacket()
-	update.AddUpdate(*screen)
-	return update, nil
+	// No update returned; frontend will optimistically update UI
+	return nil, nil
 }
 
 func SidebarRemoveCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {
@@ -122,7 +117,6 @@ func SidebarRemoveCommand(ctx context.Context, pk *scpacket.FeCommandPacketType)
 	if err != nil {
 		return nil, fmt.Errorf("/%s error updating screenviewopts: %v", GetCmdStr(pk), err)
 	}
-	update := scbus.MakeUpdatePacket()
-	update.AddUpdate(*screen)
-	return update, nil
+	// No update returned; frontend will optimistically update UI
+	return nil, nil
 }

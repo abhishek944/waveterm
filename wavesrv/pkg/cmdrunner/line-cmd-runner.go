@@ -406,17 +406,8 @@ func LineMinimizeCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) 
 	if err != nil {
 		return nil, fmt.Errorf("cannot update linestate: %v", err)
 	}
-	lineObj, err := sstore.GetLineById(ctx, ids.ScreenId, lineId)
-	if err != nil {
-		return nil, fmt.Errorf("/line:minimize cannot retrieve updated line: %v", err)
-	}
-	if lineObj == nil {
-		// no line (which is strange given we checked for it above).  just return a nop.
-		return nil, nil
-	}
-	update := scbus.MakeUpdatePacket()
-	sstore.AddLineUpdate(update, lineObj, nil)
-	return update, nil
+	// Do not return an update; frontend will optimistically update UI
+	return nil, nil
 }
 
 func LineDeleteCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {

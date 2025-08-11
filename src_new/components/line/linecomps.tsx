@@ -523,7 +523,8 @@ const LineCmd: React.FC<{
         const mainDivCn = clsx(
             "line",
             "line-cmd",
-            "bg-[var(--line-bg-color)] rounded-md my-1 p-2.5 border border-[var(--app-border-color)]",
+            // Ensure full-width container and clip any overflowing child content (xterm, renderers)
+            "w-full overflow-hidden bg-[var(--line-bg-color)] rounded-md my-1 p-2.5 border border-[var(--app-border-color)]",
             { selected: isSelected },
             { "cmd-done": !cmd.isRunning() },
             { "has-error": cmdError },

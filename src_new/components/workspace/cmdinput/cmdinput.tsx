@@ -157,7 +157,7 @@ export const CmdInput: React.FC = observer(() => {
         <div
             ref={cmdInputRef}
             className={clsx(
-                "max-h-[max(300px,40%)] flex flex-col w-full z-[100] border-t-2 border-gray-700 bg-gray-900 relative",
+                "max-h-[max(300px,40%)] flex flex-col w-full z-[100] border-t-2 border-gray-700 bg-gray-900 rounded-md relative",
                 {
                     "border-t-0 border-b-2": inputPosition === "top",
                     "has-history": openView === appconst.InputAuxView_History,

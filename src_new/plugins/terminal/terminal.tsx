@@ -123,7 +123,6 @@ export const TerminalRenderer: React.FC<{
         }
     }, [onHeightChange]);
 
-
     React.useEffect(() => {
         const termWrap = screen.getTermWrap(line.lineid);
         if (termLoaded && termWrap) {
@@ -165,8 +164,8 @@ export const TerminalRenderer: React.FC<{
             <div
                 ref={elemRef}
                 className={clsx(
-                    "terminal-wrapper",
-                    { "focus": isFocused, "cmd-done": !cmd.isRunning(), "h-0": termHeight === 0, "collapsed": collapsed }
+                    "terminal-wrapper w-full overflow-hidden", // container spans full width; prevent child overflow
+                    { focus: isFocused, "cmd-done": !cmd.isRunning(), "h-0": termHeight === 0, collapsed: collapsed }
                 )}
                 data-usedrows={usedRows}
             >
@@ -177,7 +176,7 @@ export const TerminalRenderer: React.FC<{
                     <TerminalKeybindings termWrap={termWrap} lineid={line.lineid} />
                 </If>
                 <div
-                    className="terminal-connectelem"
+                    className="terminal-connectelem w-full"
                     ref={termRef}
                     data-lineid={line.lineid}
                     style={{ height: termHeight }}

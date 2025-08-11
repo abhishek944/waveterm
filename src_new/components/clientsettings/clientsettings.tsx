@@ -257,10 +257,11 @@ class ClientSettingsView extends React.Component<{ model: RemotesModel }, { hove
                 onClose={this.handleClose}
                 scrollable={true}
             >
-                <If condition={!isHidden}>
-                    <ClientSettingsKeybindings></ClientSettingsKeybindings>
-                </If>
-                <div className="px-[30px] py-[14px] pr-[18px]">
+                <>
+                    <If condition={!isHidden}>
+                        <ClientSettingsKeybindings></ClientSettingsKeybindings>
+                    </If>
+                    <div className="px-[30px] py-[14px] pr-[18px] min-h-full">
                     <div className="flex flex-row items-center">
                         <div className="font-bold w-[250px] flex flex-row items-center mr-[10px]">Term Font Size</div>
                         <div className="flex flex-row items-center">
@@ -459,6 +460,7 @@ class ClientSettingsView extends React.Component<{ model: RemotesModel }, { hove
                     </div>
                     <SettingsError errorMessage={this.errorMessage.get()} onDismiss={this.dismissError} />
                 </div>
+                </>
             </MainView>
         );
     }

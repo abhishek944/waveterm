@@ -25,7 +25,7 @@ const MainView: React.FC<MainViewProps> = observer(({
     
     return (
         <div 
-            className={cn("flex-grow flex flex-col relative bg-black", className)}
+            className={cn("absolute inset-0 flex flex-col bg-black", className)}
             style={{ maxWidth: `calc(100vw - ${maxWidthSubtractor}px)` }}
         >
             <div className={cn("border-b border-gray-800", {
@@ -45,7 +45,7 @@ const MainView: React.FC<MainViewProps> = observer(({
             </div>
             {scrollable ? (
                 <OverlayScrollbarsComponent
-                    className="flex-1 flex flex-col"
+                    className="flex-1 flex flex-col overflow-hidden"
                     options={{ scrollbars: { autoHide: "leave" } }}
                     defer={true}
                 >
