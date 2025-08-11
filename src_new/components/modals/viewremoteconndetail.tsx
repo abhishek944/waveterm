@@ -150,42 +150,42 @@ const ViewRemoteConnDetailModal: React.FC = observer(() => {
     const renderHeaderBtns = (remote: RemoteType): React.ReactNode => {
         const buttons: React.ReactNode[] = [];
         const disconnectButton = (
-            <Button className="secondary" onClick={() => disconnectRemote(remote.remoteid)}>
+            <Button variant="secondary" onClick={() => disconnectRemote(remote.remoteid)}>
                 Disconnect Now
             </Button>
         );
         const connectButton = (
-            <Button className="secondary" onClick={() => connectRemote(remote.remoteid)}>
+            <Button variant="secondary" onClick={() => connectRemote(remote.remoteid)}>
                 Connect Now
             </Button>
         );
         const tryReconnectButton = (
-            <Button className="secondary" onClick={() => connectRemote(remote.remoteid)}>
+            <Button variant="secondary" onClick={() => connectRemote(remote.remoteid)}>
                 Try Reconnect
             </Button>
         );
         const updateAuthButton = (
-            <Button className="secondary" onClick={() => openEditModal()}>
+            <Button variant="secondary" onClick={() => openEditModal()}>
                 Edit
             </Button>
         );
         const cancelInstallButton = (
-            <Button className="secondary" onClick={() => cancelInstall(remote.remoteid)}>
+            <Button variant="secondary" onClick={() => cancelInstall(remote.remoteid)}>
                 Cancel Install
             </Button>
         );
         let installNowButton = (
-            <Button className="secondary" onClick={() => installRemote(remote.remoteid)}>
+            <Button variant="secondary" onClick={() => installRemote(remote.remoteid)}>
                 Install Now
             </Button>
         );
         let archiveButton = (
-            <Button className="secondary danger" onClick={() => clickArchive()}>
+            <Button variant="destructive" onClick={() => clickArchive()}>
                 Delete
             </Button>
         );
         const reinstallButton = (
-            <Button className="secondary" onClick={clickReinstall}>
+            <Button variant="secondary" onClick={clickReinstall}>
                 Reinstall
             </Button>
         );
@@ -200,7 +200,7 @@ const ViewRemoteConnDetailModal: React.FC = observer(() => {
                 <TooltipProvider>
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <Button className="secondary danger" onClick={() => clickArchive()}>
+                            <Button variant="destructive" onClick={() => clickArchive()}>
                                 Delete
                                 <i className="fa-sharp fa-regular fa-fw fa-triangle-exclamation" />
                             </Button>

@@ -33,8 +33,8 @@
             "@/hooks/*": ["src_new/hooks/*"],
             "@/context/*": ["src_new/context/*"],
             "@/types/*": ["src_new/types/*"],
-            
-            // Legacy paths for gradual migration
+            "@/plugins_view": ["src_new/plugins_view/index"],
+            "@/plugins_view/*": ["src_new/plugins_view/*"],
             "@/modals": ["src_new/components/modals/index"],
             "@/modals/*": ["src_new/components/modals/*"]
         }

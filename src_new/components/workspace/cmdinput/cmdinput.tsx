@@ -66,6 +66,7 @@ export const CmdInput: React.FC = observer(() => {
             return;
         }
         GlobalModel.inputModel.setAuxViewFocus(false);
+        GlobalModel.inputModel.setChatSidebarFocus(false);
     };
 
     const clickHistoryAction = (e: React.MouseEvent) => {
@@ -238,12 +239,18 @@ export const CmdInput: React.FC = observer(() => {
                     </If>
                 </div>
                 <If condition={!hidePrompt}>
-                    <div key="prompt" className="cmd-input-context text-white whitespace-nowrap flex justify-between items-center font-mono text-sm leading-6 pt-2 px-4 ml-0.5">
+                    <div
+                        key="prompt"
+                        className="cmd-input-context text-white whitespace-nowrap flex justify-between items-center font-mono text-sm leading-6 pt-2 px-4 ml-0.5"
+                    >
                         <div className="flex items-center flex-nowrap gap-0">
                             <span ref={promptRef}>
                                 <Prompt rptr={rptr} festate={feState} color={true} shellInitMsg={shellInitMsg} />
                                 {(isThreadMode || isAgentMode) && (
-                                    <span className="text-red-500 font-bold whitespace-nowrap"> | Mode: {isAgentMode ? "Agent" : "Thread"}</span>
+                                    <span className="text-red-500 font-bold whitespace-nowrap">
+                                        {" "}
+                                        | Mode: {isAgentMode ? "Agent" : "Thread"}
+                                    </span>
                                 )}
                             </span>
                             {(isThreadMode || isAgentMode) && <AIProviderDropdown />}
@@ -262,11 +269,7 @@ export const CmdInput: React.FC = observer(() => {
                             <div className="button is-static">{inputMode}</div>
                         </div>
                     </If>
-                    <TextAreaInput
-                        key={textAreaInputKey}
-                        screen={screen}
-                        onHeightChange={updateCmdInputHeight}
-                    />
+                    <TextAreaInput key={textAreaInputKey} screen={screen} onHeightChange={updateCmdInputHeight} />
                 </div>
             </div>
         </div>

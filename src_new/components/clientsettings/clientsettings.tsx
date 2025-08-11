@@ -253,7 +253,6 @@ class ClientSettingsView extends React.Component<{ model: RemotesModel }, { hove
 
         return (
             <MainView
-                className="clientsettings-view"
                 title="Client Settings"
                 onClose={this.handleClose}
                 scrollable={true}
@@ -261,7 +260,7 @@ class ClientSettingsView extends React.Component<{ model: RemotesModel }, { hove
                 <If condition={!isHidden}>
                     <ClientSettingsKeybindings></ClientSettingsKeybindings>
                 </If>
-                <div className="px-[30px] py-[14px] pr-[18px] overflow-y-scroll">
+                <div className="px-[30px] py-[14px] pr-[18px]">
                     <div className="flex flex-row items-center">
                         <div className="font-bold w-[250px] flex flex-row items-center mr-[10px]">Term Font Size</div>
                         <div className="flex flex-row items-center">

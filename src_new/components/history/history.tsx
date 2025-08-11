@@ -98,7 +98,7 @@ const HistoryCmdStr: React.FC<{
             </div>
             <div className="flex">
                 <CopyButton onClick={onCopy} title="Copy" />
-                <Button className="secondary ghost" title="Use Command" onClick={onUse}>
+                <Button variant="ghost" className="bg-secondary text-secondary-foreground hover:bg-secondary/80" title="Use Command" onClick={onUse}>
                     <i className="fa-sharp fa-solid fa-play" />
                 </Button>
             </div>

@@ -294,7 +294,7 @@ const LineText: React.FC<{
         <div
             className={clsx(
                 "m-0 px-[calc(var(--termpad)*3)] py-[calc(var(--termpad)*2)] pb-[calc(var(--termpad)*2+1px)]",
-                "flex flex-col overflow-x-hidden overflow-y-visible flex-shrink-0 relative",
+                "flex flex-col overflow-x-hidden overflow-y-visible flex-shrink-0 relative whitespace-pre",
                 "leading-[11px] font-normal font-[var(--termfontfamily)] scroll-mb-5",
                 "focus-parent",
                 { "selected": isSelected }
@@ -445,6 +445,7 @@ const LineCmd: React.FC<{
         const mainDivCn = clsx(
             "line",
             "line-cmd",
+            "bg-[var(--line-bg-color)] rounded-md my-1 p-2.5 border border-[var(--app-border-color)]",
             { selected: isSelected },
             { "cmd-done": !cmd.isRunning() },
             { "has-error": cmdError },
@@ -452,27 +453,36 @@ const LineCmd: React.FC<{
         );
 
         return (
-            <div
-                className={mainDivCn}
-                ref={lineRef}
-                onClick={handleClick}
-                data-lineid={line.lineid}
-                data-linenum={line.linenum}
-                data-screenid={line.screenid}
-            >
-                <If condition={isSelected || cmdError}>
-                    <div className={clsx("line-mask", { "error-mask": cmdError })}></div>
-                </If>
-                <LineActions screen={screen} line={line} cmd={cmd} />
-                <LineHeader line={line} cmd={cmd} />
-                <LineContent
-                    screen={screen}
-                    line={line}
-                    cmd={cmd}
-                    width={width}
-                    onHeightChange={handleHeightChange}
-                />
-            </div>
+            <>
+                <style>
+                    {`
+                    .line-cmd.cmd-done .xterm-cursor {
+                        display: none;
+                    }
+                `}
+                </style>
+                <div
+                    className={clsx(mainDivCn, "flex-shrink-0")}
+                    ref={lineRef}
+                    onClick={handleClick}
+                    data-lineid={line.lineid}
+                    data-linenum={line.linenum}
+                    data-screenid={line.screenid}
+                >
+                    <If condition={isSelected || cmdError}>
+                        <div className={clsx("line-mask", { "error-mask": cmdError })}></div>
+                    </If>
+                    <LineActions screen={screen} line={line} cmd={cmd} />
+                    <LineHeader line={line} cmd={cmd} />
+                    <LineContent
+                        screen={screen}
+                        line={line}
+                        cmd={cmd}
+                        width={width > 20 ? width - 20 : 0}
+                        onHeightChange={handleHeightChange}
+                    />
+                </div>
+            </>
         );
     }
 );

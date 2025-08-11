@@ -190,7 +190,7 @@ const TabSettings: React.FC = observer(() => {
             </div>
             <div className="h-px bg-gray-700" />
             <div className="py-2.5 px-4">
-                <Button onClick={handleDeleteScreen} className="py-1 primary greyoutlined greytext hover:danger">
+                <Button onClick={handleDeleteScreen} className="py-1 bg-primary text-primary-foreground border border-gray-500 text-gray-400 hover:bg-destructive hover:text-destructive-foreground">
                     Delete Tab
                 </Button>
             </div>
@@ -220,12 +220,9 @@ export const WorkspaceView: React.FC = observer(() => {
     return (
         <div
             ref={sessionRef}
-            className={clsx("mainview relative flex flex-col overflow-hidden", { "is-hidden": isHidden })}
+            className={clsx("absolute inset-0 flex flex-col overflow-hidden", { "hidden": isHidden })}
             id={sessionId}
             data-sessionid={sessionId}
-            style={{
-                width: `${window.innerWidth - mainSidebarModel.getWidth()}px`,
-            }}
         >
             <If condition={!isHidden}>
                 <SessionKeybindings key="keybindings" />
@@ -235,16 +232,17 @@ export const WorkspaceView: React.FC = observer(() => {
                 <div
                     key="pulldown"
                     className={clsx(
-                        "absolute w-full transition-height duration-200 ease-in-out overflow-hidden z-10 border-b-3 border-gray-700 bg-gray-800 rounded-b-md",
+                        "absolute w-full transition-all duration-200 ease-in-out overflow-hidden z-10 border-b-4 border-gray-700 bg-gray-800 rounded-b-md",
                         {
                             "h-0 border-b-0": !showTabSettings,
-                            "top-[calc(var(--screentabs-height)+60px)]": inputPosition === "top",
-                            "top-[var(--screentabs-height)]": inputPosition !== "top",
+                            "h-auto": showTabSettings,
+                            "top-[98px]": inputPosition === "top", // 38px (tabs) + 60px (input)
+                            "top-[38px]": inputPosition !== "top", // Just tabs height
                         }
                     )}
                 >
                     <Button
-                        className="absolute top-2.5 right-2.5 p-1.5 rounded secondary ghost"
+                        className="absolute top-2.5 right-2.5 p-1.5 rounded bg-secondary text-secondary-foreground hover:bg-secondary/80"
                         onClick={toggleTabSettings}
                     >
                         <i className="fa-solid fa-sharp fa-xmark-large" />

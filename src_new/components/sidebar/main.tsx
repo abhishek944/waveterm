@@ -7,7 +7,6 @@ import { action, observable } from "mobx";
 import { clsx } from "clsx";
 import dayjs from "dayjs";
 
-import { ReactComponent as AppsIcon } from "@/assets/icons/apps.svg";
 import { ReactComponent as WorkspacesIcon } from "@/assets/icons/workspaces.svg";
 import { ReactComponent as SettingsIcon } from "@/assets/icons/settings.svg";
 import { ReactComponent as WaveLogo } from "@/assets/waveterm-logo.svg";
@@ -48,21 +47,11 @@ const SideBarItem: React.FC<{
     );
 };
 
-const HotKeyIcon: React.FC<{ hotkey: string }> = ({ hotkey }) => {
-    return (
-        <CenteredIcon className="hotkey">
-            <span>⌘{hotkey}</span>
-        </CenteredIcon>
-    );
-};
-
 interface MainSideBarProps {
     parentRef: React.RefObject<HTMLDivElement>;
 }
 
 const MainSideBar: React.FC<MainSideBarProps> = observer(({ parentRef }) => {
-    const middleHeightSubtractor = observable.box(404);
-
     const handleSessionClick = (sessionId: string) => {
         GlobalCommandRunner.switchSession(sessionId);
     };
@@ -148,26 +137,6 @@ const MainSideBar: React.FC<MainSideBarProps> = observer(({ parentRef }) => {
         });
     };
 
-    const setMiddleHeightSubtractor = () => {
-        const windowHeight = window.innerHeight;
-        const bottomHeight = windowHeight - window.document.getElementById("sidebar-bottom")?.offsetTop;
-        const middleTop = document.getElementById("sidebar-middle")?.offsetTop;
-        const newMiddleHeightSubtractor = bottomHeight + middleTop;
-        if (!Number.isNaN(newMiddleHeightSubtractor)) {
-            action(() => {
-                middleHeightSubtractor.set(newMiddleHeightSubtractor);
-            })();
-        }
-    };
-
-    React.useEffect(() => {
-        setMiddleHeightSubtractor();
-        window.addEventListener("resize", setMiddleHeightSubtractor);
-        return () => {
-            window.removeEventListener("resize", setMiddleHeightSubtractor);
-        };
-    }, []);
-
     const mainView = GlobalModel.activeMainView.get();
     const connectionsActive = mainView == "connections";
     const settingsActive = mainView == "clientsettings";
@@ -175,74 +144,69 @@ const MainSideBar: React.FC<MainSideBarProps> = observer(({ parentRef }) => {
     return (
         <ResizableSidebar
             collapsed={GlobalModel.mainSidebarModel.getCollapsed()}
-            className="main-sidebar"
+            className="flex flex-col bg-gray-900 border-r border-gray-800"
             position="left"
             ref={parentRef}
         >
-            <React.Fragment>
-                <div className="title-bar-drag flex items-center relative border-b border-gray-800" style={{ height: "calc(var(--screentabs-height) + 1px)" }}>
-                    <div className="logo mx-auto mt-1">
-                        <WaveLogo style={{ width: "88px" }} />
-                    </div>
-                    <div
-                        className="close-button absolute right-0 h-full flex items-center p-2.5 cursor-pointer"
-                        onClick={() =>
-                            GlobalModel.mainSidebarModel.setCollapsed(!GlobalModel.mainSidebarModel.getCollapsed())
-                        }
-                    >
-                        <i className="fa-sharp fa-solid fa-xmark-large" />
-                    </div>
+            <div
+                className="title-bar-drag flex items-center relative border-b border-gray-800 flex-shrink-0"
+                style={{ height: "calc(var(--screentabs-height) + 1px)" }}
+            >
+                <div
+                    className="close-button absolute right-0 h-full flex items-center p-2.5 cursor-pointer"
+                    onClick={() =>
+                        GlobalModel.mainSidebarModel.setCollapsed(!GlobalModel.mainSidebarModel.getCollapsed())
+                    }
+                >
+                    <i className="fa-sharp fa-solid fa-xmark-large" />
                 </div>
-                <div className="contents mt-4">
-                    <div className="top pr-1.5">
-                        <SideBarItem
-                            key="connections"
-                            frontIcon={<i className="fa-sharp fa-regular fa-globe icon" />}
-                            className={clsx({ "bg-gray-700": connectionsActive })}
-                            contents="Connections"
-                            onClick={handleConnectionsClick}
-                        />
-                    </div>
-                    <div className="separator h-px my-4 bg-gray-800" />
+            </div>
+            <div className="flex flex-col flex-1 min-h-0">
+                <div className="top pr-1.5 flex-shrink-0">
                     <SideBarItem
-                        key="workspaces"
-                        className="workspaces"
-                        frontIcon={<WorkspacesIcon className="icon" />}
-                        contents="Workspaces"
-                        endIcons={[
-                            <CenteredIcon
-                                key="add-workspace"
-                                className="add-workspace hoverEffect"
-                                onClick={handleNewSession}
-                            >
-                                <i className="fa-sharp fa-solid fa-plus"></i>
-                            </CenteredIcon>,
-                        ]}
+                        key="connections"
+                        frontIcon={<i className="fa-sharp fa-regular fa-globe icon" />}
+                        className={clsx({ "bg-gray-700": connectionsActive })}
+                        contents="Connections"
+                        onClick={handleConnectionsClick}
                     />
-                    <OverlayScrollbarsComponent
-                        element="div"
-                        className="middle p-1 border-b border-gray-800 overflow-y-auto"
-                        id="sidebar-middle"
-                        style={{
-                            maxHeight: `calc(100vh - ${middleHeightSubtractor.get()}px)`,
-                        }}
-                        options={{ scrollbars: { autoHide: "leave" } }}
-                    >
-                        {getSessions()}
-                    </OverlayScrollbarsComponent>
-
-                    <div className="bottom absolute bottom-8 left-0 w-full pt-3 pr-1.5" id="sidebar-bottom">
-                        {getUpdateAppBanner()}
-                        <SideBarItem
-                            key="settings"
-                            frontIcon={<SettingsIcon className="icon" />}
-                            className={clsx({ "bg-gray-700": settingsActive })}
-                            contents="Settings"
-                            onClick={handleSettingsClick}
-                        />
-                    </div>
                 </div>
-            </React.Fragment>
+                <div className="separator h-px my-4 bg-gray-800 flex-shrink-0" />
+                <SideBarItem
+                    key="workspaces"
+                    className="workspaces flex-shrink-0"
+                    frontIcon={<WorkspacesIcon className="icon" />}
+                    contents="Workspaces"
+                    endIcons={[
+                        <CenteredIcon
+                            key="add-workspace"
+                            className="add-workspace hoverEffect"
+                            onClick={handleNewSession}
+                        >
+                            <i className="fa-sharp fa-solid fa-plus"></i>
+                        </CenteredIcon>,
+                    ]}
+                />
+                <OverlayScrollbarsComponent
+                    element="div"
+                    className="middle p-1 border-b border-gray-800 flex-1 min-h-0 overflow-y-auto"
+                    id="sidebar-middle"
+                    options={{ scrollbars: { autoHide: "leave" } }}
+                >
+                    {getSessions()}
+                </OverlayScrollbarsComponent>
+
+                <div className="bottom pr-1.5 flex-shrink-0 pb-4" id="sidebar-bottom">
+                    {getUpdateAppBanner()}
+                    <SideBarItem
+                        key="settings"
+                        frontIcon={<SettingsIcon className="icon" />}
+                        className={clsx({ "bg-gray-700": settingsActive })}
+                        contents="Settings"
+                        onClick={handleSettingsClick}
+                    />
+                </div>
+            </div>
         </ResizableSidebar>
     );
 });

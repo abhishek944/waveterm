@@ -9,7 +9,7 @@ import { clsx } from "clsx";
 import dayjs from "dayjs";
 import localizedFormat from "dayjs/plugin/localizedFormat";
 import { debounce, throttle } from "throttle-debounce";
-import * as util from "@/util/util";
+import * as util from "@/utils/util";
 import { GlobalModel } from "@/models";
 
 dayjs.extend(localizedFormat);
@@ -150,12 +150,6 @@ export const LinesView: React.FC<{
             const line = lines[idx];
             const lineNumStr = String(line.linenum);
             
-            // Add separator between lines
-            if (idx > 0) {
-                elements.push(
-                    <div key={`sep-${line.lineid}`} className="w-full h-px border-b border-[var(--app-border-color)]" />
-                );
-            }
 
             // Get or create visibility observable
             if (!visibleMap.current.has(lineNumStr)) {
@@ -185,7 +179,7 @@ export const LinesView: React.FC<{
     return (
         <div
             className={clsx(
-                "flex flex-col overflow-auto p-0 flex-grow relative overflow-x-hidden",
+                "flex flex-col overflow-auto p-0 flex-grow relative overflow-x-hidden flex-shrink-0",
                 "pb-[calc(var(--termlineheight)*5)]",
                 renderMode === "normal" ? "lines-expanded" : "lines-collapsed",
                 "wide-scrollbar",

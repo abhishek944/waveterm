@@ -19,10 +19,24 @@ const TabIcon: React.FC<TabIconProps> = ({ icon, color }) => {
         color = "green";
     }
 
+    // Map colors to Tailwind text color classes
+    const colorClasses = {
+        green: "text-green-500",
+        orange: "text-orange-500",
+        red: "text-red-500",
+        yellow: "text-yellow-500",
+        blue: "text-blue-500",
+        mint: "text-teal-500",
+        cyan: "text-cyan-500",
+        white: "text-white",
+        violet: "text-violet-500",
+        pink: "text-pink-500",
+    };
+
+    const textColorClass = colorClasses[color] || colorClasses.green;
+
     return (
-        <div className={cn("tabicon", `color-${color}`)}>
-            <i className={iconClass} />
-        </div>
+        <i className={cn(iconClass, textColorClass)} />
     );
 };
 

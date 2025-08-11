@@ -3,14 +3,15 @@
 
 import * as React from "react";
 import { observer } from "mobx-react";
-import * as mobx from "mobx";
-import { For } from "tsx-control-statements/components";
+import { reaction } from "mobx";
 import { GlobalModel, GlobalCommandRunner, Session, Screen } from "@/models";
-import { ReactComponent as AddIcon } from "@/assets/icons/add.svg";
+import { Plus, Sparkles } from "lucide-react";
 import { Reorder } from "framer-motion";
 import { ScreenTab } from "@/components/workspace";
+import { clsx } from "clsx";
+import { Button } from "@/components/ui/button";
 
-export const ScreenTabs: React.FC<{ session: Session }> = observer(({ session }) => {
+export const ScreenTabs = observer(({ session }: { session: Session }) => {
     const tabsRef = React.useRef<HTMLDivElement>(null);
     const [showingScreens, setShowingScreens] = React.useState<Screen[]>([]);
     const lastActiveScreenId = React.useRef<string | null>(null);
@@ -29,7 +30,7 @@ export const ScreenTabs: React.FC<{ session: Session }> = observer(({ session })
 
     React.useEffect(() => {
         setShowingScreens(getScreens());
-        const dispose = mobx.reaction(
+        const dispose = reaction(
             () => getScreens(),
             (screens) => setShowingScreens(screens),
             { fireImmediately: true }
@@ -74,9 +75,19 @@ export const ScreenTabs: React.FC<{ session: Session }> = observer(({ session })
 
     if (!session) return null;
 
+    const mainSidebarCollapsed = GlobalModel.mainSidebarModel.getCollapsed();
+    const rightSidebarCollapsed = GlobalModel.rightSidebarModel.getCollapsed();
+    const platform = GlobalModel.getPlatform();
+
     return (
-        <div className="flex relative overflow-hidden h-10">
-            <div className="overflow-x-scroll overflow-y-hidden no-scrollbar">
+        <div className="flex relative overflow-hidden h-[38px] z-20 border-b border-gray-800">
+            {mainSidebarCollapsed && (
+                <div className="flex-shrink-0 h-full px-2 cursor-pointer hover:bg-gray-700 flex items-center justify-center"
+                     onClick={() => GlobalModel.mainSidebarModel.setCollapsed(false)}>
+                    <img className="h-6 w-6" src="public/logos/wave-logo.png" alt="logo" />
+                </div>
+            )}
+            <div className="overflow-x-scroll overflow-y-hidden no-scrollbar flex-1">
                 <Reorder.Group
                     className="flex flex-row h-full"
                     ref={tabsRef}
@@ -85,21 +96,38 @@ export const ScreenTabs: React.FC<{ session: Session }> = observer(({ session })
                     onReorder={setShowingScreens}
                     values={showingScreens}
                 >
-                    <For each="screen" index="index" of={showingScreens}>
+                    {showingScreens.map((screen: Screen) => (
                         <ScreenTab
                             key={screen.screenId}
                             screen={screen}
                             activeScreenId={session.activeScreenId.get()}
-                            index={index}
+                            index={screen.screenIdx.get()}
                             onSwitchScreen={handleSwitchScreen}
                         />
-                    </For>
+                    ))}
                 </Reorder.Group>
             </div>
-            <div className="flex-shrink-0 cursor-pointer flex items-center h-full" onClick={handleNewScreen}>
-                <AddIcon className="w-8 h-8 rounded-full p-1.5" />
+            <div className="flex-shrink-0 cursor-pointer flex items-center h-full px-2 hover:bg-gray-700" onClick={handleNewScreen}>
+                <Plus className="w-5 h-5 text-gray-400 hover:text-white" />
             </div>
-            <div className="flex-grow min-w-[30px] h-full" style={{ webkitAppRegion: "drag" }} />
+            {rightSidebarCollapsed && GlobalModel.activeMainView.get() === "session" && (
+                <div className="flex-shrink-0 px-1.5 flex items-center h-full" title="Open Wave AI (Cmd-Shift-Space)">
+                    <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="h-8 px-2 bg-secondary text-secondary-foreground hover:bg-secondary/80" 
+                        onClick={() => GlobalModel.rightSidebarModel.setCollapsed(false)}
+                    >
+                        <Sparkles className="w-4 h-4" />
+                    </Button>
+                </div>
+            )}
+            {rightSidebarCollapsed && (
+                <div className={clsx("flex-shrink-0 h-full app-region-drag", {
+                    "w-12": platform !== "darwin",
+                    "w-16": platform === "darwin",
+                })} />
+            )}
         </div>
     );
 });

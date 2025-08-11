@@ -30,7 +30,7 @@ export const CenteredIcon: React.FC<PositionalIconProps> = (props) => {
     return (
         <div
             ref={props.divRef}
-            className={clsx("hidden w-5 h-5 text-base", props.className)}
+            className={clsx("w-5 h-5 text-base", props.className)}
             onClick={props.onClick}
         >
             <div className="flex w-full h-full items-center justify-center [&>div]:w-5 [&>div]:flex [&>div]:text-center [&>div]:items-center [&>div]:justify-center [&>i]:w-5 [&>i]:flex [&>i]:text-center [&>i]:items-center [&>i]:justify-center [&>span]:w-5 [&>span]:flex [&>span]:text-center [&>span]:items-center [&>span]:justify-center">
@@ -46,8 +46,8 @@ interface ActionsIconProps {
 
 export const ActionsIcon: React.FC<ActionsIconProps> = (props) => {
     return (
-        <CenteredIcon className="[&_.icon]:text-sm" onClick={props.onClick}>
-            <div className="icon hoverEffect fa-sharp fa-solid fa-1x fa-ellipsis-vertical"></div>
+        <CenteredIcon className="hover:bg-gray-700 rounded cursor-pointer" onClick={props.onClick}>
+            <i className="fa-sharp fa-solid fa-ellipsis-vertical text-sm"></i>
         </CenteredIcon>
     );
 };
@@ -179,10 +179,10 @@ export const StatusIndicator: React.FC<StatusIndicatorProps> = (props) => {
                     spinnerVisibleClass, 
                     visibilityClass,
                     "status-indicator [&_#spinner]:invisible [&_#indicator]:invisible",
-                    spinnerVisible && "[&_.spin_#spinner]:visible [&_.spin_#spinner]:stroke-[var(--app-text-color)]",
-                    indicatorLevelClass === "status-error" && "[&_#indicator]:visible [&_#indicator]:fill-[var(--app-error-color)]",
-                    indicatorLevelClass === "status-success" && "[&_#indicator]:visible [&_#indicator]:fill-[var(--app-success-color)]",
-                    indicatorLevelClass === "status-output" && "[&_#indicator]:visible [&_#indicator]:fill-[var(--app-text-color)]"
+                    spinnerVisible && "[&_.spin_#spinner]:visible [&_.spin_#spinner]:stroke-white",
+                    indicatorLevelClass === "status-error" && "[&_#indicator]:visible [&_#indicator]:fill-red-500",
+                    indicatorLevelClass === "status-success" && "[&_#indicator]:visible [&_#indicator]:fill-green-500",
+                    indicatorLevelClass === "status-output" && "[&_#indicator]:visible [&_#indicator]:fill-white"
                 )}
             >
                 <SpinnerIndicator className={spinnerVisible ? "spin" : null} />

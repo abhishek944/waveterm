@@ -152,7 +152,7 @@ const ChatWindow: React.FC<ChatWindowProps> = observer(({ chatWindowRef, onRende
             }}
             events={{ initialized: handleScrollbarInitialized }}
         >
-            <div ref={chatWindowRef} className="flex flex-col min-h-full">
+            <div ref={chatWindowRef} className="flex flex-col min-h-full pb-2">
                 <div className="flex-1" />
                 {chatMessageItems.map((chatItem, idx) => (
                     <ChatItem
@@ -498,7 +498,7 @@ const ChatSidebar: React.FC = observer(() => {
     return (
         <div ref={sidebarRef} className="h-full flex flex-col bg-background text-foreground relative overflow-hidden">
             <div className="absolute inset-0 w-full h-full -z-10" />
-            <div className="relative z-10 flex-1 overflow-hidden">
+            <div className="relative z-10 flex flex-col flex-1 overflow-hidden">
                 <ChatWindow
                     chatWindowRef={chatWindowRef}
                     onRendered={handleChatWindowRendered}

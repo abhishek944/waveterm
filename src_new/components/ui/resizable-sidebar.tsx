@@ -66,10 +66,10 @@ const ResizableSidebar = React.forwardRef<HTMLDivElement, ResizableSidebarProps>
             <div
                 ref={ref}
                 className={cn("flex h-full relative", className)}
-                style={{ width: collapsed ? 0 : width, transition: "width 0.2s ease", overflow: "visible" }}
+                style={{ width: collapsed ? 0 : width, transition: "width 0.2s ease" }}
                 {...props}
             >
-                <div className="flex flex-col h-full w-full">{children}</div>
+                {children}
                 <div
                     className={cn(
                         "absolute top-0 h-full w-3 cursor-col-resize z-20 bg-transparent hover:bg-white/20",

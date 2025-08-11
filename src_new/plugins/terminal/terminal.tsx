@@ -8,9 +8,10 @@ import dayjs from "dayjs";
 import localizedFormat from "dayjs/plugin/localizedFormat";
 import { If } from "tsx-control-statements/components";
 import { GlobalModel } from "@/models";
-import { termHeightFromRows } from "@/utils/textmeasure";
+import { termHeightFromRows, windowWidthToCols } from "@/utils/textmeasure";
 import { clsx } from "clsx";
 import * as lineutil from "@/components/line/lineutil";
+import "xterm/css/xterm.css";
 
 dayjs.extend(localizedFormat);
 
@@ -122,6 +123,15 @@ export const TerminalRenderer: React.FC<{
         }
     }, [onHeightChange]);
 
+
+    React.useEffect(() => {
+        const termWrap = screen.getTermWrap(line.lineid);
+        if (termLoaded && termWrap) {
+            const cols = windowWidthToCols(width, GlobalModel.getTermFontSize());
+            termWrap.resizeCols(cols);
+        }
+    }, [width, termLoaded]);
+
     const clickTermBlock = () => {
         const termWrap = screen.getTermWrap(line.lineid);
         if (termWrap != null) {
@@ -140,29 +150,42 @@ export const TerminalRenderer: React.FC<{
     const termWrap = screen.getTermWrap(line.lineid);
 
     return (
-        <div
-            ref={elemRef}
-            className={clsx(
-                "terminal-wrapper",
-                { "focus": isFocused, "cmd-done": !cmd.isRunning(), "h-0": termHeight === 0, "collapsed": collapsed }
-            )}
-            data-usedrows={usedRows}
-        >
-            <If condition={!isFocused}>
-                <div className="term-block" onClick={clickTermBlock} />
-            </If>
-            <If condition={isFocused}>
-                <TerminalKeybindings termWrap={termWrap} lineid={line.lineid} />
-            </If>
+        <>
+            <style>
+                {`
+                .terminal-wrapper .xterm-viewport {
+                    overflow: hidden;
+                }
+                .terminal-wrapper:hover .xterm-viewport,
+                .terminal-wrapper:focus-within .xterm-viewport {
+                    overflow: auto;
+                }
+            `}
+            </style>
             <div
-                className="terminal-connectelem"
-                ref={termRef}
-                data-lineid={line.lineid}
-                style={{ height: termHeight }}
-            />
-            <If condition={!termLoaded}>
-                <div className="terminal-loading-message">...</div>
-            </If>
-        </div>
+                ref={elemRef}
+                className={clsx(
+                    "terminal-wrapper",
+                    { "focus": isFocused, "cmd-done": !cmd.isRunning(), "h-0": termHeight === 0, "collapsed": collapsed }
+                )}
+                data-usedrows={usedRows}
+            >
+                <If condition={!isFocused}>
+                    <div className="term-block" onClick={clickTermBlock} />
+                </If>
+                <If condition={isFocused}>
+                    <TerminalKeybindings termWrap={termWrap} lineid={line.lineid} />
+                </If>
+                <div
+                    className="terminal-connectelem"
+                    ref={termRef}
+                    data-lineid={line.lineid}
+                    style={{ height: termHeight }}
+                />
+                <If condition={!termLoaded}>
+                    <div className="terminal-loading-message">...</div>
+                </If>
+            </div>
+        </>
     );
 });

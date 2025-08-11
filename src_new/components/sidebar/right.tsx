@@ -55,7 +55,7 @@ const RightSideBar: React.FC = observer(() => {
         <ResizableSidebar
             position="right"
             collapsed={isCollapsed}
-            className={cn("flex h-full relative overflow-visible bg-[#0e131f]", { "w-0": isCollapsed })}
+            className={cn("flex flex-col relative bg-[#0e131f]", { "w-0": isCollapsed })}
         >
             {/* Gradient background */}
             <div
@@ -66,18 +66,25 @@ const RightSideBar: React.FC = observer(() => {
                     filter: "blur(40px)",
                 }}
             />
-            <div className="relative z-10 flex flex-col h-full">
-                <div className="absolute top-2 right-2 z-10">
-                    <Button variant="ghost" size="icon" onClick={toggleCollapse} className="h-8 w-8 rounded-full bg-white/10 text-white hover:bg-white/20">
-                        <i className="fa-sharp fa-solid fa-xmark" />
-                    </Button>
-                </div>
-                <SidebarContent>
+            <div className="relative z-10 flex flex-col h-full min-h-0">
+                <If condition={!isCollapsed}>
+                    <div className="flex items-center justify-end h-12 pr-2 flex-shrink-0">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={toggleCollapse}
+                            className="h-8 w-8 rounded-full bg-white/10 text-white hover:bg-white/20"
+                        >
+                            <i className="fa-sharp fa-solid fa-xmark" />
+                        </Button>
+                    </div>
+                </If>
+                <SidebarContent className="flex-1 min-h-0 overflow-auto">
                     <If condition={mode === "aichat" && !isCollapsed}>
                         <ChatSidebar />
                     </If>
                 </SidebarContent>
-                <SidebarFooter className="border-t-0 bg-transparent p-4">
+                <SidebarFooter className="border-t-0 bg-transparent p-2 flex-shrink-0">
                     <SimplePromptBox />
                 </SidebarFooter>
             </div>

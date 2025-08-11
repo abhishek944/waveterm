@@ -6,36 +6,31 @@ import * as mobxReact from "mobx-react";
 import { clsx } from "clsx";
 
 import { GlobalModel } from "@/models";
-// import { isBlank } from "@/lib/utils";
+import { isBlank } from "@/lib/utils";
 import { WorkspaceView } from "@/components/workspace/workspace-view";
-
-// Temporary until utils is properly set up
-function isBlank(s: string | null | undefined): boolean {
-    return s == null || s === "";
-}
-// TODO: PluginsView needs to be migrated from src/app/pluginsview/pluginsview.tsx
+import { PluginsView } from "@/plugins_view/plugins_view";
 import { BookmarksView } from "@/components/bookmarks/bookmarks";
 import { HistoryView } from "@/components/history/history";
 import { ConnectionsView } from "@/components/connections/connections";
 import { DisconnectedModal, ClientStopModal } from "@/components/modals";
 import { ModalsProvider } from "@/components/modals/provider";
-import { Button } from "@/components/ui/button";
-// TODO: ErrorBoundary needs to be migrated from src/app/common/error/errorboundary.tsx
-// TODO: TermStyleList needs to be migrated from src/app/common/elements/
 
 import "./globals.css";
 import { ClientSettingsView } from "./components/clientsettings/clientsettings";
 import { MainSideBar, RightSideBar } from "./components/sidebar";
+import { TermStyleList } from "./components/ui/termstyle";
+import { ErrorBoundary } from "./components/error/errorboundary";
 
 const App: React.FC = mobxReact.observer(() => {
     const [dcWait, setDcWait] = React.useState(false);
-    const termThemesLoaded = true; // TODO: restore termThemesLoaded logic when TermStyleList is migrated
+    const [termThemesLoaded, setTermThemesLoaded] = React.useState(false);
     const mainContentRef = React.useRef<HTMLDivElement>(null);
     const chatFocusTimeoutId = React.useRef<NodeJS.Timeout | null>(null);
 
     React.useEffect(() => {
         if (GlobalModel.isDev) {
-            document.body.classList.add("is-dev");
+            // Dev mode styling can be handled with Tailwind classes if needed
+            // document.body.classList.add("is-dev");
         }
 
         return () => {
@@ -45,6 +40,7 @@ const App: React.FC = mobxReact.observer(() => {
             }
         };
     }, []);
+    
 
     const handleContextMenu = React.useCallback((e: React.MouseEvent) => {
         let isInNonTermInput = false;
@@ -71,15 +67,10 @@ const App: React.FC = mobxReact.observer(() => {
         setDcWait(val);
     }, []);
 
-    const openMainSidebar = React.useCallback(() => {
-        GlobalModel.mainSidebarModel.setCollapsed(false);
-    }, []);
 
-    const openRightSidebar = React.useCallback(() => {
-        GlobalModel.rightSidebarModel.setCollapsed(false);
-        chatFocusTimeoutId.current = setTimeout(() => {
-            GlobalModel.inputModel.setChatSidebarFocus();
-        }, 100);
+
+    const handleTermThemesRendered = React.useCallback(() => {
+        setTermThemesLoaded(true);
     }, []);
 
     const remotesModel = GlobalModel.remotesModel;
@@ -100,10 +91,10 @@ const App: React.FC = mobxReact.observer(() => {
             setTimeout(() => updateDcWait(true), 1500);
         }
         return (
-            <div id="main" className={`platform-${platform}`} onContextMenu={handleContextMenu}>
-                <div ref={mainContentRef} className="main-content">
+            <div id="main" className="flex flex-col h-screen" data-platform={platform} onContextMenu={handleContextMenu}>
+                <div ref={mainContentRef} className="main-content flex flex-row flex-1 min-h-0">
                     <MainSideBar parentRef={mainContentRef} />
-                    <div className="session-view" />
+                    <div className="flex-1 flex flex-col h-full overflow-hidden" />
                 </div>
                 {dcWait && (
                     <>
@@ -114,7 +105,7 @@ const App: React.FC = mobxReact.observer(() => {
             </div>
         );
     }
-    
+
     if (dcWait) {
         setTimeout(() => updateDcWait(false), 0);
     }
@@ -123,56 +114,31 @@ const App: React.FC = mobxReact.observer(() => {
     const renderVersion = GlobalModel.renderVersion.get();
     const mainSidebarCollapsed = GlobalModel.mainSidebarModel.getCollapsed();
     const rightSidebarCollapsed = GlobalModel.rightSidebarModel.getCollapsed();
-    const activeMainView = GlobalModel.activeMainView.get();
-    const lightDarkClass = GlobalModel.isDarkTheme.get() ? "is-dark" : "is-light";
     const mainClassName = clsx(
-        `platform-${platform}`,
-        {
-            "mainsidebar-collapsed": mainSidebarCollapsed,
-            "rightsidebar-collapsed": rightSidebarCollapsed,
-        },
-        lightDarkClass
+        "flex flex-col h-screen"
+        // Platform-specific styling can be handled with data attributes if needed
+        // Theme styling is handled by Tailwind's dark mode
+        // Sidebar states can be handled with conditional rendering
     );
 
     return (
         <>
-            {/* <TermStyleList onRendered={handleTermThemesRendered} /> */}
-            <div
-                key={`version-${renderVersion}`}
-                id="main"
-                className={mainClassName}
-                onContextMenu={handleContextMenu}
-            >
+            <TermStyleList onRendered={handleTermThemesRendered} />
+            <div key={`version-${renderVersion}`} id="main" className={mainClassName} data-platform={platform} data-theme={GlobalModel.isDarkTheme.get() ? "dark" : "light"} data-mainsidebar-collapsed={mainSidebarCollapsed} data-rightsidebar-collapsed={rightSidebarCollapsed} onContextMenu={handleContextMenu}>
                 {termThemesLoaded && (
                     <>
-                        {mainSidebarCollapsed && (
-                            <div key="logo-button" className="logo-button-container">
-                                <div className="logo-button-spacer" />
-                                <div className="logo-button" onClick={openMainSidebar}>
-                                    <img src="public/logos/wave-logo.png" alt="logo" />
-                                </div>
-                            </div>
-                        )}
-                        {rightSidebarCollapsed && activeMainView === "session" && (
-                            <div className="right-sidebar-triggers" title="Open Wave AI (Cmd-Shift-Space)">
-                                <Button
-                                    className="secondary ghost right-sidebar-trigger"
-                                    onClick={openRightSidebar}
-                                >
-                                    <i className="fa-sharp fa-regular fa-sparkles"></i>
-                                </Button>
-                            </div>
-                        )}
-                        <div ref={mainContentRef} className="main-content">
+                        <div ref={mainContentRef} className="main-content flex flex-row flex-1 min-h-0">
                             <MainSideBar parentRef={mainContentRef} />
-                            {/* <ErrorBoundary> */}
-                                {/* <PluginsView /> */}
-                                <WorkspaceView />
-                                <HistoryView />
-                                <BookmarksView />
-                                <ConnectionsView model={remotesModel} />
-                                <ClientSettingsView model={remotesModel} />
-                            {/* </ErrorBoundary> */}
+                            <div className="flex-1 relative overflow-hidden">
+                                <ErrorBoundary>
+                                    <PluginsView />
+                                    <WorkspaceView />
+                                    <HistoryView />
+                                    <BookmarksView />
+                                    <ConnectionsView model={remotesModel} />
+                                    <ClientSettingsView model={remotesModel} />
+                                </ErrorBoundary>
+                            </div>
                             <RightSideBar />
                         </div>
                         <ModalsProvider />

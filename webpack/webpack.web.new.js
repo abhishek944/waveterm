@@ -103,7 +103,7 @@ var webCommon = {
             "@/context": path.resolve(__dirname, "../src_new/context/"),
             "@/types": path.resolve(__dirname, "../src_new/types/"),
             "@/appconst": path.resolve(__dirname, "../src_new/appconst"),
-            
+            "@/plugins_view": path.resolve(__dirname, "../src_new/plugins_view/"),
             "@/modals": path.resolve(__dirname, "../src_new/components/modals/"),
         },
     },

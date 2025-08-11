@@ -144,11 +144,11 @@ export const ConnectionsView: React.FC<{ model: RemotesModel }> = observer(({ mo
                 </table>
             </OverlayScrollbarsComponent>
             <footer className="ml-2.5 mt-2.5 flex flex-row flex-shrink-0 gap-2">
-                <Button className="secondary" onClick={handleAddConnection}>
+                <Button variant="secondary" onClick={handleAddConnection}>
                     <i className="fa-sharp fa-solid fa-plus" />
                     New Connection
                 </Button>
-                <Button className="secondary" onClick={handleImportSshConfig}>
+                <Button variant="secondary" onClick={handleImportSshConfig}>
                     <i className="fa-sharp fa-solid fa-fw fa-file-import" />
                     Import Config
                 </Button>

@@ -222,7 +222,11 @@ const ScreenWindowView: React.FC<{ session: Session; screen: Screen; width: stri
         const lines = determineVisibleLines(win);
 
         return (
-            <div className="flex flex-col absolute h-full overflow-x-hidden" ref={windowViewRef} style={{ width }}>
+            <div
+                className="flex flex-col absolute h-full overflow-x-hidden overflow-y-auto whitespace-nowrap"
+                ref={windowViewRef}
+                style={{ width }}
+            >
                 <If condition={lines.length === 0 && screen.nextLineNum.get() !== 1}>
                     <div className="flex items-center justify-center w-full p-2.5 h-full text-main">
                         <div>

@@ -223,7 +223,7 @@ class AiProviders extends React.Component<{}, {}> {
                         <div className="flex flex-row items-center gap-[10px]">
                             {shouldShowVerify("gemini") && (
                                 <Button
-                                    className="secondary small"
+                                    variant="secondary" size="sm"
                                     onClick={() => this.handleVerifyProvider("gemini")}
                                     disabled={this.isVerifying}
                                 >
@@ -273,7 +273,7 @@ class AiProviders extends React.Component<{}, {}> {
                         <div className="flex flex-row items-center gap-[10px]">
                             {shouldShowVerify("openai") && (
                                 <Button
-                                    className="secondary small"
+                                    variant="secondary" size="sm"
                                     onClick={() => this.handleVerifyProvider("openai")}
                                     disabled={this.isVerifying}
                                 >
@@ -336,7 +336,7 @@ class AiProviders extends React.Component<{}, {}> {
                         <div className="flex flex-row items-center gap-[10px]">
                             {shouldShowVerify("azure") && (
                                 <Button
-                                    className="secondary small"
+                                    variant="secondary" size="sm"
                                     onClick={() => this.handleVerifyProvider("azure")}
                                     disabled={this.isVerifying}
                                 >
@@ -361,7 +361,7 @@ class AiProviders extends React.Component<{}, {}> {
                                     const newAiOpts = { ...aiOpts, default: newDefault };
                                     this.handleAiOptsChange(newAiOpts);
                                 }}
-                                className="px-[10px] py-[6px] border border-[var(--border-color)] rounded bg-[var(--input-bg-color,var(--panel-bg-color))] text-[var(--main-text-color)] text-[13px] outline-none focus:border-[var(--accent-color)]"
+                                className="px-2.5 py-1.5 border border-gray-700 rounded bg-black text-white text-sm outline-none focus:border-green-500"
                             >
                                 <option value="openai">OpenAI</option>
                                 <option value="gemini">Gemini</option>

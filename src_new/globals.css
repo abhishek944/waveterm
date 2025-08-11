@@ -33,70 +33,60 @@
         --ring: 106 55% 51%;
 
         --radius: 0.5rem;
+        --screentabs-height: 38px;
     }
-    html,
+    html {
+        @apply h-full m-0 p-0;
+    }
+
     body {
-        @apply overflow-hidden bg-black text-white;
-        font: var(--base-font);
+        @apply h-full overflow-hidden bg-black text-white m-0 p-0;
         -webkit-font-smoothing: auto;
     }
 
-    body.is-dev .sidebar {
-        --app-panel-bg-color: var(--app-panel-bg-color-dev);
+    /*
+     * The #measure element is used to measure monospace font metrics
+     * at runtime. It MUST be present in the DOM and measurable.
+     * Do NOT use display:none (Tailwind's hidden) here, since that
+     * makes offsetHeight/offsetWidth zero. Keep it offscreen and
+     * invisible while still participating in layout.
+     */
+    #measure {
+        position: absolute; /* keep out of flow but measurable */
+        left: -10000px;
+        top: -10000px;
+        visibility: hidden; /* not visible but takes measurements */
+        pointer-events: none;
     }
 
-    body textarea,
-    body textarea.textarea {
-        @apply overflow-visible leading-relaxed;
-        font: var(--base-font);
-        color: var(--app-text-color);
-        background-color: var(--input-bg-color);
+    #app {
+        @apply h-full w-full m-0 p-0;
     }
 
-    body textarea:focus,
-    body textarea.textarea:focus {
-        @apply shadow-none;
-    }
-
-    body textarea::placeholder,
-    body textarea.textarea::placeholder {
-        color: var(--input-placeholder-color);
-    }
-
-    body input,
-    body input.input {
-        font: var(--base-font);
-        @apply leading-relaxed;
-        color: var(--app-text-color);
-        background-color: var(--input-bg-color);
-    }
-
-    body input::placeholder,
-    body input.input::placeholder {
-        color: var(--input-placeholder-color);
-    }
-
-    body a {
-        color: var(--app-accent-color);
-        @apply cursor-pointer no-underline;
-    }
-
-    body a:hover {
-        color: var(--app-accent-color);
-    }
-
-    body code {
-        font-family: var(--termfontfamily);
-        @apply bg-transparent;
+    * {
+        @apply box-border;
     }
 
     svg.icon {
-        fill: var(--app-text-color);
         @apply w-full h-full inline-block;
     }
 
-    input[type="checkbox"] {
-        @apply cursor-pointer;
+    .app-region-drag {
+        -webkit-app-region: drag;
+    }
+
+    .app-region-no-drag {
+        -webkit-app-region: no-drag;
+    }
+
+    /* Hide scrollbar for Chrome, Safari and Opera */
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* Hide scrollbar for IE, Edge and Firefox */
+    .no-scrollbar {
+        -ms-overflow-style: none; /* IE and Edge */
+        scrollbar-width: none; /* Firefox */
     }
 }
-
