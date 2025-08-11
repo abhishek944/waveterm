@@ -25,7 +25,7 @@ const ScreenSidebar: React.FC<{ screen: Screen; width: string }> = observer(({ s
     const [sidebarSize, setSidebarSize] = React.useState<WindowSize>({ height: 0, width: 0 });
 
     const handleResize = React.useCallback(
-        debounce(100, (entries: ResizeObserverEntry[]) => {
+        (entries: ResizeObserverEntry[]) => {
             const sidebarElem = sidebarRef.current;
             if (sidebarElem) {
                 const newSize = {
@@ -37,7 +37,7 @@ const ScreenSidebar: React.FC<{ screen: Screen; width: string }> = observer(({ s
                 };
                 setSidebarSize(newSize);
             }
-        }),
+        },
         []
     );
 
@@ -56,40 +56,11 @@ const ScreenSidebar: React.FC<{ screen: Screen; width: string }> = observer(({ s
 
     const sidebar = screen.viewOpts.get()?.sidebar;
     const lineId = sidebar?.sidebarlineid;
-    const sidebarOk = sidebarSize.width > 0 && !util.isBlank(lineId);
+    const line = screen.getLineById(lineId);
+    const sidebarOk = line != null;
 
     return (
-        <div className="absolute top-0 right-0 flex flex-col h-full overflow-y-auto border-l border-gray-700 transition-width duration-500 ease-in-out" style={{ width }} ref={sidebarRef}>
-            <div className="flex flex-row px-0 py-1 border-b border-gray-700 text-sm font-mono leading-6 text-gray-400 hover:text-white">
-                <div className="invisible group-hover:visible ml-2">sidebar</div>
-                <div className="flex-spacer" />
-                <div onClick={sidebarOpenHalf} title="Set Sidebar Width to 50%" className="p-1 cursor-pointer">
-                    <i className="fa-sharp fa-solid fa-table-columns" />
-                </div>
-                <div onClick={sidebarOpenPartial} title="Set Sidebar Width to 500px" className="p-1 cursor-pointer">
-                    <i className="fa-sharp fa-solid fa-sidebar-flip" />
-                </div>
-                <div onClick={sidebarClose} className="ml-1 mr-2.5 p-1 cursor-pointer">
-                    <i className="fa-sharp fa-solid fa-xmark-large" />
-                </div>
-            </div>
-            <If condition={!sidebarOk}>
-                <div className="self-center mt-[20%]">
-                    <div className="font-bold">No Sidebar Line Selected</div>
-                    <div className="mt-5 p-2 bg-gray-800 rounded font-mono">
-                        /sidebar:open [width=[50%|500px]]
-                        <br />
-                        /sidebar:close
-                        <br />
-                        /sidebar:add line=[linenum]
-                    </div>
-                    <div className="flex flex-col items-center justify-center mt-5 mb-2.5">
-                        <Button className="secondary" onClick={sidebarClose}>
-                            Close Sidebar
-                        </Button>
-                    </div>
-                </div>
-            </If>
+        <div className="absolute top-0 right-0 flex flex-col h-full overflow-y-auto transition-width duration-500 ease-in-out" style={{ width }} ref={sidebarRef}>
             <If condition={sidebarOk}>
                 <SidebarLineContainer key={lineId} screen={screen} winSize={sidebarSize} lineId={lineId} />
             </If>
@@ -99,30 +70,16 @@ const ScreenSidebar: React.FC<{ screen: Screen; width: string }> = observer(({ s
 
 const SidebarLineContainer: React.FC<{ screen: Screen; winSize: WindowSize; lineId: string }> = observer(
     ({ screen, winSize, lineId }) => {
-        const [container, setContainer] = React.useState<ForwardLineContainer | null>(null);
-        const [ready, setReady] = React.useState(false);
+        const container = React.useMemo(
+            () => new ForwardLineContainer(screen, winSize, appconst.LineContainer_Sidebar, lineId),
+            [screen, winSize, lineId]
+        );
         const overrideCollapsed = React.useRef(mobx.observable.box(false, { name: "overrideCollapsed" }));
         const visible = React.useRef(mobx.observable.box(true, { name: "visible" }));
 
         React.useEffect(() => {
-            const timeoutId = setTimeout(() => {
-                mobx.action(() => {
-                    setContainer(new ForwardLineContainer(screen, winSize, appconst.LineContainer_Sidebar, lineId));
-                    setReady(true);
-                })();
-            }, 100);
-            return () => clearTimeout(timeoutId);
-        }, [screen, winSize, lineId]);
-
-        React.useEffect(() => {
-            if (container) {
-                container.screenSizeCallback(mobx.toJS(winSize));
-            }
+            container.screenSizeCallback(mobx.toJS(winSize));
         }, [winSize, container]);
-
-        if (!ready || !container) {
-            return null;
-        }
 
         const line = screen.getLineById(lineId);
         if (!line) {
@@ -154,14 +111,14 @@ const ScreenWindowView: React.FC<{ session: Session; screen: Screen; width: stri
         const [shareCopied, setShareCopied] = React.useState(false);
 
         const setSize_debounced = React.useCallback(
-            debounce(1000, (newWidth: number, newHeight: number) => {
+            (newWidth: number, newHeight: number) => {
                 if (screen && newWidth > 0 && newHeight > 0) {
                     mobx.action(() => {
                         setSize({ width: newWidth, height: newHeight });
                         screen.screenSizeCallback({ height: newHeight, width: newWidth });
                     })();
                 }
-            }),
+            },
             [screen]
         );
 
@@ -262,7 +219,6 @@ const ScreenWindowView: React.FC<{ session: Session; screen: Screen; width: stri
 export const ScreenView: React.FC<{ session: Session; screen: Screen }> = observer(({ session, screen }) => {
     const screenViewRef = React.useRef<HTMLDivElement>(null);
     const [width, setWidth] = React.useState<number | null>(null);
-    const [sidebarShowing, setSidebarShowing] = React.useState(false);
 
     const handleResize = React.useCallback(
         debounce(100, () => {
@@ -282,18 +238,6 @@ export const ScreenView: React.FC<{ session: Session; screen: Screen }> = observ
         return () => rszObs.disconnect();
     }, [handleResize]);
 
-    React.useEffect(() => {
-        if (screen) {
-            const viewOpts = screen.viewOpts.get();
-            const hasSidebar = viewOpts?.sidebar?.open;
-            if (hasSidebar) {
-                const timeoutId = setTimeout(() => setSidebarShowing(true), 500);
-                return () => clearTimeout(timeoutId);
-            } else {
-                setSidebarShowing(false);
-            }
-        }
-    }, [screen]);
 
     const createWorkspace = () => GlobalCommandRunner.createNewSession();
     const createTab = () => GlobalCommandRunner.createNewScreen();
@@ -341,21 +285,9 @@ export const ScreenView: React.FC<{ session: Session; screen: Screen }> = observ
     let winWidth = "100%";
     let sidebarWidth = "0px";
     if (hasSidebar) {
-        const targetWidth = viewOpts?.sidebar?.width;
-        let realWidth = 0;
-        if (util.isBlank(targetWidth) || width < MagicLayout.ScreenSidebarMinWidth * 2) {
-            realWidth = Math.floor(width / 2) - MagicLayout.ScreenSidebarWidthPadding;
-        } else if (targetWidth.includes("%")) {
-            let targetPercent = parseInt(targetWidth);
-            if (targetPercent > 100) targetPercent = 100;
-            realWidth = Math.floor((width * targetPercent) / 100);
-            realWidth = util.boundInt(realWidth, MagicLayout.ScreenSidebarMinWidth, width - MagicLayout.ScreenSidebarMinWidth);
-        } else {
-            const targetWidthNum = parseInt(targetWidth);
-            realWidth = util.boundInt(targetWidthNum, MagicLayout.ScreenSidebarMinWidth, width - MagicLayout.ScreenSidebarMinWidth);
-        }
+        const realWidth = Math.floor(width / 2);
         winWidth = `${width - realWidth}px`;
-        sidebarWidth = `${realWidth - MagicLayout.ScreenSidebarWidthPadding}px`;
+        sidebarWidth = `${realWidth}px`;
     }
 
     return (
@@ -366,7 +298,7 @@ export const ScreenView: React.FC<{ session: Session; screen: Screen }> = observ
                 screen={screen}
                 width={winWidth}
             />
-            <If condition={hasSidebar && sidebarShowing}>
+            <If condition={hasSidebar}>
                 <ScreenSidebar screen={screen} width={sidebarWidth} />
             </If>
         </div>
