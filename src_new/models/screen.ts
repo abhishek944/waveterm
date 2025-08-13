@@ -619,7 +619,6 @@ class Screen {
         return lines.length > 0 ? lines[0] : null;
     }
 
-
     getScreenLines(): ScreenLines {
         return this.globalModel.getScreenLinesById(this.screenId);
     }

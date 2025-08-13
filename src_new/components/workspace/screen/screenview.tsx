@@ -137,7 +137,6 @@ const ScreenWindowView: React.FC<{ session: Session; screen: Screen; width: stri
         const windowViewRef = React.useRef<HTMLDivElement>(null);
         const [size, setSize] = React.useState({ width: 0, height: 0 });
         const [renderMode, setRenderMode] = React.useState<RenderModeType>("normal");
-        const [shareCopied, setShareCopied] = React.useState(false);
 
         const setSize_debounced = React.useCallback(
             (newWidth: number, newHeight: number) => {
@@ -283,12 +282,12 @@ export const ScreenView: React.FC<{ session: Session; screen: Screen }> = observ
     const createTab = () => GlobalCommandRunner.createNewScreen();
 
     if (width === null) {
-        return <div className="flex-grow relative border-t border-gray-700 flex flex-col" ref={screenViewRef}></div>;
+        return <div className="flex-grow relative flex flex-col" ref={screenViewRef}></div>;
     }
 
     if (!session) {
         return (
-            <div className="flex-grow relative border-t border-gray-700 flex flex-col" ref={screenViewRef}>
+            <div className="flex-grow relative flex flex-col" ref={screenViewRef}>
                 <div className="flex items-center justify-center w-full p-2.5 h-full text-main">
                     <div className="flex flex-col items-center">
                         <code className="bg-transparent text-green-500">[no workspace]</code>
@@ -305,7 +304,7 @@ export const ScreenView: React.FC<{ session: Session; screen: Screen }> = observ
 
     if (!screen) {
         return (
-            <div className="flex-grow relative border-t border-gray-700 flex flex-col" ref={screenViewRef}>
+            <div className="flex-grow relative flex flex-col" ref={screenViewRef}>
                 <div className="flex items-center justify-center w-full p-2.5 h-full text-main">
                     <div className="flex flex-col items-center">
                         <code className="bg-transparent text-green-500">[no active tab]</code>
@@ -332,7 +331,7 @@ export const ScreenView: React.FC<{ session: Session; screen: Screen }> = observ
 
     return (
         <div
-            className="flex-grow relative border-t border-gray-700 flex flex-col"
+            className="flex-grow relative flex flex-col my-1"
             id={screen.screenId}
             data-screenid={screen.screenId}
             ref={screenViewRef}

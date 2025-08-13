@@ -591,9 +591,9 @@ export const TextAreaInput: React.FC<{ screen: Screen; onHeightChange: () => voi
                     <HistoryKeybindings />
                 </If>
 
-                <If condition={!util.isBlank(shellType)}>
+                {/* <If condition={!util.isBlank(shellType)}>
                     <div className="absolute bottom-[-13px] right-0 text-xs text-gray-400 select-none">{shellType}</div>
-                </If>
+                </If> */}
                 <If condition={primaryAutocompleteSuggestion}>
                     <div
                         className="absolute top-0 left-0 resize-none overflow-auto whitespace-pre-wrap font-mono bg-transparent border-none shadow-none text-gray-500 z-10"

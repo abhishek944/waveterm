@@ -150,41 +150,32 @@ export const TerminalRenderer: React.FC<{
 
     return (
         <>
-            <style>
-                {`
-                .terminal-wrapper .xterm-viewport {
-                    overflow: hidden;
-                }
-                .terminal-wrapper:hover .xterm-viewport,
-                .terminal-wrapper:focus-within .xterm-viewport {
-                    overflow: auto;
-                }
-            `}
-            </style>
-            <div
-                ref={elemRef}
-                className={clsx(
-                    "terminal-wrapper w-full overflow-hidden", // container spans full width; prevent child overflow
-                    { focus: isFocused, "cmd-done": !cmd.isRunning(), "h-0": termHeight === 0, collapsed: collapsed }
-                )}
-                data-usedrows={usedRows}
-            >
-                <If condition={!isFocused}>
-                    <div className="term-block" onClick={clickTermBlock} />
-                </If>
-                <If condition={isFocused}>
-                    <TerminalKeybindings termWrap={termWrap} lineid={line.lineid} />
-                </If>
-                <div
-                    className="terminal-connectelem w-full"
-                    ref={termRef}
-                    data-lineid={line.lineid}
-                    style={{ height: termHeight }}
-                />
-                <If condition={!termLoaded}>
-                    <div className="terminal-loading-message">...</div>
-                </If>
-            </div>
+            {/* Tailwind-only; remove custom CSS hooks */}
+            {(() => {
+                return (
+                    <div
+                        ref={elemRef}
+                        className={clsx("w-full overflow-x-hidden", termHeight === 0 ? "h-0" : "")}
+                        data-usedrows={usedRows}
+                    >
+                        <If condition={!isFocused}>
+                            <div className="term-block" onClick={clickTermBlock} />
+                        </If>
+                        <If condition={isFocused}>
+                            <TerminalKeybindings termWrap={termWrap} lineid={line.lineid} />
+                        </If>
+                        <div
+                            className="w-full"
+                            ref={termRef}
+                            data-lineid={line.lineid}
+                            style={{ height: termHeight }}
+                        />
+                        <If condition={!termLoaded}>
+                            <div className="terminal-loading-message">...</div>
+                        </If>
+                    </div>
+                );
+            })()}
         </>
     );
 });

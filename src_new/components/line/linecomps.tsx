@@ -93,9 +93,12 @@ const AgentModeRenderer: React.FC<{
         }
     }, [loading, content, line.lineid, line.linenum, onHeightChange]);
 
+    const fontSize = GlobalModel.getTermFontSize();
+    const fontFamily = GlobalModel.getTermFontFamily();
+
     if (loading) {
         return (
-            <div className="bg-white/2 rounded-md my-1 p-2.5">
+            <div className="bg-white/2 rounded-md my-1 p-2.5" style={{ fontSize: fontSize, fontFamily: fontFamily }}>
                 <div className="text-white/50 italic">Loading...</div>
             </div>
         );
@@ -103,14 +106,14 @@ const AgentModeRenderer: React.FC<{
 
     if (!content) {
         return (
-            <div className="bg-white/2 rounded-md my-1 p-2.5">
+            <div className="bg-white/2 rounded-md my-1 p-2.5" style={{ fontSize: fontSize, fontFamily: fontFamily }}>
                 <div className="text-white/50 italic">No content available</div>
             </div>
         );
     }
 
     return (
-        <div className="bg-white/2 rounded-md my-1">
+        <div className="bg-white/2 rounded-md my-1" style={{ fontSize: fontSize, fontFamily: fontFamily }}>
             <div className="p-2.5 agent-mode-content">
                 <Markdown text={content} onClickExecute={(cmd) => GlobalModel.submitRawCommand(cmd, false, true)} />
             </div>
@@ -609,6 +612,7 @@ const LineHeader: React.FC<{ line: LineType; cmd: Cmd }> = observer(({ line, cmd
         }
         const isMultiLine = lineutil.isMultiLineCmdText(cmd.getCmdStr());
         return (
+            <>
             <div
                 className={clsx("overflow-auto max-h-24 whitespace-pre text-gray-300 font-bold w-full", {
                     "border-l-2 border-gray-600 ml-1 pl-2": isMultiLine,
@@ -616,6 +620,8 @@ const LineHeader: React.FC<{ line: LineType; cmd: Cmd }> = observer(({ line, cmd
             >
                 {lineutil.getFullCmdText(cmd.getCmdStr())}
             </div>
+            <br></br>
+            </>
         );
     };
 
@@ -631,7 +637,7 @@ const LineHeader: React.FC<{ line: LineType; cmd: Cmd }> = observer(({ line, cmd
     );
 });
 
-const RtnState: React.FC<{ cmd: Cmd; line: LineType }> = observer(({ cmd, line }) => {
+/* const RtnState: React.FC<{ cmd: Cmd; line: LineType }> = observer(({ cmd, line }) => {
     const [rtnStateDiff, setRtnStateDiff] = React.useState<string>(null);
     const rtnStateDiffFetched = React.useRef(false);
 
@@ -705,6 +711,7 @@ const RtnState: React.FC<{ cmd: Cmd; line: LineType }> = observer(({ cmd, line }
         </div>
     );
 });
+*/
 
 const LineContent: React.FC<{
     screen: LineContainerType;
@@ -825,9 +832,9 @@ const LineContent: React.FC<{
                     />
                 </When>
             </Choose>
-            <If condition={cmd.getRtnState()}>
+            {/* <If condition={cmd.getRtnState()}>
                 <RtnState cmd={cmd} line={line} />
-            </If>
+            </If> */}
         </ErrorBoundary>
     );
 });

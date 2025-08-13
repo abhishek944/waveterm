@@ -80,7 +80,7 @@ export const ScreenTabs = observer(({ session }: { session: Session }) => {
     const platform = GlobalModel.getPlatform();
 
     return (
-        <div className="flex relative overflow-hidden h-[38px] z-20 border-b border-gray-800">
+        <div className="flex relative overflow-hidden h-[38px] z-20">
             {mainSidebarCollapsed && (
                 <div className="flex-shrink-0 h-full px-2 cursor-pointer hover:bg-gray-700 flex items-center justify-center"
                      onClick={() => GlobalModel.mainSidebarModel.setCollapsed(false)}>

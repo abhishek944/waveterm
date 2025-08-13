@@ -47,11 +47,11 @@
     --app-text-primary-color: rgb(255, 255, 255);
     --app-text-secondary-color: rgb(195, 200, 194);
     --app-text-disabled-color: rgb(173, 173, 173);
-    --app-text-bg-color: rgb(23, 23, 23);
+    --app-text-bg-color: #000000;
     --app-text-bg-disabled-color: rgb(51, 51, 51);
     --app-border-color: rgb(51, 51, 51);
     --app-maincontent-bg-color: rgb(51, 51, 51);
-    --app-panel-bg-color: rgba(21, 23, 21, 1);
+    --app-panel-bg-color: #000000;
     --app-panel-bg-color-dev: rgb(21, 23, 48);
     --app-icon-color: rgb(139, 145, 138);
     --app-icon-hover-color: rgb(255, 255, 255);

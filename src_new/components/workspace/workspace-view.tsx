@@ -228,7 +228,7 @@ export const WorkspaceView: React.FC = observer(() => {
                 <SessionKeybindings key="keybindings" />
             </If>
             <ScreenTabs key={"tabs-" + sessionId} session={session} />
-            <If condition={activeScreen != null}>
+            {/* <If condition={activeScreen != null}>
                 <div
                     key="pulldown"
                     className={clsx(
@@ -252,7 +252,7 @@ export const WorkspaceView: React.FC = observer(() => {
                         <TabSettingsPulldownKeybindings />
                     </If>
                 </div>
-            </If>
+            </If> */}
             <ErrorBoundary key="eb">
                 <div className="flex flex-col flex-1 overflow-hidden">
                     <If condition={activeScreen != null && inputPosition === "top"}>

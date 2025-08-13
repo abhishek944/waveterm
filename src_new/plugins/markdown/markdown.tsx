@@ -38,7 +38,7 @@ export const SimpleMarkdownRenderer: React.FC<{
 
     if (data == null || data.notFound) {
         return (
-            <div className="text-main" style={{ fontSize: opts.termFontSize }}>
+            <div className="text-main" style={{ fontSize: opts.termFontSize, fontFamily: opts.termFontFamily }}>
                 <div className="text-red-500">
                     ERROR: file {data?.name ? JSON.stringify(data.name) : ""} not found
                 </div>
@@ -48,7 +48,7 @@ export const SimpleMarkdownRenderer: React.FC<{
 
     if (markdownError) {
         return (
-            <div className="text-main" style={{ fontSize: opts.termFontSize }}>
+            <div className="text-main" style={{ fontSize: opts.termFontSize, fontFamily: opts.termFontFamily }}>
                 <div className="text-red-500">{markdownError}</div>
             </div>
         );
@@ -59,7 +59,7 @@ export const SimpleMarkdownRenderer: React.FC<{
     }
 
     return (
-        <div className="text-main">
+        <div className="text-main" style={{ fontSize: opts.termFontSize, fontFamily: opts.termFontFamily }}>
             <div className="overflow-y-auto" style={{ maxHeight: opts.maxSize.height }}>
                 <Markdown text={markdownText} />
             </div>
