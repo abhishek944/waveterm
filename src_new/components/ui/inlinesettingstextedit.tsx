@@ -72,10 +72,22 @@ const InlineSettingsTextEdit: React.FC<InlineSettingsTextEditProps> = ({
                         if (e.key === "Escape") cancelChange();
                     }}
                 />
-                <Button variant="ghost" size="icon" onClick={cancelChange} title="Cancel (Esc)">
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onMouseDown={(e) => e.preventDefault()} 
+                    onClick={cancelChange} 
+                    title="Cancel (Esc)"
+                >
                     <X className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" onClick={confirmChange} title="Confirm (Enter)">
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onMouseDown={(e) => e.preventDefault()} 
+                    onClick={confirmChange} 
+                    title="Confirm (Enter)"
+                >
                     <Check className="h-4 w-4" />
                 </Button>
             </div>

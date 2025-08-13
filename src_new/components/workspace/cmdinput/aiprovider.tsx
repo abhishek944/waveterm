@@ -12,6 +12,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Bot, Cloud, Sparkles } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface AIProviderOption {
     value: string;
@@ -24,6 +25,24 @@ const AI_PROVIDERS: AIProviderOption[] = [
     { value: "azure", label: "Azure OpenAI", icon: <Cloud className="h-4 w-4" /> },
     { value: "gemini", label: "Google Gemini", icon: <Sparkles className="h-4 w-4" /> },
 ];
+
+// Custom SelectItem that hides the checkmark and adjusts padding
+const CustomSelectItem = React.forwardRef<
+    React.ElementRef<typeof SelectItem>,
+    React.ComponentPropsWithoutRef<typeof SelectItem> & { children: React.ReactNode }
+>(({ className, children, ...props }, ref) => (
+    <SelectItem
+        ref={ref}
+        className={cn(
+            "pl-3 [&>span:first-child]:hidden", // Hide the checkmark span and adjust padding
+            className
+        )}
+        {...props}
+    >
+        {children}
+    </SelectItem>
+));
+CustomSelectItem.displayName = "CustomSelectItem";
 
 export const AIProviderDropdown: React.FC = observer(() => {
     const aiProviderFromObservable = GlobalModel.aiProvider.get();
@@ -45,7 +64,7 @@ export const AIProviderDropdown: React.FC = observer(() => {
     return (
         <div className="inline-flex ml-2.5 align-middle">
             <Select value={currentProvider} onValueChange={handleProviderChange}>
-                <SelectTrigger className="h-6 px-2 text-xs bg-panel border border-border text-main rounded min-w-[140px]">
+                <SelectTrigger className="h-6 px-2 text-xs bg-black border border-gray-600 text-white rounded min-w-[140px]">
                     <SelectValue placeholder="Choose provider">
                         {currentProviderObj && (
                             <div className="flex items-center gap-1.5">
@@ -57,12 +76,12 @@ export const AIProviderDropdown: React.FC = observer(() => {
                         )}
                     </SelectValue>
                 </SelectTrigger>
-                <SelectContent className="bg-panel border border-border text-main text-xs min-w-[140px] rounded-md shadow-lg">
+                <SelectContent className="bg-black/100 border border-gray-600 text-white text-xs min-w-[140px] rounded-md shadow-lg z-50">
                     {AI_PROVIDERS.map((provider) => (
-                        <SelectItem
+                        <CustomSelectItem
                             key={provider.value}
                             value={provider.value}
-                            className="text-xs px-3 py-1.5 cursor-pointer"
+                            className="text-xs py-1.5 cursor-pointer"
                         >
                             <div className="flex items-center gap-2 w-full">
                                 {React.cloneElement(provider.icon as React.ReactElement, {
@@ -81,7 +100,7 @@ export const AIProviderDropdown: React.FC = observer(() => {
                                     <span className="w-1 h-1 rounded-full bg-green-400 ml-auto" />
                                 )}
                             </div>
-                        </SelectItem>
+                        </CustomSelectItem>
                     ))}
                 </SelectContent>
             </Select>

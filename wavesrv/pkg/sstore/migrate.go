@@ -13,16 +13,16 @@ import (
 	"strconv"
 	"time"
 
+	dbfs "github.com/abhishek944/waveterm/wavesrv/db"
 	_ "github.com/golang-migrate/migrate/v4/database/sqlite3"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 	_ "github.com/mattn/go-sqlite3"
-	dbfs "github.com/abhishek944/waveterm/wavesrv/db"
 
 	"github.com/golang-migrate/migrate/v4"
 )
 
-const MaxMigration = 32
+const MaxMigration = 33
 const MigratePrimaryScreenVersion = 9
 const CmdScreenSpecialMigration = 13
 const CmdLineSpecialMigration = 20

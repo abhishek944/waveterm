@@ -394,6 +394,10 @@ declare global {
         threadmodetoggle?: {
             enabled: boolean;
         };
+        threads?: {
+            screenid: string;
+            items: Array<{ threadid: string; name: string }>;
+        };
     };
 
     type TermThemesType = {

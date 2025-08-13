@@ -265,6 +265,7 @@ func init() {
 
 	registerCmdFn("_killserver", KillServerCommand)
 	registerCmdFn("_dumpstate", DumpStateCommand)
+	registerCmdFn("_requestthreads", RequestThreadsCommand)
 
 	registerCmdFn("set", SetCommand)
 
@@ -2281,6 +2282,34 @@ func DumpStateCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (sc
 	feState := sstore.FeStateFromShellState(currentState)
 	shellenv.DumpVarMapFromState(currentState)
 	return sstore.InfoMsgUpdate("current connection state sent to log.  festate: %s", dbutil.QuickJson(feState)), nil
+}
+
+func RequestThreadsCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {
+	screenId := pk.Kwargs["screenid"]
+	if screenId == "" {
+		ids, err := resolveUiIds(ctx, pk, R_Screen)
+		if err != nil {
+			return nil, err
+		}
+		screenId = ids.ScreenId
+	}
+	
+	// Fetch threads list for the screen
+	threads, err := sstore.ListThreads(ctx, screenId)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching threads: %v", err)
+	}
+	
+	// Convert to the format expected by frontend
+	items := make([]map[string]string, 0, len(threads))
+	for _, t := range threads {
+		items = append(items, map[string]string{"threadid": t.ThreadId, "name": t.Name})
+	}
+	
+	// Send update to frontend
+	update := scbus.MakeUpdatePacket()
+	update.AddUpdate(sstore.ThreadsUpdateType{ScreenId: screenId, Items: items})
+	return update, nil
 }
 
 var confirmKeyRe = regexp.MustCompile(`^[a-z][a-z0-9_]*$`)

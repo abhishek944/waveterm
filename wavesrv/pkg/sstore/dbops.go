@@ -497,6 +497,10 @@ func UpdateClientAIOpts(ctx context.Context, aiOpts AIOptsType) error {
 	txErr := WithTx(ctx, func(tx *TxWrap) error {
 		query := `UPDATE client SET aiopts = ?`
 		tx.Exec(query, jsonData)
+		// Verify the update
+		var storedJSON string
+		tx.Get(&storedJSON, `SELECT aiopts FROM client`)
+		log.Printf("[UpdateClientAIOpts] Stored JSON after update: %s", storedJSON)
 		return nil
 	})
 	if txErr != nil {

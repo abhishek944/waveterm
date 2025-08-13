@@ -735,22 +735,22 @@ class InputModel {
         if (commandStr.trim() == "") {
             return;
         }
-        
+
         // Prefix command based on mode
         const isAgentMode = this.globalModel.isAgentMode.get();
         const isThreadMode = this.globalModel.isThreadMode.get();
-        
+
         if (isAgentMode && !commandStr.startsWith("/agent ")) {
             commandStr = "/agent " + commandStr;
         } else if (isThreadMode && !commandStr.startsWith("/thread ")) {
             commandStr = "/thread " + commandStr;
         }
-        
+
         mobx.action(() => {
             this.resetInput();
             // Don't toggle off agent mode here - it will be toggled off after response is received
         })();
-        
+
         this.globalModel.submitRawCommand(commandStr, true, true, isAgentMode, isThreadMode);
     }
 

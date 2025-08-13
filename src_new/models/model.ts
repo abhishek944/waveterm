@@ -160,6 +160,12 @@ class Model {
     aiProvider: OV<string> = mobx.observable.box("", {
         name: "aiProvider",
     });
+    // Thread selection
+    activeThreadId: OV<string> = mobx.observable.box("", { name: "activeThreadId" });
+    threadsByScreen: OMap<string, Array<{ threadid: string; name: string }>> = mobx.observable.map(
+        {},
+        { name: "threadsByScreen", deep: false }
+    );
 
     private constructor() {
         this.clientId = getApi().getId();
@@ -231,6 +237,21 @@ class Model {
             lineHeightSm: 13,
             pad: 7,
         };
+        
+        // Monitor active screen changes when thread mode is active
+        mobx.reaction(
+            () => ({
+                activeScreen: this.getActiveScreen(),
+                isThreadMode: this.isThreadMode.get()
+            }),
+            ({ activeScreen, isThreadMode }) => {
+                if (isThreadMode && activeScreen) {
+                    // Request threads list for the new active screen
+                    this.submitCommand("_requestthreads", null, null, { screenid: activeScreen.screenId }, false);
+                }
+            },
+            { fireImmediately: false }
+        );
     }
 
     readConfigKeybindings() {
@@ -449,8 +470,26 @@ class Model {
             if (this.isAgentMode.get()) {
                 this.isAgentMode.set(false);
             }
-            this.isThreadMode.set(!this.isThreadMode.get());
+            const newThreadModeState = !this.isThreadMode.get();
+            this.isThreadMode.set(newThreadModeState);
+            
+            // If enabling thread mode, request threads list for the active screen
+            if (newThreadModeState) {
+                const activeScreen = this.getActiveScreen();
+                if (activeScreen) {
+                    // Send command to fetch threads list
+                    this.submitCommand("_requestthreads", null, null, { screenid: activeScreen.screenId }, false);
+                }
+            }
         })();
+    }
+
+    setActiveThreadId(threadId: string) {
+        mobx.action(() => this.activeThreadId.set(threadId))();
+    }
+
+    getActiveThreadId(): string {
+        return this.activeThreadId.get();
     }
 
     toggleAgentMode(): void {
@@ -1144,7 +1183,9 @@ class Model {
                 } else if (update.clientdata != null) {
                     console.log("[Model.runUpdate_internal] Received clientdata update:", update.clientdata);
                     console.log("[Model.runUpdate_internal] clientdata.aiopts:", update.clientdata.aiopts);
+                    console.log("[Model.runUpdate_internal] Before setClientData - current aiopts:", this.clientData.get()?.aiopts);
                     this.setClientData(update.clientdata);
+                    console.log("[Model.runUpdate_internal] After setClientData - new aiopts:", this.clientData.get()?.aiopts);
                 } else if (update.cmdline != null) {
                     this.inputModel.updateCmdLine(update.cmdline);
                 } else if (update.openaicmdinfochat != null) {
@@ -1163,6 +1204,31 @@ class Model {
                         // If enabling thread mode and agent mode is active, turn off agent mode
                         if (update.threadmodetoggle.enabled && this.isAgentMode.get()) {
                             this.isAgentMode.set(false);
+                        }
+                    })();
+                } else if ((update as any).threads != null) {
+                    const u: any = (update as any).threads;
+                    mobx.action(() => {
+                        const threads = u.items ?? [];
+                        this.threadsByScreen.set(u.screenid, threads);
+                        
+                        // If thread mode is active and no thread is selected, select the latest thread
+                        if (this.isThreadMode.get() && threads.length > 0) {
+                            const currentThreadId = this.activeThreadId.get();
+                            const activeScreen = this.getActiveScreen();
+                            
+                            // Only auto-select if:
+                            // 1. No thread is currently selected, OR
+                            // 2. Current thread no longer exists (was deleted), OR  
+                            // 3. This is for the active screen and we're switching from "new-thread"
+                            if (activeScreen && activeScreen.screenId === u.screenid) {
+                                const threadExists = threads.some((t: any) => t.threadid === currentThreadId);
+                                if (!currentThreadId || currentThreadId === "new-thread" || !threadExists) {
+                                    // Select the first thread (most recent, since threads are ordered by updatedts DESC)
+                                    const latestThread = threads[0];
+                                    this.activeThreadId.set(latestThread.threadid);
+                                }
+                            }
                         }
                     })();
                 } else if (update.screenstatusindicator != null) {
@@ -1410,6 +1476,8 @@ class Model {
     }
 
     setClientData(clientData: ClientDataType) {
+        console.log("[Model.setClientData] Called with clientData:", clientData);
+        console.log("[Model.setClientData] clientData.aiopts:", clientData?.aiopts);
         let curClientDataIsNull = this.clientData.get() == null;
         let newFontFamily = clientData?.feopts?.termfontfamily;
         if (newFontFamily == null) {
@@ -1428,9 +1496,11 @@ class Model {
         }
         const themeUpdated = newTheme != this.getThemeSource();
         mobx.action(() => {
+            console.log("[Model.setClientData] Inside mobx.action - setting clientData");
             this.clientData.set(clientData);
             // Load saved AI provider from config
             const savedProvider = clientData?.aiopts?.default;
+            console.log("[Model.setClientData] savedProvider:", savedProvider);
             if (savedProvider != null) {
                 this.aiProvider.set(savedProvider);
             }
@@ -1702,6 +1772,10 @@ class Model {
             const provider = this.aiProvider.get();
             if (provider && provider !== "") {
                 pk.kwargs["provider"] = provider;
+            }
+            const threadId = this.activeThreadId.get();
+            if (threadId) {
+                pk.kwargs["threadid"] = threadId;
             }
         }
 

@@ -19,6 +19,13 @@ import * as appconst from "@/appconst";
 import { AutocompleteSuggestionView } from "@/components/workspace";
 import { AIProviderDropdown } from "@/components/workspace";
 import { Button } from "@/components/ui/button";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 
 dayjs.extend(localizedFormat);
 
@@ -152,12 +159,15 @@ export const CmdInput: React.FC = observer(() => {
     const inputPosition = GlobalModel.inputPosition.get();
     const isAgentMode = GlobalModel.isAgentMode.get();
     const isThreadMode = GlobalModel.isThreadMode.get();
+    const activeScreenId = screen?.screenId;
+    const threads = activeScreenId ? GlobalModel.threadsByScreen.get(activeScreenId) ?? [] : [];
+    const activeThreadId = GlobalModel.activeThreadId.get();
 
     return (
         <div
             ref={cmdInputRef}
             className={clsx(
-                "max-h-[max(300px,40%)] flex flex-col w-full z-[100] rounded-md relative border border-[var(--app-border-color)]",
+                "max-h-[max(300px,40%)] flex flex-col w-full z-20 rounded-md relative border border-[var(--app-border-color)]",
                 {
                     "has-history": openView === appconst.InputAuxView_History,
                     "agent-mode": isAgentMode,
@@ -253,6 +263,30 @@ export const CmdInput: React.FC = observer(() => {
                                 )}
                             </span>
                             {(isThreadMode || isAgentMode) && <AIProviderDropdown />}
+                            {isThreadMode && (
+                                <Select value={activeThreadId || "new-thread"} onValueChange={(value) => {
+                                    if (value === "new-thread") {
+                                        GlobalModel.setActiveThreadId(null);
+                                    } else {
+                                        GlobalModel.setActiveThreadId(value);
+                                    }
+                                }}>
+                                    <SelectTrigger 
+                                        className="ml-2 h-6 px-2 text-xs bg-black border border-gray-600 rounded min-w-[120px]"
+                                        onMouseDown={(e) => e.stopPropagation()}
+                                    >
+                                        <SelectValue placeholder="New Thread…" />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-black/100 border border-gray-600 text-white text-xs z-50">
+                                        <SelectItem value="new-thread">New Thread…</SelectItem>
+                                        {threads.map((t) => (
+                                            <SelectItem key={t.threadid} value={t.threadid}>
+                                                {t.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            )}
                         </div>
                     </div>
                 </If>

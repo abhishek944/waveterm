@@ -5,7 +5,11 @@ package sstore
 
 import (
 	"context"
+	"fmt"
 	"time"
+
+	"github.com/abhishek944/waveterm/wavesrv/pkg/dbutil"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/scbase"
 )
 
 // ThreadModeToggleType is used to toggle thread mode on/off
@@ -42,11 +46,14 @@ func makeNewLineThreadMode(screenId string, userId string, lineId string) *LineT
 	return rtn
 }
 
-// GetThreadModeLines retrieves all thread mode lines for a screen
-// For now, returns empty list - can be implemented later when needed
-func GetThreadModeLines(ctx context.Context, screenId string) ([]*ThreadLineType, error) {
-	// TODO: Implement actual retrieval from database
-	return []*ThreadLineType{}, nil
+// GetThreadLinesByThread retrieves all thread lines for a given thread
+func GetThreadLinesByThread(ctx context.Context, threadId string) ([]*ThreadLineType, error) {
+	return WithTxRtn(ctx, func(tx *TxWrap) ([]*ThreadLineType, error) {
+		query := `SELECT tl.screenid, tl.lineid, tl.linenum, tl.userquery, tl.assistantresponse, tl.command
+                  FROM thread_line tl WHERE tl.threadid = ? ORDER BY tl.linenum`
+		rtn := dbutil.SelectMappable[*ThreadLineType](tx, query, threadId)
+		return rtn, nil
+	})
 }
 
 // ThreadLineType represents a thread mode conversation line
@@ -59,20 +66,126 @@ type ThreadLineType struct {
 	Command           string `json:"command,omitempty"`
 }
 
+func (ThreadLineType) UseDBMap() {}
+
+// ThreadsUpdateType is sent to the frontend with the list of threads for a screen
+type ThreadsUpdateType struct {
+	ScreenId string              `json:"screenid"`
+	Items    []map[string]string `json:"items"`
+}
+
+func (ThreadsUpdateType) GetType() string { return "threads" }
+
 // UpdateThreadLineUserQuery updates the user query for a thread line
-func UpdateThreadLineUserQuery(ctx context.Context, screenId string, lineId string, userQuery string) error {
-	// TODO: Implement actual update to database
-	return nil
+func UpdateThreadLineUserQuery(ctx context.Context, threadId string, screenId string, lineId string, userQuery string) error {
+	return WithTx(ctx, func(tx *TxWrap) error {
+		query := `UPDATE thread_line SET userquery = ? WHERE threadid = ? AND screenid = ? AND lineid = ?`
+		tx.Exec(query, userQuery, threadId, screenId, lineId)
+		return nil
+	})
 }
 
 // UpdateThreadLineAssistantResponse updates the assistant response for a thread line
-func UpdateThreadLineAssistantResponse(ctx context.Context, screenId string, lineId string, response string) error {
-	// TODO: Implement actual update to database
-	return nil
+func UpdateThreadLineAssistantResponse(ctx context.Context, threadId string, screenId string, lineId string, response string) error {
+	return WithTx(ctx, func(tx *TxWrap) error {
+		query := `UPDATE thread_line SET assistantresponse = ? WHERE threadid = ? AND screenid = ? AND lineid = ?`
+		tx.Exec(query, response, threadId, screenId, lineId)
+		return nil
+	})
 }
 
 // UpdateThreadLineCommand updates the command for a thread line
-func UpdateThreadLineCommand(ctx context.Context, screenId string, lineId string, command string) error {
-	// TODO: Implement actual update to database
-	return nil
+func UpdateThreadLineCommand(ctx context.Context, threadId string, screenId string, lineId string, command string) error {
+	return WithTx(ctx, func(tx *TxWrap) error {
+		query := `UPDATE thread_line SET command = ? WHERE threadid = ? AND screenid = ? AND lineid = ?`
+		tx.Exec(query, command, threadId, screenId, lineId)
+		return nil
+	})
+}
+
+// Thread data model
+type ThreadType struct {
+	ThreadId  string `json:"threadid"`
+	SessionId string `json:"sessionid"`
+	ScreenId  string `json:"screenid"`
+	Name      string `json:"name"`
+	CreatedTs int64  `json:"createdts"`
+	UpdatedTs int64  `json:"updatedts"`
+	Archived  bool   `json:"archived"`
+}
+
+func (ThreadType) UseDBMap() {}
+
+// CountThreadsForScreen counts the number of threads (including archived) for a screen
+func CountThreadsForScreen(ctx context.Context, screenId string) (int, error) {
+	return WithTxRtn(ctx, func(tx *TxWrap) (int, error) {
+		query := `SELECT COUNT(*) FROM thread WHERE screenid = ?`
+		var count int
+		tx.Get(&count, query, screenId)
+		return count, nil
+	})
+}
+
+// CreateThread creates a new thread for a screen
+func CreateThread(ctx context.Context, sessionId string, screenId string, name string) (*ThreadType, error) {
+	// If name is empty or "Thread", auto-generate a name
+	if name == "" || name == "Thread" {
+		count, err := CountThreadsForScreen(ctx, screenId)
+		if err != nil {
+			// If we can't get the count, default to "thread-1"
+			name = "thread-1"
+		} else {
+			// Generate name based on count + 1
+			name = fmt.Sprintf("thread-%d", count+1)
+		}
+	}
+
+	now := time.Now().UnixMilli()
+	thread := &ThreadType{
+		ThreadId:  scbase.GenWaveUUID(),
+		SessionId: sessionId,
+		ScreenId:  screenId,
+		Name:      name,
+		CreatedTs: now,
+		UpdatedTs: now,
+		Archived:  false,
+	}
+	err := WithTx(ctx, func(tx *TxWrap) error {
+		query := `INSERT INTO thread (threadid, sessionid, screenid, name, createdts, updatedts, archived)
+                  VALUES (:threadid, :sessionid, :screenid, :name, :createdts, :updatedts, :archived)`
+		tx.NamedExec(query, dbutil.ToDBMap(thread, false))
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return thread, nil
+}
+
+// ListThreads lists threads for a screen
+func ListThreads(ctx context.Context, screenId string) ([]*ThreadType, error) {
+	return WithTxRtn(ctx, func(tx *TxWrap) ([]*ThreadType, error) {
+		query := `SELECT * FROM thread WHERE screenid = ? AND NOT archived ORDER BY updatedts DESC`
+		rtn := dbutil.SelectMappable[*ThreadType](tx, query, screenId)
+		return rtn, nil
+	})
+}
+
+// AddThreadLine associates a line with a thread
+func AddThreadLine(ctx context.Context, threadId string, screenId string, line *LineType) error {
+	return WithTx(ctx, func(tx *TxWrap) error {
+		query := `INSERT INTO thread_line (threadid, screenid, lineid, linenum) VALUES (?, ?, ?, ?)`
+		tx.Exec(query, threadId, screenId, line.LineId, line.LineNum)
+		tx.Exec(`UPDATE thread SET updatedts = ? WHERE threadid = ?`, time.Now().UnixMilli(), threadId)
+		return nil
+	})
+}
+
+// GetThreadById fetches a thread by id
+func GetThreadById(ctx context.Context, threadId string) (*ThreadType, error) {
+	return WithTxRtn(ctx, func(tx *TxWrap) (*ThreadType, error) {
+		query := `SELECT * FROM thread WHERE threadid = ?`
+		thread := dbutil.GetMappable[*ThreadType](tx, query, threadId)
+		return thread, nil
+	})
 }

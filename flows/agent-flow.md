@@ -9,26 +9,29 @@ Agent Mode is a special input mode that allows users to interact with AI directl
 ## Key Components
 
 ### Frontend Files
-- **src_new/models/model.ts** - Main model containing agent mode state
-- **src_new/models/input.ts** - Handles input submission and command prefixing
-- **src_new/components/workspace/cmdinput/cmdinput.tsx** - UI component showing agent mode indicator
-- **src_new/components/line/linecomps.tsx** - Line rendering component that handles "agent_mode" line type
-- **assets/default-keybindings.json** - Defines Cmd+O keybinding for agent mode
-- **src_new/types/custom.d.ts** - TypeScript type definitions
+
+-   **src_new/models/model.ts** - Main model containing agent mode state and PTY update dispatch
+-   **src_new/models/input.ts** - Handles input submission and command prefixing
+-   **src_new/components/workspace/cmdinput/cmdinput.tsx** - UI component showing agent mode indicator
+-   **src_new/components/line/linecomps.tsx** - Line rendering. For `agent_mode`, uses a custom `AgentModeRenderer` that streams via a lightweight `RendererModel`
+-   **assets/default-keybindings.json** - Defines Cmd+O keybinding for agent mode
+-   **src_new/types/custom.d.ts** - TypeScript type definitions
 
 ### Backend Files
-- **wavesrv/pkg/cmdrunner/cmdrunner.go** - Main command runner, contains AgentCommand function
-- **wavesrv/pkg/cmdrunner/ai-cmd-runner.go** - AI integration logic
-- **wavesrv/pkg/sstore/sstore.go** - Storage types and constants
-- **wavesrv/pkg/sstore/updatetypes.go** - Update packet types
-- **wavesrv/pkg/prompts/agent-prompt.go** - System prompt for agent mode
-- **wavesrv/pkg/telemetry/telemetry.go** - Telemetry tracking
+
+-   **wavesrv/pkg/cmdrunner/cmdrunner.go** - Main command runner, contains AgentCommand function
+-   **wavesrv/pkg/cmdrunner/ai-cmd-runner.go** - AI integration logic
+-   **wavesrv/pkg/sstore/sstore.go** - Storage types and constants
+-   **wavesrv/pkg/sstore/updatetypes.go** - Update packet types
+-   **wavesrv/pkg/prompts/agent-prompt.go** - System prompt for agent mode
+-   **wavesrv/pkg/telemetry/telemetry.go** - Telemetry tracking
 
 ## Detailed Flow
 
 ### 1. Activation (User presses Cmd+O)
 
 **File: src_new/models/model.ts**
+
 ```typescript
 // Line ~300: Keybinding registration
 keybindManager.registerKeybinding("pane", "app", "app:toggleAgentMode", (waveEvent) => {
@@ -50,6 +53,7 @@ toggleAgentMode(): void {
 ### 2. UI Updates
 
 **File: src_new/components/workspace/cmdinput/cmdinput.tsx**
+
 ```typescript
 // Line ~201: Agent mode class applied to cmd-input
 <div className={clsx("cmd-input", { "agent-mode": isAgentMode })}>
@@ -63,6 +67,7 @@ toggleAgentMode(): void {
 ### 3. User Input Submission
 
 **File: src_new/models/input.ts**
+
 ```typescript
 // Lines ~735-756: uiSubmitCommand function
 uiSubmitCommand(): void {
@@ -70,20 +75,20 @@ uiSubmitCommand(): void {
     if (commandStr.trim() == "") {
         return;
     }
-    
+
     const isAgentMode = this.globalModel.isAgentMode.get();
     const isThreadMode = this.globalModel.isThreadMode.get();
-    
+
     // Prefix command with /agent if in agent mode
     if (isAgentMode && !commandStr.startsWith("/agent ")) {
         commandStr = "/agent " + commandStr;
     }
-    
+
     mobx.action(() => {
         this.resetInput();
         // Don't toggle off agent mode here - it will be toggled off after response
     })();
-    
+
     this.globalModel.submitRawCommand(commandStr, true, true, isAgentMode, isThreadMode);
 }
 ```
@@ -91,6 +96,7 @@ uiSubmitCommand(): void {
 ### 4. Command Processing
 
 **File: src_new/models/model.ts**
+
 ```typescript
 // Lines ~1638-1669: submitRawCommand
 submitRawCommand(cmdStr: string, addToHistory: boolean, interactive: boolean, isAgentMode?: boolean, isThreadMode?: boolean): Promise<CommandRtnType> {
@@ -103,7 +109,7 @@ submitRawCommand(cmdStr: string, addToHistory: boolean, interactive: boolean, is
         interactive: interactive,
         rawstr: cmdStr,
     };
-    
+
     if (isAgentMode) {
         pk.kwargs["agentmode"] = "1";
         const provider = this.aiProvider.get();
@@ -111,7 +117,7 @@ submitRawCommand(cmdStr: string, addToHistory: boolean, interactive: boolean, is
             pk.kwargs["provider"] = provider;
         }
     }
-    
+
     return this.submitCommandPacket(pk, interactive);
 }
 ```
@@ -119,6 +125,7 @@ submitRawCommand(cmdStr: string, addToHistory: boolean, interactive: boolean, is
 ### 5. Backend Command Routing
 
 **File: wavesrv/pkg/cmdrunner/cmdrunner.go**
+
 ```typescript
 // Line ~274: Command registration
 registerCmdFn("agent", AgentCommand)
@@ -133,6 +140,7 @@ func EvalMetaCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scb
 ### 6. Agent Command Execution
 
 **File: wavesrv/pkg/cmdrunner/cmdrunner.go**
+
 ```go
 // Lines ~2720-2838: AgentCommand function
 func AgentCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {
@@ -147,15 +155,15 @@ func AgentCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.
         Status:    sstore.CmdStatusDone, // Set as done, not running
         RunOut:    nil,
     }
-    
+
     // Add agent mode line
     line, err := sstore.AddAgentModeLine(ctx, ids.ScreenId, DefaultUserId, cmd)
-    
+
     // Run agent mode in goroutine
     go func() {
         response, err := RunAgentMode(ctx, pk, clientData, promptStr, provider)
         // Handle streaming response...
-        
+
         // When done, send toggle update
         if !ok {
             update := scbus.MakeUpdatePacket()
@@ -170,6 +178,7 @@ func AgentCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.
 ### 7. Line Creation
 
 **File: wavesrv/pkg/sstore/sstore.go**
+
 ```go
 // Lines ~59-62: Line type constants
 const (
@@ -197,6 +206,7 @@ func makeNewLineAgentMode(screenId string, userId string, lineId string) *LineTy
 ### 8. AI Processing
 
 **File: wavesrv/pkg/cmdrunner/ai-cmd-runner.go**
+
 ```go
 // Lines ~180-202: RunAgentMode
 func RunAgentMode(ctx context.Context, pk *scpacket.FeCommandPacketType, clientData *sstore.ClientData, prompt string, provider string) (*AIResponse, error) {
@@ -210,7 +220,7 @@ func RunAgentMode(ctx context.Context, pk *scpacket.FeCommandPacketType, clientD
             Content: prompt,
         },
     }
-    
+
     request := &AIRequest{
         Mode:      AIModeAgent,
         Prompt:    agentPrompt,
@@ -218,34 +228,57 @@ func RunAgentMode(ctx context.Context, pk *scpacket.FeCommandPacketType, clientD
         Context:   ctx,
         Provider:  provider,
     }
-    
+
     return RunAICompletion(ctx, clientData, request)
 }
 ```
 
-### 9. Frontend Line Rendering
+### 9. Frontend Line Rendering (Agent Mode)
 
 **File: src_new/components/line/linecomps.tsx**
+
 ```typescript
-// Lines ~1008-1016: Line component routing
-render() {
-    const line = this.props.line;
-    if (line.archived) {
-        return null;
-    }
-    if (line.linetype == "text") {
-        return <LineText {...this.props} />;
-    }
-    if (line.linetype == "cmd" || line.linetype == "agent_mode") {
-        return <LineCmd {...this.props} />;
-    }
-    return <div className="line line-invalid">[invalid line type '{line.linetype}']</div>;
-}
+// Inside LineContent: route agent_mode to AgentModeRenderer
+<Choose>
+  <When condition={rendererPlugin == null && line.renderer !== "none"}>
+    <Choose>
+      <When condition={line.linetype == "agent_mode"}>
+        <AgentModeRenderer
+          screen={screen}
+          line={line}
+          width={width}
+          onHeightChange={onHeightChange}
+        />
+      </When>
+      <Otherwise>
+        <TerminalRenderer ... />
+      </Otherwise>
+    </Choose>
+  </When>
+</Choose>
+
+// AgentModeRenderer registers a lightweight RendererModel so PTY chunks
+// are delivered through Screen.updatePtyData(renderer.receiveData)
+const model: RendererModel = {
+  initialize: () => {},
+  dispose: () => {},
+  reload: () => {},
+  giveFocus: () => {},
+  updateOpts: () => {},
+  setIsDone: () => {},
+  receiveData: (pos, data) => {
+    const chunk = new TextDecoder().decode(data);
+    setContent(prev => prev + chunk);
+  },
+  updateHeight: () => {},
+};
+screen.registerRenderer(line.lineid, model);
 ```
 
 ### 10. Agent Mode Toggle Off
 
 **File: wavesrv/pkg/sstore/updatetypes.go**
+
 ```go
 // Lines ~169-176: AgentModeToggleType
 type AgentModeToggleType struct {
@@ -258,6 +291,7 @@ func (AgentModeToggleType) GetType() string {
 ```
 
 **File: src_new/models/model.ts**
+
 ```typescript
 // Lines ~1140-1147: Update handler
 } else if (update.agentmodetoggle != null) {
@@ -273,11 +307,11 @@ func (AgentModeToggleType) GetType() string {
 
 ## Key Features
 
-1. **Non-Running Line Behavior**: Agent mode commands don't show as "running" - they're created with `CmdStatusDone`
+1. **Non-Running Line Behavior**: Agent mode lines are created with `CmdStatusDone`
 2. **Mode Persistence**: Agent mode stays active during AI processing
 3. **Auto Toggle Off**: Mode automatically turns off after response completion
 4. **Provider Selection**: Supports multiple AI providers (OpenAI, Gemini, Azure)
-5. **Streaming Response**: AI responses are streamed back in real-time
+5. **Streaming Response**: AI responses stream back via PTY and render live in `AgentModeRenderer` (Markdown)
 
 ## Data Flow Summary
 
@@ -286,8 +320,17 @@ func (AgentModeToggleType) GetType() string {
 3. Command sent to backend � Routed to `AgentCommand` function
 4. Agent line created (type: "agent_mode") � Not shown as "running"
 5. AI provider called � Response streamed back
-6. Response written to PTY � Displayed in terminal
+6. Response written to PTY � Delivered to frontend `Screen.updatePtyData` and rendered in `AgentModeRenderer`
 7. On completion � Backend sends `agentmodetoggle` update
 8. Frontend receives update � Agent mode toggled off
+
+### Debug logging notes
+
+-   Frontend:
+    -   Model: `[Model.updatePtyData]` logs PTY pos/len and active line resolution
+    -   Screen: `[Screen.updatePtyData]` logs whether a renderer or terminal exists for the line
+    -   AgentModeRenderer: logs initial preload length and per-chunk receipt
+-   Backend:
+    -   Agent runner: logs stream start, per-chunk writes, timeouts, and stream close
 
 This architecture ensures a seamless experience where users can quickly get AI assistance without the command appearing as a traditional "running" command, and the mode automatically resets after each use.
