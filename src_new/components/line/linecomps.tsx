@@ -59,36 +59,64 @@ const AgentModeRenderer: React.FC<{
 }> = observer(({ screen, line, width, onHeightChange }) => {
     const [content, setContent] = React.useState("");
     const [loading, setLoading] = React.useState(true);
+    const modelRef = React.useRef<RendererModel | null>(null);
+    const decoderRef = React.useRef(new TextDecoder());
 
     React.useEffect(() => {
-        const loadContent = async () => {
-            const cmd = screen.getCmd(line);
-            if (!cmd) {
-                setLoading(false);
-                return;
-            }
+        // Register a lightweight renderer to receive PTY streaming
+        const model: RendererModel = {
+            initialize: (_params) => {},
+            dispose: () => {},
+            reload: (_delayMs: number) => {},
+            giveFocus: () => {},
+            updateOpts: (_opts) => {},
+            setIsDone: () => {},
+            receiveData: (pos: number, data: Uint8Array) => {
+                const chunk = decoderRef.current.decode(data);
+                if ((GlobalModel as any).isDev) {
+                    console.log("[AgentModeRenderer] receiveData", { pos, chunkLen: chunk.length });
+                }
+                setContent((prev) => prev + chunk);
+            },
+            updateHeight: (_newHeight: number) => {},
+        };
+        modelRef.current = model;
+        screen.registerRenderer(line.lineid, model);
+
+        // Preload existing PTY buffer
+        (async () => {
             try {
+                const cmd = screen.getCmd(line);
+                if (!cmd) {
+                    setLoading(false);
+                    return;
+                }
                 const termContext = { screenId: cmd.screenId, lineId: line.lineid, lineNum: line.linenum };
                 const ptyDataResult = await getTermPtyData(termContext);
                 if (ptyDataResult?.data) {
-                    const decoder = new TextDecoder();
-                    const newContent = decoder.decode(ptyDataResult.data);
-                    setContent(newContent);
+                    const initial = decoderRef.current.decode(ptyDataResult.data);
+                    console.log("[AgentModeRenderer] initial content length:", initial.length);
+                    setContent(initial);
                 }
             } catch (err) {
-                console.error("Error loading agent mode content:", err);
+                console.error("[AgentModeRenderer] error preloading content:", err);
             } finally {
                 setLoading(false);
             }
+        })();
+
+        return () => {
+            // Unregister renderer
+            screen.unloadRenderer(line.lineid);
+            modelRef.current = null;
         };
-        loadContent();
     }, [screen, line]);
 
     React.useEffect(() => {
         if (!loading) {
             const elem = document.querySelector(`[data-lineid="${line.lineid}"] .agent-mode-content`);
             if (elem) {
-                onHeightChange(line.linenum, elem.scrollHeight, 0);
+                onHeightChange(line.linenum, (elem as HTMLElement).scrollHeight, 0);
             }
         }
     }, [loading, content, line.lineid, line.linenum, onHeightChange]);
@@ -96,26 +124,14 @@ const AgentModeRenderer: React.FC<{
     const fontSize = GlobalModel.getTermFontSize();
     const fontFamily = GlobalModel.getTermFontFamily();
 
-    if (loading) {
-        return (
-            <div className="bg-white/2 rounded-md my-1 p-2.5" style={{ fontSize: fontSize, fontFamily: fontFamily }}>
-                <div className="text-white/50 italic">Loading...</div>
-            </div>
-        );
-    }
-
-    if (!content) {
-        return (
-            <div className="bg-white/2 rounded-md my-1 p-2.5" style={{ fontSize: fontSize, fontFamily: fontFamily }}>
-                <div className="text-white/50 italic">No content available</div>
-            </div>
-        );
-    }
-
     return (
         <div className="bg-white/2 rounded-md my-1" style={{ fontSize: fontSize, fontFamily: fontFamily }}>
             <div className="p-2.5 agent-mode-content">
-                <Markdown text={content} onClickExecute={(cmd) => GlobalModel.submitRawCommand(cmd, false, true)} />
+                {loading && <div className="text-white/50 italic">Loading...</div>}
+                {!loading && content === "" && <div className="text-white/50 italic">No content available</div>}
+                {!loading && content !== "" && (
+                    <Markdown text={content} onClickExecute={(cmd) => GlobalModel.submitRawCommand(cmd, false, true)} />
+                )}
             </div>
         </div>
     );
@@ -613,14 +629,14 @@ const LineHeader: React.FC<{ line: LineType; cmd: Cmd }> = observer(({ line, cmd
         const isMultiLine = lineutil.isMultiLineCmdText(cmd.getCmdStr());
         return (
             <>
-            <div
-                className={clsx("overflow-auto max-h-24 whitespace-pre text-gray-300 font-bold w-full", {
-                    "border-l-2 border-gray-600 ml-1 pl-2": isMultiLine,
-                })}
-            >
-                {lineutil.getFullCmdText(cmd.getCmdStr())}
-            </div>
-            <br></br>
+                <div
+                    className={clsx("overflow-auto max-h-24 whitespace-pre text-gray-300 font-bold w-full", {
+                        "border-l-2 border-gray-600 ml-1 pl-2": isMultiLine,
+                    })}
+                >
+                    {lineutil.getFullCmdText(cmd.getCmdStr())}
+                </div>
+                <br></br>
             </>
         );
     };

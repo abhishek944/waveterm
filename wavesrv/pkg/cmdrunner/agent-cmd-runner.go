@@ -25,16 +25,16 @@ func AgentCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.
 	if err != nil {
 		return nil, fmt.Errorf("cannot retrieve client data: %v", err)
 	}
-	
+
 	// Get the prompt from args
 	promptStr := strings.Join(pk.Args, " ")
 	if promptStr == "" {
 		return nil, fmt.Errorf("agent error, prompt string is blank")
 	}
-	
+
 	// Get provider from UI (defaults to empty string to use configured default)
 	provider := pk.Kwargs["provider"]
-	
+
 	// Get terminal options
 	ptermVal := defaultStr(pk.Kwargs["wterm"], DefaultPTERM)
 	pkTermOpts, err := GetUITermOpts(pk.UIContext.WinSize, ptermVal)
@@ -42,7 +42,7 @@ func AgentCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.
 		return nil, fmt.Errorf("agent error, invalid 'pterm' value %q: %v", ptermVal, err)
 	}
 	termOpts := convertTermOpts(pkTermOpts)
-	
+
 	// Create command for agent mode (not a running command)
 	cmd := &sstore.CmdType{
 		ScreenId:  ids.ScreenId,
@@ -64,15 +64,15 @@ func AgentCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.
 	if err != nil {
 		return nil, fmt.Errorf("cannot create ptyout file for agent command: %w", err)
 	}
-	
+
 	// Add agent mode line
 	line, err := sstore.AddAgentModeLine(ctx, ids.ScreenId, DefaultUserId, cmd)
 	if err != nil {
 		return nil, fmt.Errorf("cannot add new line: %v", err)
 	}
-	
+
 	// sendRendererActivityUpdate("agent_mode")
-	
+
 	// Run agent mode
 	go func() {
 		// Create a new context that won't be canceled when the parent function returns
@@ -82,12 +82,12 @@ func AgentCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.
 			writeErrorToPty(cmd, fmt.Sprintf("agent error: %v", err), 0)
 			return
 		}
-		
+
 		// Handle streaming response
 		if response.Stream != nil {
 			var outputPos int64
 			packetTimeout := OpenAIPacketTimeout
-			
+
 			for {
 				select {
 				case <-time.After(packetTimeout):
@@ -107,7 +107,7 @@ func AgentCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.
 						scbus.MainUpdateBus.DoUpdate(update)
 						return
 					}
-					
+
 					// Extract and write only the text content to PTY
 					if pk.Error != "" {
 						writeErrorToPty(cmd, pk.Error, outputPos)
@@ -126,7 +126,7 @@ func AgentCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.
 			}
 		}
 	}()
-	
+
 	// Update screen
 	updateHistoryContext(ctx, line, cmd, nil)
 	updateMap := make(map[string]interface{})
@@ -136,7 +136,7 @@ func AgentCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.
 	if err != nil {
 		log.Printf("agent error updating screen selected line: %v\n", err)
 	}
-	
+
 	update := scbus.MakeUpdatePacket()
 	sstore.AddLineUpdate(update, line, cmd)
 	update.AddUpdate(*screen)

@@ -461,7 +461,7 @@ class Model {
             }
             const newAgentModeState = !this.isAgentMode.get();
             this.isAgentMode.set(newAgentModeState);
-            
+
             // When turning on agent mode, ensure the AI provider is set from client settings
             if (newAgentModeState) {
                 const clientData = this.clientData.get();
@@ -1667,7 +1667,13 @@ class Model {
         return this.submitCommandPacket(pk, interactive);
     }
 
-    submitRawCommand(cmdStr: string, addToHistory: boolean, interactive: boolean, isAgentMode?: boolean, isThreadMode?: boolean): Promise<CommandRtnType> {
+    submitRawCommand(
+        cmdStr: string,
+        addToHistory: boolean,
+        interactive: boolean,
+        isAgentMode?: boolean,
+        isThreadMode?: boolean
+    ): Promise<CommandRtnType> {
         const pk: FeCmdPacketType = {
             type: "fecmd",
             metacmd: "eval",
@@ -1698,7 +1704,7 @@ class Model {
                 pk.kwargs["provider"] = provider;
             }
         }
-        
+
         return this.submitCommandPacket(pk, interactive);
     }
 
