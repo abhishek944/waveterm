@@ -33,7 +33,7 @@ const MainView: React.FC<MainViewProps> = observer(({
                 "pl-14": sidebarModel.getCollapsed() && GlobalModel.getPlatform() !== "darwin"
             })}>
                 <header className="flex items-center justify-between h-[38px] px-2.5 select-none app-region-drag">
-                    <h2 className="text-lg font-semibold text-green-500 px-2.5 leading-[38px] align-middle">{title}</h2>
+                    {/* <h2 className="text-lg font-semibold text-green-500 px-2.5 leading-[38px] align-middle"></h2> */}
                     <button 
                         onClick={onClose} 
                         title="Close (Escape)" 

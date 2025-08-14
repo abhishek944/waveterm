@@ -25,20 +25,8 @@ import { IncrementalRenderer } from "@/plugins/core/incrementalrenderer";
 
 dayjs.extend(localizedFormat);
 
-const THREAD_STORAGE_KEY = "threadedLines";
+// Thread lines are now managed in backend database instead of localStorage
 const threadedLinesObs = mobx.observable.set<string>([], { deep: false });
-
-function initThreadedLines() {
-    const stored = localStorage.getItem(THREAD_STORAGE_KEY);
-    if (stored) {
-        const parsed = JSON.parse(stored);
-        mobx.action(() => {
-            threadedLinesObs.clear();
-            parsed.forEach((lineId: string) => threadedLinesObs.add(lineId));
-        })();
-    }
-}
-initThreadedLines();
 
 function setThreadedLine(lineID: string, added: boolean): void {
     mobx.action(() => {
@@ -47,9 +35,348 @@ function setThreadedLine(lineID: string, added: boolean): void {
         } else {
             threadedLinesObs.delete(lineID);
         }
-        localStorage.setItem(THREAD_STORAGE_KEY, JSON.stringify(Array.from(threadedLinesObs)));
+        // Note: Thread persistence is handled by backend database
     })();
 }
+
+const ThreadModeRenderer: React.FC<{
+    screen: LineContainerType;
+    line: LineType;
+    width: number;
+    onHeightChange: LineHeightChangeCallbackType;
+}> = observer(({ screen, line, width: _width, onHeightChange }) => {
+    const [content, setContent] = React.useState("");
+    const [loading, setLoading] = React.useState(true);
+    const [parsedResponse, setParsedResponse] = React.useState<{ explanation?: string; command?: string } | null>(null);
+    const modelRef = React.useRef<RendererModel | null>(null);
+    const decoderRef = React.useRef(new TextDecoder());
+    const rawContentRef = React.useRef("");
+    const isSidebar = screen.getContainerType() === appconst.LineContainer_Sidebar;
+    
+    // Track linestate changes to ensure reactivity
+    const lineState = line.linestate || {};
+    const cmdExecLineId = lineState.cmdexeclineid as string | undefined;
+    
+    console.log("[ThreadModeRenderer] Component render - cmdExecLineId:", cmdExecLineId, "lineId:", line.lineid, "lineState:", lineState);
+    
+    // Helper function to attempt JSON parsing
+    const tryParseResponse = (text: string) => {
+        try {
+            const parsed = JSON.parse(text.trim());
+            if (parsed.explanation || parsed.command) {
+                setParsedResponse(parsed);
+                return true;
+            }
+        } catch (e) {
+            // Not valid JSON
+        }
+        return false;
+    };
+
+    React.useEffect(() => {
+        console.log("[ThreadModeRenderer] useEffect triggered", {
+            lineId: line.lineid,
+            lineType: line.linetype,
+            isSidebar,
+            containerType: screen.getContainerType()
+        });
+        
+        // No special handling for sidebar view anymore - thread lines show normally in sidebar
+        // The command execution is now a separate line that gets added to sidebar
+        
+        console.log("[ThreadModeRenderer] Main view mode - registering renderer");
+        // Register a lightweight renderer to receive PTY streaming (main view only)
+        const model: RendererModel = {
+            initialize: (_params) => {
+                console.log("[ThreadModeRenderer] Renderer initialized");
+            },
+            dispose: () => {
+                console.log("[ThreadModeRenderer] Renderer disposed");
+            },
+            reload: (_delayMs: number) => {},
+            giveFocus: () => {},
+            updateOpts: (_opts) => {},
+            setIsDone: () => {},
+            receiveData: (pos: number, data: Uint8Array) => {
+                const chunk = decoderRef.current.decode(data);
+                console.log("[ThreadModeRenderer] Received data chunk", {
+                    pos,
+                    chunkLength: chunk.length,
+                    preview: chunk.substring(0, 50)
+                });
+                rawContentRef.current += chunk;
+                setContent((prev) => prev + chunk);
+                
+                // Try to parse as JSON for structured response
+                tryParseResponse(rawContentRef.current);
+            },
+            updateHeight: (_newHeight: number) => {},
+        };
+        modelRef.current = model;
+        screen.registerRenderer(line.lineid, model);
+
+        // Preload existing PTY buffer
+        (async () => {
+            try {
+                const cmd = screen.getCmd(line);
+                if (!cmd) {
+                    setLoading(false);
+                    return;
+                }
+                const termContext = { screenId: cmd.screenId, lineId: line.lineid, lineNum: line.linenum };
+                const ptyDataResult = await getTermPtyData(termContext);
+                if (ptyDataResult?.data) {
+                    const initial = decoderRef.current.decode(ptyDataResult.data);
+                    rawContentRef.current = initial;
+                    setContent(initial);
+                    
+                    // Try to parse as JSON
+                    tryParseResponse(initial);
+                }
+            } catch (err) {
+                console.error("[ThreadModeRenderer] error preloading content:", err);
+            } finally {
+                setLoading(false);
+            }
+        })();
+
+        return () => {
+            // Unregister renderer
+            if (modelRef.current) {
+                screen.unloadRenderer(line.lineid);
+                modelRef.current = null;
+            }
+        };
+    }, [screen, line, isSidebar]);
+
+    React.useEffect(() => {
+        if (!loading) {
+            const elem = document.querySelector(`[data-lineid="${line.lineid}"]`);
+            if (elem) {
+                onHeightChange(line.linenum, (elem as HTMLElement).scrollHeight, 0);
+            }
+        }
+    }, [loading, content, parsedResponse, line.lineid, line.linenum, onHeightChange]);
+    
+    // Watch for cmdexeclineid changes and update sidebar if it's showing this thread line
+    React.useEffect(() => {
+        console.log("[ThreadModeRenderer] cmdExecLineId effect triggered:", cmdExecLineId);
+        if (cmdExecLineId && !isSidebar) {
+            const activeScreen = GlobalModel.getActiveScreen();
+            if (activeScreen) {
+                const curViewOpts = activeScreen.viewOpts.get();
+                const sidebarLineId = curViewOpts?.sidebar?.sidebarlineid;
+                
+                // If sidebar is showing this thread line, update it to show the command execution
+                if (sidebarLineId === line.lineid) {
+                    console.log("[ThreadModeRenderer] Updating sidebar to show command execution line:", cmdExecLineId);
+                    const newViewOpts = {
+                        ...curViewOpts,
+                        sidebar: {
+                            ...(curViewOpts.sidebar || {}),
+                            sidebarlineid: cmdExecLineId,
+                        },
+                    };
+                    mobx.action(() => {
+                        activeScreen.viewOpts.set(newViewOpts);
+                    })();
+                    if (cmdExecLineId) {
+                        GlobalModel.submitCommand("sidebar", "add", null, { nohist: "1", line: cmdExecLineId }, false);
+                    }
+                }
+            }
+        }
+    }, [cmdExecLineId, line.lineid, isSidebar, lineState]);
+
+    const fontSize = GlobalModel.getTermFontSize();
+    const fontFamily = GlobalModel.getTermFontFamily();
+    
+    const handleCommandClick = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        
+        if (!parsedResponse?.command || isSidebar) {
+            return; // Don't open sidebar if we're already in the sidebar
+        }
+        
+        // Re-read the cmdExecLineId from line state to get the latest value
+        const latestCmdExecLineId = line.linestate?.cmdexeclineid as string | undefined;
+        console.log("[ThreadModeRenderer] handleCommandClick - cmdExecLineId:", cmdExecLineId, "latest:", latestCmdExecLineId);
+        
+        // Open sidebar immediately
+        console.log("[ThreadModeRenderer] Opening sidebar...");
+        try {
+            await GlobalModel.submitCommand("sidebar", "open", null, { nohist: "1" }, false);
+            console.log("[ThreadModeRenderer] Sidebar open command completed");
+        } catch (err) {
+            console.error("[ThreadModeRenderer] Error opening sidebar:", err);
+            return; // Don't continue if sidebar open failed
+        }
+        
+        if (latestCmdExecLineId) {
+            // We have cmdExecLineId, show command execution
+            console.log("[ThreadModeRenderer] Have cmdExecLineId, will open sidebar with it");
+            setTimeout(async () => {
+                const activeScreen = GlobalModel.getActiveScreen();
+                console.log("[ThreadModeRenderer] activeScreen:", activeScreen);
+                if (activeScreen) {
+                    const curViewOpts: any = activeScreen.viewOpts.get() || {};
+                    console.log("[ThreadModeRenderer] Current viewOpts:", curViewOpts);
+                    const newViewOpts = {
+                        ...curViewOpts,
+                        sidebar: {
+                            ...(curViewOpts.sidebar || {}),
+                            open: true,
+                            sidebarlineid: latestCmdExecLineId,
+                        },
+                    };
+                    console.log("[ThreadModeRenderer] Setting new viewOpts:", newViewOpts);
+                    mobx.action(() => {
+                        activeScreen.viewOpts.set(newViewOpts);
+                    })();
+                    if (latestCmdExecLineId) {
+                        console.log("[ThreadModeRenderer] Calling sidebar add with line:", latestCmdExecLineId);
+                        try {
+                            await GlobalModel.submitCommand("sidebar", "add", null, { nohist: "1", line: latestCmdExecLineId }, false);
+                            console.log("[ThreadModeRenderer] Sidebar add command completed");
+                        } catch (err) {
+                            console.error("[ThreadModeRenderer] Error calling sidebar add:", err);
+                        }
+                    }
+                } else {
+                    console.error("[ThreadModeRenderer] No active screen found!");
+                }
+            }, 100);
+        } else {
+            // Show the thread line in sidebar while waiting for command execution
+            // The component will re-render when cmdexeclineid is available
+            console.log("[ThreadModeRenderer] No cmdExecLineId yet, showing thread line in sidebar");
+            console.log("[ThreadModeRenderer] Line state:", line.linestate);
+            setTimeout(async () => {
+                const activeScreen = GlobalModel.getActiveScreen();
+                console.log("[ThreadModeRenderer] (else branch) activeScreen:", activeScreen);
+                if (activeScreen) {
+                    const curViewOpts: any = activeScreen.viewOpts.get() || {};
+                    const newViewOpts = {
+                        ...curViewOpts,
+                        sidebar: {
+                            ...(curViewOpts.sidebar || {}),
+                            open: true,
+                            sidebarlineid: line.lineid,
+                        },
+                    };
+                    console.log("[ThreadModeRenderer] (else branch) Setting viewOpts with thread line:", line.lineid);
+                    mobx.action(() => {
+                        activeScreen.viewOpts.set(newViewOpts);
+                    })();
+                    try {
+                        await GlobalModel.submitCommand("sidebar", "add", null, { nohist: "1", line: line.lineid }, false);
+                        console.log("[ThreadModeRenderer] (else branch) Sidebar add completed");
+                    } catch (err) {
+                        console.error("[ThreadModeRenderer] (else branch) Error:", err);
+                    }
+                }
+            }, 100);
+        }
+    };
+
+    const renderContent = () => {
+        if (loading) {
+            return <div className="text-white/50 italic">Loading...</div>;
+        }
+        
+        if (content === "") {
+            return <div className="text-white/50 italic">No content available</div>;
+        }
+        
+        // Thread lines now render the same way in both main view and sidebar
+        
+        // If we have parsed structured response, render it nicely
+        if (parsedResponse) {
+            return (
+                <>
+                    {parsedResponse.explanation && (
+                        <div className="mb-3">
+                            <Markdown 
+                                text={parsedResponse.explanation} 
+                                onClickExecute={(cmd) => GlobalModel.submitRawCommand(cmd, false, true)} 
+                            />
+                        </div>
+                    )}
+                    {parsedResponse.command && (
+                        <>
+                            <div className="text-white/50 text-xs mb-2">Command executed:</div>
+                            <div 
+                                className="mt-2 p-3 bg-black/50 rounded font-mono text-sm border border-white/10 cursor-pointer hover:bg-black/70 transition-colors"
+                                onClick={handleCommandClick}
+                                title="Click to view command execution in sidebar"
+                            >
+                                <div className="flex items-center justify-between">
+                                    <div className="text-green-400">{parsedResponse.command}</div>
+                                    <div className="text-white/30 text-xs">
+                                        <i className="fa-sharp fa-regular fa-arrow-right-to-bracket" /> View in sidebar
+                                    </div>
+                                </div>
+                            </div>
+                        </>
+                    )}
+                </>
+            );
+        }
+        
+        // Otherwise render as plain text/markdown
+        // Try to parse as JSON one more time in case it's a structured response
+        try {
+            const parsed = JSON.parse(content);
+            if (parsed.explanation || parsed.command) {
+                return (
+                    <>
+                        {parsed.explanation && (
+                            <div className="mb-3">
+                                <Markdown 
+                                    text={parsed.explanation} 
+                                    onClickExecute={(cmd) => GlobalModel.submitRawCommand(cmd, false, true)} 
+                                />
+                            </div>
+                        )}
+                        {parsed.command && (
+                            <>
+                                <div className="text-white/50 text-xs mb-2">Command executed:</div>
+                                <div 
+                                    className="mt-2 p-3 bg-black/50 rounded font-mono text-sm border border-white/10 cursor-pointer hover:bg-black/70 transition-colors"
+                                    onClick={handleCommandClick}
+                                    title="Click to view command execution in sidebar"
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <div className="text-green-400">{parsed.command}</div>
+                                        <div className="text-white/30 text-xs">
+                                            <i className="fa-sharp fa-regular fa-arrow-right-to-bracket" /> View in sidebar
+                                        </div>
+                                    </div>
+                                </div>
+                            </>
+                        )}
+                    </>
+                );
+            }
+        } catch (e) {
+            // Not JSON, render as markdown
+        }
+        
+        return (
+            <Markdown text={content} onClickExecute={(cmd) => GlobalModel.submitRawCommand(cmd, false, true)} />
+        );
+    };
+
+    return (
+        <div className="bg-white/2 rounded-md my-1 overflow-hidden" style={{ fontSize: fontSize, fontFamily: fontFamily }}>
+            <div className="p-2.5">
+                <div className="w-full" style={{ overflowWrap: 'break-word', wordBreak: 'break-word' }}>
+                    {renderContent()}
+                </div>
+            </div>
+        </div>
+    );
+});
 
 const AgentModeRenderer: React.FC<{
     screen: LineContainerType;
@@ -73,9 +400,6 @@ const AgentModeRenderer: React.FC<{
             setIsDone: () => {},
             receiveData: (pos: number, data: Uint8Array) => {
                 const chunk = decoderRef.current.decode(data);
-                if ((GlobalModel as any).isDev) {
-                    console.log("[AgentModeRenderer] receiveData", { pos, chunkLen: chunk.length });
-                }
                 setContent((prev) => prev + chunk);
             },
             updateHeight: (_newHeight: number) => {},
@@ -95,7 +419,6 @@ const AgentModeRenderer: React.FC<{
                 const ptyDataResult = await getTermPtyData(termContext);
                 if (ptyDataResult?.data) {
                     const initial = decoderRef.current.decode(ptyDataResult.data);
-                    console.log("[AgentModeRenderer] initial content length:", initial.length);
                     setContent(initial);
                 }
             } catch (err) {
@@ -125,13 +448,15 @@ const AgentModeRenderer: React.FC<{
     const fontFamily = GlobalModel.getTermFontFamily();
 
     return (
-        <div className="bg-white/2 rounded-md my-1" style={{ fontSize: fontSize, fontFamily: fontFamily }}>
+        <div className="bg-white/2 rounded-md my-1 overflow-hidden" style={{ fontSize: fontSize, fontFamily: fontFamily }}>
             <div className="p-2.5 agent-mode-content">
-                {loading && <div className="text-white/50 italic">Loading...</div>}
-                {!loading && content === "" && <div className="text-white/50 italic">No content available</div>}
-                {!loading && content !== "" && (
-                    <Markdown text={content} onClickExecute={(cmd) => GlobalModel.submitRawCommand(cmd, false, true)} />
-                )}
+                <div className="w-full" style={{ overflowWrap: 'break-word', wordBreak: 'break-word' }}>
+                    {loading && <div className="text-white/50 italic">Loading...</div>}
+                    {!loading && content === "" && <div className="text-white/50 italic">No content available</div>}
+                    {!loading && content !== "" && (
+                        <Markdown text={content} onClickExecute={(cmd) => GlobalModel.submitRawCommand(cmd, false, true)} />
+                    )}
+                </div>
             </div>
         </div>
     );
@@ -259,13 +584,15 @@ const LineActions: React.FC<{ screen: LineContainerType; line: LineType; cmd: Cm
                                 <i className="fa-sharp fa-regular fa-circle-minus fa-fw" />
                             )}
                         </div>
-                        <div
-                            className="px-1 cursor-pointer hover:text-[var(--line-actions-active-color)]"
-                            onClick={clickMoveToSidebar}
-                            title="Move to Sidebar"
-                        >
-                            <i className="fa-sharp fa-solid fa-right-to-line fa-fw" />
-                        </div>
+                        <If condition={line.linetype !== "thread_mode"}>
+                            <div
+                                className="px-1 cursor-pointer hover:text-[var(--line-actions-active-color)]"
+                                onClick={clickMoveToSidebar}
+                                title="Move to Sidebar"
+                            >
+                                <i className="fa-sharp fa-solid fa-right-to-line fa-fw" />
+                            </div>
+                        </If>
                         <div
                             key="settings"
                             title="Line Settings"
@@ -440,7 +767,7 @@ const Line: React.FC<{
         return <LineText {...props} />;
     }
 
-    if (line.linetype == "cmd" || line.linetype == "agent_mode" || line.linetype == "thread_mode") {
+    if (line.linetype == "cmd" || line.linetype == "agent_mode" || line.linetype == "thread_mode" || line.linetype == "thread_mode_cmd") {
         return <LineCmd {...props} />;
     }
 
@@ -798,6 +1125,14 @@ const LineContent: React.FC<{
                                 onHeightChange={onHeightChange}
                             />
                         </When>
+                        <When condition={line.linetype == "thread_mode"}>
+                            <ThreadModeRenderer
+                                screen={screen}
+                                line={line}
+                                width={width}
+                                onHeightChange={onHeightChange}
+                            />
+                        </When>
                         <Otherwise>
                             <TerminalRenderer
                                 screen={screen}
@@ -855,4 +1190,4 @@ const LineContent: React.FC<{
     );
 });
 
-export { Line, LineActions, AgentModeRenderer };
+export { Line, LineActions, AgentModeRenderer, ThreadModeRenderer };

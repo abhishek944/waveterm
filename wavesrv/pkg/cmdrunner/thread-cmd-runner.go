@@ -166,6 +166,7 @@ func ThreadCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus
 					if !ok {
 						// Channel closed, parse the response
 						responseText := fullResponse.String()
+						log.Printf("[ThreadCommand] Stream closed, final response: %s", responseText)
 
 						// Try to parse as JSON for structured output
 						threadResp, err := ParseThreadModeResponse(responseText)
@@ -183,41 +184,55 @@ func ThreadCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus
 								log.Printf("thread error updating assistant response: %v\n", err)
 							}
 						} else {
-							// Write explanation to PTY
-							if threadResp.Explanation != "" {
-								err = writeTextToPty(bgCtx, cmd, threadResp.Explanation+"\n", &outputPos)
-								if err != nil {
-									log.Printf("error writing explanation to ptybuffer: %v", err)
-								}
-							}
-
-							// Execute command if provided
-							if threadResp.Command != "" {
-								// Write command to PTY for visibility
-								err = writeTextToPty(bgCtx, cmd, "\n$ "+threadResp.Command+"\n", &outputPos)
-								if err != nil {
-									log.Printf("error writing command to ptybuffer: %v", err)
-								}
-
-								// For now, just show the command without executing it
-								// TODO: Implement actual command execution when ready
-								err = writeTextToPty(bgCtx, cmd, "\n[Command execution in thread mode is not yet implemented]\n", &outputPos)
-								if err != nil {
-									log.Printf("error writing notice to ptybuffer: %v", err)
-								}
-							}
-
-							// Save structured response
+							// Save structured response to database
 							err = sstore.UpdateThreadLineAssistantResponse(bgCtx, threadId, ids.ScreenId, line.LineId, responseText)
 							if err != nil {
 								log.Printf("thread error updating assistant response: %v\n", err)
 							}
+							
+							// For thread mode, write the JSON to PTY for the frontend to parse
+							// The ThreadModeRenderer expects this format
+							err = writeTextToPty(bgCtx, cmd, responseText, &outputPos)
+							if err != nil {
+								log.Printf("error writing response to ptybuffer: %v", err)
+							}
 
-							// Save command if executed
+							// Save command and execute it within thread context
 							if threadResp.Command != "" {
 								err = sstore.UpdateThreadLineCommand(bgCtx, threadId, ids.ScreenId, line.LineId, threadResp.Command)
 								if err != nil {
 									log.Printf("thread error updating command: %v\n", err)
+								}
+								
+								// Execute command within the same thread line
+								cmdExecLineId, err := ExecuteCommandInThread(bgCtx, ids.SessionId, threadId, ids.ScreenId, line.LineId, threadResp.Command, &ids.Remote.RemotePtr)
+								if err != nil {
+									log.Printf("thread error executing command: %v\n", err)
+									// Don't write error to PTY since it would interfere with the JSON response
+									// The error is already logged
+								} else {
+									// Store command execution lineId in thread_line table for persistence
+									err = sstore.UpdateThreadLineCmdLineId(bgCtx, threadId, ids.ScreenId, line.LineId, cmdExecLineId)
+									if err != nil {
+										log.Printf("thread error updating thread line with cmdlineid: %v\n", err)
+									}
+									
+									// Also store in line state for immediate frontend access
+									lineState := make(map[string]interface{})
+									lineState["cmdexeclineid"] = cmdExecLineId
+									err = sstore.UpdateLineState(bgCtx, ids.ScreenId, line.LineId, lineState)
+									if err != nil {
+										log.Printf("thread error updating line state with cmdexeclineid: %v\n", err)
+									} else {
+										// Send line update to frontend so it knows about the cmdexeclineid
+										updatedLine, err := sstore.GetLineById(bgCtx, ids.ScreenId, line.LineId)
+										if err == nil && updatedLine != nil {
+											update := scbus.MakeUpdatePacket()
+											sstore.AddLineUpdate(update, updatedLine, nil)
+											scbus.MainUpdateBus.DoUpdate(update)
+											log.Printf("thread sent line update with cmdexeclineid: %s\n", cmdExecLineId)
+										}
+									}
 								}
 							}
 						}

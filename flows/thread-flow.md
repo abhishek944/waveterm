@@ -266,6 +266,64 @@ This architecture provides a foundation for advanced AI-assisted command executi
 
 \n
 
+# Thread Mode Architecture - Agentic System Design
+
+## Overview
+
+Thread mode supports an agentic workflow where AI can execute multiple commands iteratively until a task is complete. Each thread line is self-contained with all related data.
+
+## Database Schema
+
+```sql
+-- Thread table for managing conversations
+CREATE TABLE thread (
+    threadid varchar(36) PRIMARY KEY,
+    sessionid varchar(36) NOT NULL,
+    screenid varchar(36) NOT NULL,
+    name varchar(100) NOT NULL,
+    createdts bigint NOT NULL,
+    updatedts bigint NOT NULL,
+    archived boolean NOT NULL DEFAULT 0
+);
+
+-- Thread line table for conversation history
+CREATE TABLE thread_line (
+    threadid varchar(36) NOT NULL,
+    screenid varchar(36) NOT NULL,
+    lineid varchar(36) NOT NULL,    -- Same ID used in cmd table for commands
+    linenum int NOT NULL,
+    
+    -- Core conversation data
+    userquery text,              -- User's input/request
+    assistantresponse text,      -- AI's explanation/response
+    command text,                -- Command string (for display)
+    
+    -- Metadata
+    created_ts bigint NOT NULL,
+    metadata text,               -- Additional JSON metadata
+    
+    PRIMARY KEY (threadid, lineid)
+);
+
+-- Note: When a command is executed in a thread:
+-- 1. The thread_line.lineid matches cmd.lineid
+-- 2. Command execution details (status, output, etc.) come from cmd table
+-- 3. No duplication of command data between tables
+```
+
+## Display Order
+
+Each thread line displays its content in the following order:
+
+1. **User Message** (if `userquery` is present) - Shows the user's input
+2. **AI Explanation** (if `assistantresponse` is present) - Shows the AI's response/explanation
+3. **Command** (if `command` is present) - Shows the command to be executed
+   - Clicking on the command opens it in the sidebar
+   - Command execution results are fetched from the `cmd` table using the same `lineid`
+   - No command results are stored in the thread_line table
+
+This simple design keeps the conversation flow clean while leveraging Wave's existing command execution infrastructure.
+
 # Thread Mode Flow - End to End (Current, ID-based and Streaming)
 
 This section reflects the current implementation after recent changes. Thread Mode maintains conversation context strictly by thread ID and streams responses like Agent Mode.
@@ -315,6 +373,63 @@ This section reflects the current implementation after recent changes. Thread Mo
 -   Done: ID-based selection, streaming, persistence, structured output.
 -   TODO: command execution, rename UI, load thread list on connect, safety checks, output capture.
 
+## Agentic Workflow Design
+
+### Thread Line Examples
+
+Each thread line can contain different combinations of user input, AI response, and command:
+
+1. **Initial Request** (Line 1)
+   - `userquery`: "Install nodejs"
+   - `assistantresponse`: "I'll help you install Node.js. Let me check your system first."
+   - `command`: "uname -s"
+   - Display order: User message → AI explanation → Command
+
+2. **Command Result Analysis** (Line 2)
+   - `userquery`: "" (empty)
+   - `assistantresponse`: "You're on macOS. I'll use Homebrew to install Node.js."
+   - `command`: "which brew"
+   - Display order: AI explanation → Command
+
+3. **Final Steps** (Line 3)
+   - `userquery`: "" (empty)
+   - `assistantresponse`: "Great! Homebrew is installed. Now installing Node.js..."
+   - `command`: "brew install node"
+   - Display order: AI explanation → Command
+
+4. **Task Completion** (Line 4)
+   - `userquery`: "" (empty)
+   - `assistantresponse`: "Node.js has been successfully installed! You can verify with 'node --version'"
+   - `command`: "" (empty)
+   - Display order: AI explanation only
+
+### Benefits of Agentic Design
+
+1. **Complete Context**: Each thread line contains full interaction context
+2. **No Line Proliferation**: Commands don't create separate lines
+3. **Better History**: Can replay entire agentic workflows
+4. **Cleaner UI**: Thread conversations stay together
+5. **Powerful Automation**: AI can execute multi-step tasks autonomously
+
+## Implementation Status
+
+### Completed
+- Database migration 000033_threads with clean schema
+- Thread line model without redundant fields
+- ExecuteCommandInThread function for in-context command execution
+- Frontend ThreadModeRenderer for displaying thread lines
+- Command execution displays in sidebar when clicked
+- Hidden "Move to Sidebar" action for thread mode lines
+- Updated thread prompt to be more action-oriented
+- Thread persistence and selection
+- Auto-naming for threads (thread-1, thread-2, etc.)
+
+### Remaining
+- Continuous execution loop where AI can execute multiple commands in sequence
+- Enhanced UI to show command execution status within thread lines
+- Better visualization of command results in thread context
+- Safety checks for potentially destructive commands
+
 ## Recent Updates Summary
 
 ### Frontend Changes
@@ -350,3 +465,171 @@ This section reflects the current implementation after recent changes. Thread Mo
 - `wavesrv/pkg/sstore/thread-mode.go` - Auto-naming logic
 - `wavesrv/pkg/cmdrunner/ai-cmd-runner.go` - Debug logging
 - `wavesrv/pkg/remote/openai/openai.go` - Removed debug logging after user reverted
+
+## Command Execution in Thread Mode with Sidebar Display
+
+### Overview
+Thread mode now supports executing AI-suggested commands with results displayed in the sidebar. This provides a clean separation between the AI conversation flow and command execution output.
+
+### Database Schema Updates (v34)
+```sql
+-- Migration 000034_thread_cmdlineid.up.sql
+ALTER TABLE thread_line ADD COLUMN cmdlineid varchar(36);
+```
+
+This new column stores the ID of the command execution line, creating a link between the thread conversation and command execution.
+
+### Architecture
+
+#### Line Types
+1. **thread_mode**: Regular thread conversation lines containing AI responses
+2. **thread_mode_cmd**: Special lines for command execution (only shown in sidebar, not in main terminal)
+
+#### PTY Data Separation
+- **Thread Line PTY** (`{lineId}.ptyout`): Contains the AI response JSON with explanation and command
+- **Command Execution PTY** (`{cmdExecLineId}.ptyout`): Contains only the command execution output
+
+### Implementation Flow
+
+#### 1. Command Execution Request
+When a user clicks on a command in the AI response:
+
+**Frontend (linecomps.tsx)**:
+```typescript
+const handleCommandClick = async (e: React.MouseEvent) => {
+    // Open sidebar
+    await GlobalModel.submitCommand("sidebar", "open", null, { nohist: "1" }, false);
+    
+    // Check if command execution line exists
+    const cmdExecLineId = line.linestate?.cmdexeclineid;
+    if (cmdExecLineId) {
+        // Show command execution in sidebar
+        GlobalModel.submitCommand("sidebar", "add", null, { 
+            nohist: "1", 
+            line: cmdExecLineId 
+        }, false);
+    } else {
+        // Show thread line while waiting for execution
+        GlobalModel.submitCommand("sidebar", "add", null, { 
+            nohist: "1", 
+            line: line.lineid 
+        }, false);
+    }
+};
+```
+
+#### 2. Backend Command Execution
+**thread-cmd-runner.go**:
+```go
+// When AI response includes a command
+if threadResp.Command != "" {
+    // Execute command in thread context
+    cmdExecLineId, err := ExecuteCommandInThread(
+        bgCtx, ids.SessionId, threadId, ids.ScreenId, 
+        line.LineId, threadResp.Command, &ids.Remote.RemotePtr
+    )
+    
+    // Store command execution line ID in database
+    sstore.UpdateThreadLineCmdLineId(bgCtx, threadId, ids.ScreenId, line.LineId, cmdExecLineId)
+    
+    // Store in line state for immediate frontend access
+    lineState["cmdexeclineid"] = cmdExecLineId
+    sstore.UpdateLineState(bgCtx, ids.ScreenId, line.LineId, lineState)
+    
+    // Send update to frontend
+    updatedLine, _ := sstore.GetLineById(bgCtx, ids.ScreenId, line.LineId)
+    update := scbus.MakeUpdatePacket()
+    sstore.AddLineUpdate(update, updatedLine, nil)
+    scbus.MainUpdateBus.DoUpdate(update)
+}
+```
+
+#### 3. Command Execution Handler
+**thread-exec.go**:
+```go
+func ExecuteCommandInThread(...) (string, error) {
+    // Generate new UUID for command execution
+    cmdExecLineId := scbase.GenWaveUUID()
+    
+    // Create command execution line (thread_mode_cmd type)
+    cmdLine := &sstore.LineType{
+        ScreenId:  screenId,
+        LineId:    cmdExecLineId,
+        LineType:  sstore.LineTypeThreadModeCmd,  // Special type
+        LineState: map[string]any{
+            "threadlineid": lineId,
+            "iscmdexec": true,
+        },
+    }
+    
+    // Insert line and send update to frontend
+    sstore.InsertLine(ctx, cmdLine, cmd)
+    
+    // Send line update so sidebar can find it
+    update := scbus.MakeUpdatePacket()
+    sstore.AddLineUpdate(update, cmdExecLine, cmd)
+    scbus.MainUpdateBus.DoUpdate(update)
+    
+    // Execute command asynchronously
+    go func() {
+        remote.RunCommand(bgCtx, rcOpts, runPacket)
+    }()
+    
+    return cmdExecLineId, nil
+}
+```
+
+#### 4. Frontend Updates
+**ThreadModeRenderer Component**:
+- Tracks `cmdexeclineid` from line state
+- React effect watches for changes and updates sidebar when command execution line becomes available
+- Displays command as clickable element in the AI response
+
+**ScreenLines Filtering**:
+```typescript
+getNonArchivedLines(): LineType[] {
+    let rtn: LineType[] = [];
+    for (const line of this.lines) {
+        if (line.archived) continue;
+        // Skip thread_mode_cmd lines - they're only for sidebar
+        if (line.linetype === "thread_mode_cmd") continue;
+        rtn.push(line);
+    }
+    return rtn;
+}
+```
+
+### Key Features
+
+1. **Separate PTY Files**: AI responses and command outputs are stored separately
+2. **Clean UI**: Command execution lines don't clutter the main terminal view
+3. **Reactive Updates**: Sidebar automatically updates when command execution begins
+4. **Persistent Links**: Database stores the relationship between thread lines and their command executions
+5. **Asynchronous Execution**: Commands run in background without blocking the UI
+
+### Benefits
+
+1. **Better Organization**: AI conversation stays in main view, command output in sidebar
+2. **Improved Performance**: Separate PTY files prevent mixing of outputs
+3. **Enhanced UX**: Users can see command execution progress in real-time
+4. **Cleaner History**: Thread conversations remain readable without command output clutter
+5. **Future Extensibility**: Architecture supports multiple command executions per thread line
+
+### Implementation Status
+
+#### Completed
+- Database migration for cmdlineid column
+- Thread command execution function
+- Separate PTY file creation and management
+- Frontend command click handling
+- Sidebar display of command execution
+- Line type filtering to hide thread_mode_cmd from main view
+- Reactive updates when cmdexeclineid becomes available
+- Line update broadcasting from backend to frontend
+
+#### Future Enhancements
+- Command execution status indicators in thread view
+- Ability to re-run commands from history
+- Command output summarization for thread context
+- Safety checks before command execution
+- Command cancellation support

@@ -27,6 +27,10 @@ class ScreenLines {
             if (line.archived) {
                 continue;
             }
+            // Skip thread_mode_cmd lines - they are only for sidebar display
+            if (line.linetype === "thread_mode_cmd") {
+                continue;
+            }
             rtn.push(line);
         }
         return rtn;

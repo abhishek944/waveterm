@@ -20,6 +20,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { commandRtnHandler, isBlank } from "@/utils/util";
 import { getTermThemes } from "@/utils/themeutil";
 import * as appconst from "@/appconst";
@@ -27,6 +28,7 @@ import { MainView } from "@/components/ui/mainview";
 import { OverlayScrollbarsComponent } from "overlayscrollbars-react";
 
 import { AiProviders } from "./aiproviders";
+import { SettingItem } from "./settingItem";
 
 class ClientSettingsKeybindings extends React.Component<{}, {}> {
     componentDidMount() {
@@ -261,205 +263,194 @@ class ClientSettingsView extends React.Component<{ model: RemotesModel }, { hove
                     <If condition={!isHidden}>
                         <ClientSettingsKeybindings></ClientSettingsKeybindings>
                     </If>
-                    <div className="px-[30px] py-[14px] pr-[18px] min-h-full">
-                    <div className="flex flex-row items-center">
-                        <div className="font-bold w-[250px] flex flex-row items-center mr-[10px]">Term Font Size</div>
-                        <div className="flex flex-row items-center">
-                            <Select onValueChange={this.handleChangeFontSize} defaultValue={`${curFontSize}`}>
-                                <SelectTrigger className="w-[200px]">
-                                    <SelectValue placeholder="Select font size" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {this.getFontSizes().map((size) => (
-                                        <SelectItem key={size.value} value={size.value}>
-                                            {size.label}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
+                    <div className="grid grid-cols-2 gap-4 p-4">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Appearance</CardTitle>
+                            </CardHeader>
+                            <CardContent className="pt-2">
+                                <SettingItem title="Theme" description="Select the application theme.">
+                                    <Select onValueChange={this.handleChangeThemeSource} defaultValue={curTheme}>
+                                        <SelectTrigger className="w-[200px]">
+                                            <SelectValue placeholder="Select theme" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {this.getThemeSources().map((theme) => (
+                                                <SelectItem key={theme.value} value={theme.value}>
+                                                    {theme.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </SettingItem>
+                                <If condition={termThemes.length > 0}>
+                                    <SettingItem title="Terminal Theme" description="Select the terminal theme.">
+                                        <Select onValueChange={this.handleChangeTermTheme} defaultValue={currTermTheme}>
+                                            <SelectTrigger className="w-[200px]">
+                                                <SelectValue placeholder="Select terminal theme" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {termThemes.map((theme) => (
+                                                    <SelectItem key={theme.value} value={theme.value}>
+                                                        {theme.label}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </SettingItem>
+                                </If>
+                                <SettingItem title="Terminal Font Size" description="Select the font size for the terminal.">
+                                    <Select onValueChange={this.handleChangeFontSize} defaultValue={`${curFontSize}`}>
+                                        <SelectTrigger className="w-[200px]">
+                                            <SelectValue placeholder="Select font size" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {this.getFontSizes().map((size) => (
+                                                <SelectItem key={size.value} value={size.value}>
+                                                    {size.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </SettingItem>
+                                <SettingItem title="Terminal Font Family" description="Select the font family for the terminal.">
+                                    <Select onValueChange={this.handleChangeFontFamily} defaultValue={curFontFamily}>
+                                        <SelectTrigger className="w-[200px]">
+                                            <SelectValue placeholder="Select font family" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {this.getFontFamilies().map((font) => (
+                                                <SelectItem key={font.value} value={font.value}>
+                                                    {font.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </SettingItem>
+                                <SettingItem title="Input Position" description="Select the position of the command input.">
+                                    <Select
+                                        onValueChange={this.handleChangeInputPosition}
+                                        defaultValue={GlobalModel.inputPosition.get()}
+                                    >
+                                        <SelectTrigger className="w-[200px]">
+                                            <SelectValue placeholder="Select position" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {this.getLayoutOrderOptions().map((opt) => (
+                                                <SelectItem key={opt.value} value={opt.value}>
+                                                    {opt.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </SettingItem>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Security</CardTitle>
+                            </CardHeader>
+                            <CardContent className="pt-2">
+                                <SettingItem title="Remember Sudo Password" description="Configure how sudo password is cached.">
+                                    <Select onValueChange={this.handleChangeSudoPwStoreConfig} defaultValue={curSudoPwStore}>
+                                        <SelectTrigger className="w-[200px]">
+                                            <SelectValue placeholder="Select option" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {this.getSudoPwStoreOptions().map((opt) => (
+                                                <SelectItem key={opt.value} value={opt.value}>
+                                                    {opt.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </SettingItem>
+                                <SettingItem title="Sudo Timeout (Minutes)" description="Set the timeout for cached sudo password.">
+                                    <InlineSettingsTextEdit
+                                        placeholder=""
+                                        text={curSudoPwTimeout}
+                                        value={curSudoPwTimeout}
+                                        onChange={this.handleChangeSudoPwTimeoutConfig}
+                                        maxLength={6}
+                                        showIcon={true}
+                                        isNumber={true}
+                                    />
+                                </SettingItem>
+                                <SettingItem title="Clear Sudo Password on Sleep" description="Clear cached sudo password when the system sleeps.">
+                                    <Toggle
+                                        checked={curSudoPwClearOnSleep}
+                                        onCheckedChange={this.handleChangeSudoPwClearOnSleepConfig}
+                                    />
+                                </SettingItem>
+                            </CardContent>
+                        </Card>
+                        <Card className="col-span-2">
+                            <CardHeader>
+                                <CardTitle>AI</CardTitle>
+                            </CardHeader>
+                            <CardContent className="pt-2">
+                                <AiProviders />
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Advanced</CardTitle>
+                            </CardHeader>
+                            <CardContent className="pt-2">
+                                <SettingItem title="Command Autocomplete" description="Enable or disable command autocomplete.">
+                                    <Toggle
+                                        checked={cdata.clientopts.autocompleteenabled ?? false}
+                                        onCheckedChange={this.handleChangeAutocompleteEnabled}
+                                    />
+                                </SettingItem>
+                                <SettingItem title="Command Autocomplete Debugging" description="Enable or disable debugging for command autocomplete.">
+                                    <Toggle
+                                        checked={GlobalModel.autocompleteModel.loggingEnabled}
+                                        onCheckedChange={this.handleChangeAutocompleteDebuggingEnabled}
+                                    />
+                                </SettingItem>
+                                <SettingItem title="Global Hotkey" description="Set a global hotkey to show/hide the application.">
+                                    <Select onValueChange={this.handleChangeShortcut} defaultValue={this.getCurrentShortcut()}>
+                                        <SelectTrigger className="w-[200px]">
+                                            <SelectValue placeholder="Select hotkey" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {this.getFKeys().map((key) => (
+                                                <SelectItem key={key.value} value={key.value}>
+                                                    {key.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </SettingItem>
+                                <SettingItem title="Check for Updates" description="Automatically check for new releases.">
+                                    <Toggle
+                                        checked={!cdata.clientopts.noreleasecheck}
+                                        onCheckedChange={this.handleChangeReleaseCheck}
+                                    />
+                                </SettingItem>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>About</CardTitle>
+                            </CardHeader>
+                            <CardContent className="pt-2">
+                                <SettingItem title="Client ID" description="Your unique client identifier.">
+                                    <div className="flex flex-row items-center">{cdata.clientid}</div>
+                                </SettingItem>
+                                <SettingItem title="Client Version" description="The current version of the application.">
+                                    <div className="flex flex-row items-center">
+                                        {appconst.VERSION} {appconst.BUILD}
+                                    </div>
+                                </SettingItem>
+                                <SettingItem title="DB Version" description="The current version of the database schema.">
+                                    <div className="flex flex-row items-center">{cdata.dbversion}</div>
+                                </SettingItem>
+                            </CardContent>
+                        </Card>
+                        <SettingsError errorMessage={this.errorMessage.get()} onDismiss={this.dismissError} />
                     </div>
-                    <div className="flex flex-row items-center mt-[10px]">
-                        <div className="font-bold w-[250px] flex flex-row items-center mr-[10px]">Term Font Family</div>
-                        <div className="flex flex-row items-center">
-                            <Select onValueChange={this.handleChangeFontFamily} defaultValue={curFontFamily}>
-                                <SelectTrigger className="w-[200px]">
-                                    <SelectValue placeholder="Select font family" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {this.getFontFamilies().map((font) => (
-                                        <SelectItem key={font.value} value={font.value}>
-                                            {font.label}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
-                    <div className="flex flex-row items-center mt-[10px]">
-                        <div className="font-bold w-[250px] flex flex-row items-center mr-[10px]">Theme</div>
-                        <div className="flex flex-row items-center">
-                            <Select onValueChange={this.handleChangeThemeSource} defaultValue={curTheme}>
-                                <SelectTrigger className="w-[200px]">
-                                    <SelectValue placeholder="Select theme" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {this.getThemeSources().map((theme) => (
-                                        <SelectItem key={theme.value} value={theme.value}>
-                                            {theme.label}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
-                    <If condition={termThemes.length > 0}>
-                        <div className="flex flex-row items-center mt-[10px]">
-                            <div className="font-bold w-[250px] flex flex-row items-center mr-[10px]">Terminal Theme</div>
-                            <div className="flex flex-row items-center">
-                                <Select onValueChange={this.handleChangeTermTheme} defaultValue={currTermTheme}>
-                                    <SelectTrigger className="w-[200px]">
-                                        <SelectValue placeholder="Select terminal theme" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {termThemes.map((theme) => (
-                                            <SelectItem key={theme.value} value={theme.value}>
-                                                {theme.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
-                    </If>
-                    <div className="flex flex-row items-center mt-[10px]">
-                        <div className="font-bold w-[250px] flex flex-row items-center mr-[10px]">Client ID</div>
-                        <div className="flex flex-row items-center">{cdata.clientid}</div>
-                    </div>
-                    <div className="flex flex-row items-center mt-[10px]">
-                        <div className="font-bold w-[250px] flex flex-row items-center mr-[10px]">Client Version</div>
-                        <div className="flex flex-row items-center">
-                            {appconst.VERSION} {appconst.BUILD}
-                        </div>
-                    </div>
-                    <div className="flex flex-row items-center mt-[10px]">
-                        <div className="font-bold w-[250px] flex flex-row items-center mr-[10px]">DB Version</div>
-                        <div className="flex flex-row items-center">{cdata.dbversion}</div>
-                    </div>
-                    {/* <div className="flex flex-row items-center mt-[10px]">
-                        <div className="font-bold w-[250px] flex flex-row items-center mr-[10px]">Basic Telemetry</div>
-                        <div className="flex flex-row items-center">
-                            <Toggle checked={!cdata.clientopts.notelemetry} onChange={this.handleChangeTelemetry} />
-                        </div>
-                    </div> */}
-                    <div className="flex flex-row items-center mt-[10px]">
-                        <div className="font-bold w-[250px] flex flex-row items-center mr-[10px]">Check for Updates</div>
-                        <div className="flex flex-row items-center">
-                            <Toggle
-                                checked={!cdata.clientopts.noreleasecheck}
-                                onCheckedChange={this.handleChangeReleaseCheck}
-                            />
-                        </div>
-                    </div>
-                    <AiProviders />
-
-                    <div className="flex flex-row items-center mt-[10px]">
-                        <div className="font-bold w-[250px] flex flex-row items-center mr-[10px]">Global Hotkey</div>
-                        <div className="flex flex-row items-center">
-                            <Select onValueChange={this.handleChangeShortcut} defaultValue={this.getCurrentShortcut()}>
-                                <SelectTrigger className="w-[200px]">
-                                    <SelectValue placeholder="Select hotkey" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {this.getFKeys().map((key) => (
-                                        <SelectItem key={key.value} value={key.value}>
-                                            {key.label}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
-                    <div className="flex flex-row items-center mt-[10px]">
-                        <div className="font-bold w-[250px] flex flex-row items-center mr-[10px]">Input Position</div>
-                        <div className="flex flex-row items-center">
-                            <Select
-                                onValueChange={this.handleChangeInputPosition}
-                                defaultValue={GlobalModel.inputPosition.get()}
-                            >
-                                <SelectTrigger className="w-[200px]">
-                                    <SelectValue placeholder="Select position" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {this.getLayoutOrderOptions().map((opt) => (
-                                        <SelectItem key={opt.value} value={opt.value}>
-                                            {opt.label}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
-                    <div className="flex flex-row items-center mt-[10px]">
-                        <div className="font-bold w-[250px] flex flex-row items-center mr-[10px]">Remember Sudo Password</div>
-                        <div className="flex flex-row items-center">
-                            <Select onValueChange={this.handleChangeSudoPwStoreConfig} defaultValue={curSudoPwStore}>
-                                <SelectTrigger className="w-[200px]">
-                                    <SelectValue placeholder="Select option" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {this.getSudoPwStoreOptions().map((opt) => (
-                                        <SelectItem key={opt.value} value={opt.value}>
-                                            {opt.label}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
-                    <div className="flex flex-row items-center mt-[10px]">
-                        <div className="font-bold w-[250px] flex flex-row items-center mr-[10px]">Sudo Timeout (Minutes)</div>
-                        <div className="flex flex-row items-center">
-                            <InlineSettingsTextEdit
-                                placeholder=""
-                                text={curSudoPwTimeout}
-                                value={curSudoPwTimeout}
-                                onChange={this.handleChangeSudoPwTimeoutConfig}
-                                maxLength={6}
-                                showIcon={true}
-                                isNumber={true}
-                            />
-                        </div>
-                    </div>
-                    <div className="flex flex-row items-center mt-[10px]">
-                        <div className="font-bold w-[250px] flex flex-row items-center mr-[10px]">Clear Sudo Password on Sleep</div>
-                        <div className="flex flex-row items-center">
-                            <Toggle
-                                checked={curSudoPwClearOnSleep}
-                                onCheckedChange={this.handleChangeSudoPwClearOnSleepConfig}
-                            />
-                        </div>
-                    </div>
-                    <div className="flex flex-row items-center mt-[10px]">
-                        <div className="font-bold w-[250px] flex flex-row items-center mr-[10px]">Command Autocomplete</div>
-                        <div className="flex flex-row items-center">
-                            <Toggle
-                                checked={cdata.clientopts.autocompleteenabled ?? false}
-                                onCheckedChange={this.handleChangeAutocompleteEnabled}
-                            />
-                        </div>
-                    </div>
-                    <div className="flex flex-row items-center mt-[10px]">
-                        <div className="font-bold w-[250px] flex flex-row items-center mr-[10px]">Command Autocomplete Debugging</div>
-                        <div className="flex flex-row items-center">
-                            <Toggle
-                                checked={GlobalModel.autocompleteModel.loggingEnabled}
-                                onCheckedChange={this.handleChangeAutocompleteDebuggingEnabled}
-                            />
-                        </div>
-                    </div>
-                    <SettingsError errorMessage={this.errorMessage.get()} onDismiss={this.dismissError} />
-                </div>
                 </>
             </MainView>
         );

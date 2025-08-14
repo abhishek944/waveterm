@@ -49,7 +49,8 @@ func makeNewLineThreadMode(screenId string, userId string, lineId string) *LineT
 // GetThreadLinesByThread retrieves all thread lines for a given thread
 func GetThreadLinesByThread(ctx context.Context, threadId string) ([]*ThreadLineType, error) {
 	return WithTxRtn(ctx, func(tx *TxWrap) ([]*ThreadLineType, error) {
-		query := `SELECT tl.screenid, tl.lineid, tl.linenum, tl.userquery, tl.assistantresponse, tl.command
+		query := `SELECT tl.screenid, tl.lineid, tl.linenum, tl.userquery, tl.assistantresponse, tl.command,
+                         tl.cmdlineid, tl.created_ts
                   FROM thread_line tl WHERE tl.threadid = ? ORDER BY tl.linenum`
 		rtn := dbutil.SelectMappable[*ThreadLineType](tx, query, threadId)
 		return rtn, nil
@@ -64,6 +65,8 @@ type ThreadLineType struct {
 	UserQuery         string `json:"userquery"`
 	AssistantResponse string `json:"assistantresponse"`
 	Command           string `json:"command,omitempty"`
+	CmdLineId         string `json:"cmdlineid,omitempty"`
+	CreatedTs         int64  `json:"createdts"`
 }
 
 func (ThreadLineType) UseDBMap() {}
@@ -99,6 +102,15 @@ func UpdateThreadLineCommand(ctx context.Context, threadId string, screenId stri
 	return WithTx(ctx, func(tx *TxWrap) error {
 		query := `UPDATE thread_line SET command = ? WHERE threadid = ? AND screenid = ? AND lineid = ?`
 		tx.Exec(query, command, threadId, screenId, lineId)
+		return nil
+	})
+}
+
+// UpdateThreadLineCmdLineId updates the cmdlineid for a thread line
+func UpdateThreadLineCmdLineId(ctx context.Context, threadId string, screenId string, lineId string, cmdLineId string) error {
+	return WithTx(ctx, func(tx *TxWrap) error {
+		query := `UPDATE thread_line SET cmdlineid = ? WHERE threadid = ? AND screenid = ? AND lineid = ?`
+		tx.Exec(query, cmdLineId, threadId, screenId, lineId)
 		return nil
 	})
 }
@@ -174,8 +186,8 @@ func ListThreads(ctx context.Context, screenId string) ([]*ThreadType, error) {
 // AddThreadLine associates a line with a thread
 func AddThreadLine(ctx context.Context, threadId string, screenId string, line *LineType) error {
 	return WithTx(ctx, func(tx *TxWrap) error {
-		query := `INSERT INTO thread_line (threadid, screenid, lineid, linenum) VALUES (?, ?, ?, ?)`
-		tx.Exec(query, threadId, screenId, line.LineId, line.LineNum)
+		query := `INSERT INTO thread_line (threadid, screenid, lineid, linenum, created_ts) VALUES (?, ?, ?, ?, ?)`
+		tx.Exec(query, threadId, screenId, line.LineId, line.LineNum, time.Now().UnixMilli())
 		tx.Exec(`UPDATE thread SET updatedts = ? WHERE threadid = ?`, time.Now().UnixMilli(), threadId)
 		return nil
 	})

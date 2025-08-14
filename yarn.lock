@@ -1689,6 +1689,11 @@
 "@trysound/sax@0.2.0":
   version "0.2.0"
 
+"@types/autobind-decorator@^1.3.3":
+  version "1.3.3"
+  resolved "https://registry.npmjs.org/@types/autobind-decorator/-/autobind-decorator-1.3.3.tgz"
+  integrity sha512-/NmCXcDUFIs2u8kzKYQeCA1gUm/4NsmpJ6KANKhC46lTCYBoAkkOD362z/3pFkePbgV1MupVP6J5zyyB57ToQQ==
+
 "@types/body-parser@*":
   version "1.19.6"
   dependencies:

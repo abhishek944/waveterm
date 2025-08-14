@@ -52,7 +52,7 @@ const CodeBlock: React.FC<{ children: React.ReactNode; onClickExecute?: (cmd: st
 
 const Markdown: React.FC<MarkdownProps> = ({ text, className, onClickExecute }) => {
     const markdownComponents = {
-        p: (props: any) => <p {...props} className="my-1" />,
+        p: (props: any) => <p {...props} className="my-1 break-words" style={{ overflowWrap: 'break-word', wordBreak: 'break-word' }} />,
         a: (props: any) => <a {...props} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline" />,
         h1: (props: any) => <h1 {...props} className="text-2xl font-bold my-4" />,
         h2: (props: any) => <h2 {...props} className="text-xl font-bold my-3" />,
@@ -68,7 +68,10 @@ const Markdown: React.FC<MarkdownProps> = ({ text, className, onClickExecute }) 
     };
 
     return (
-        <div className={cn("markdown-view first:mt-0", className)}>
+        <div 
+            className={cn("markdown-view", className)}
+            style={{ whiteSpace: 'normal', overflowWrap: 'anywhere', wordBreak: 'break-word' }}
+        >
             <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                 {text}
             </ReactMarkdown>

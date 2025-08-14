@@ -183,68 +183,19 @@ class AiProviders extends React.Component<{}, {}> {
         };
 
         return (
-            <div>
-                <div className="border border-gray-600 rounded-[5px] p-[10px] mt-5">
-                    <div className="flex flex-row items-center justify-between font-bold text-[1.1em] mb-[10px]">
-                        <div>Gemini</div>
-                        <Toggle
-                            checked={geminiOpts.enabled || false}
-                            onCheckedChange={(enabled) => this.handleToggleProvider("gemini", enabled)}
-                        />
-                    </div>
-                    <div className="flex flex-row items-center mt-[15px]">
-                        <div className="w-48 mr-[10px]">Model</div>
-                        <div className="flex flex-row items-center">
-                            <InlineSettingsTextEdit
-                                placeholder="Model (e.g., gemini-pro)"
-                                text={geminiOpts.model || "(not set)"}
-                                value={geminiOpts.model || ""}
-                                onChange={(val) => this.handleProviderChange("gemini", "model", val)}
-                                maxLength={256}
-                                showIcon={true}
-                            />
-                        </div>
-                    </div>
-                    <div className="flex flex-row items-center mt-[15px]">
-                        <div className="w-48 mr-[10px]">API Key</div>
-                        <div className="flex flex-row items-center">
-                            <InlineSettingsTextEdit
-                                placeholder="API Key"
-                                text={getMaskedValue(geminiOpts.apitoken)}
-                                value={geminiOpts.apitoken || ""}
-                                onChange={(val) => this.handleProviderChange("gemini", "apitoken", val)}
-                                maxLength={256}
-                                showIcon={true}
-                            />
-                        </div>
-                    </div>
-                    <div className="flex flex-row items-center mt-[15px]">
-                        <div className="w-48 mr-[10px]"></div>
-                        <div className="flex flex-row items-center gap-[10px]">
-                            {shouldShowVerify("gemini") && (
-                                <Button
-                                    variant="secondary" size="sm"
-                                    onClick={() => this.handleVerifyProvider("gemini")}
-                                    disabled={this.isVerifying}
-                                >
-                                    Verify
-                                </Button>
-                            )}
-                            {getConnectionStatus("gemini")}
-                        </div>
-                    </div>
-                </div>
-                <div className="border border-gray-600 rounded-[5px] p-[10px] mt-5">
-                    <div className="flex flex-row items-center justify-between font-bold text-[1.1em] mb-[10px]">
-                        <div>OpenAI</div>
+            <div className="grid grid-cols-2 gap-4">
+                {/* OpenAI Settings */}
+                <div className="flex flex-col space-y-2">
+                    <div className="flex items-center justify-between">
+                        <h3 className="font-bold text-lg">OpenAI</h3>
                         <Toggle
                             checked={openAIOpts.enabled || false}
                             onCheckedChange={(enabled) => this.handleToggleProvider("openai", enabled)}
                         />
                     </div>
-                    <div className="flex flex-row items-center mt-[15px]">
-                        <div className="w-48 mr-[10px]">Model</div>
-                        <div className="flex flex-row items-center">
+                    <div className="pl-4 border-l-2 border-gray-700 space-y-2">
+                        <div className="flex items-center">
+                            <div className="w-48">Model</div>
                             <InlineSettingsTextEdit
                                 placeholder="Model (e.g., gpt-3.5-turbo)"
                                 text={openAIOpts.model || "(not set)"}
@@ -254,10 +205,8 @@ class AiProviders extends React.Component<{}, {}> {
                                 showIcon={true}
                             />
                         </div>
-                    </div>
-                    <div className="flex flex-row items-center mt-[15px]">
-                        <div className="w-48 mr-[10px]">API Key</div>
-                        <div className="flex flex-row items-center">
+                        <div className="flex items-center">
+                            <div className="w-48">API Key</div>
                             <InlineSettingsTextEdit
                                 placeholder="API Key"
                                 text={getMaskedValue(openAIOpts.apitoken)}
@@ -267,34 +216,37 @@ class AiProviders extends React.Component<{}, {}> {
                                 showIcon={true}
                             />
                         </div>
-                    </div>
-                    <div className="flex flex-row items-center mt-[15px]">
-                        <div className="w-48 mr-[10px]"></div>
-                        <div className="flex flex-row items-center gap-[10px]">
-                            {shouldShowVerify("openai") && (
-                                <Button
-                                    variant="secondary" size="sm"
-                                    onClick={() => this.handleVerifyProvider("openai")}
-                                    disabled={this.isVerifying}
-                                >
-                                    Verify
-                                </Button>
-                            )}
-                            {getConnectionStatus("openai")}
+                        <div className="flex items-center">
+                            <div className="w-48"></div>
+                            <div className="flex items-center gap-2">
+                                {shouldShowVerify("openai") && (
+                                    <Button
+                                        variant="secondary"
+                                        size="sm"
+                                        onClick={() => this.handleVerifyProvider("openai")}
+                                        disabled={this.isVerifying}
+                                    >
+                                        Verify
+                                    </Button>
+                                )}
+                                {getConnectionStatus("openai")}
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div className="border border-gray-600 rounded-[5px] p-[10px] mt-5">
-                    <div className="flex flex-row items-center justify-between font-bold text-[1.1em] mb-[10px]">
-                        <div>Azure OpenAI</div>
+
+                {/* Azure OpenAI Settings */}
+                <div className="flex flex-col space-y-2">
+                    <div className="flex items-center justify-between">
+                        <h3 className="font-bold text-lg">Azure OpenAI</h3>
                         <Toggle
                             checked={azureOpts.enabled || false}
                             onCheckedChange={(enabled) => this.handleToggleProvider("azure", enabled)}
                         />
                     </div>
-                    <div className="flex flex-row items-center mt-[15px]">
-                        <div className="w-48 mr-[10px]">Base URL</div>
-                        <div className="flex flex-row items-center">
+                    <div className="pl-4 border-l-2 border-gray-700 space-y-2">
+                        <div className="flex items-center">
+                            <div className="w-48">Base URL</div>
                             <InlineSettingsTextEdit
                                 placeholder="Base URL"
                                 text={azureOpts.baseurl || "(not set)"}
@@ -304,10 +256,8 @@ class AiProviders extends React.Component<{}, {}> {
                                 showIcon={true}
                             />
                         </div>
-                    </div>
-                    <div className="flex flex-row items-center mt-[15px]">
-                        <div className="w-48 mr-[10px]">Deployment Name</div>
-                        <div className="flex flex-row items-center">
+                        <div className="flex items-center">
+                            <div className="w-48">Deployment Name</div>
                             <InlineSettingsTextEdit
                                 placeholder="Deployment Name"
                                 text={azureOpts.deploymentname || "(not set)"}
@@ -317,10 +267,8 @@ class AiProviders extends React.Component<{}, {}> {
                                 showIcon={true}
                             />
                         </div>
-                    </div>
-                    <div className="flex flex-row items-center mt-[15px]">
-                        <div className="w-48 mr-[10px]">API Key</div>
-                        <div className="flex flex-row items-center">
+                        <div className="flex items-center">
+                            <div className="w-48">API Key</div>
                             <InlineSettingsTextEdit
                                 placeholder="API Key"
                                 text={getMaskedValue(azureOpts.apitoken)}
@@ -330,45 +278,92 @@ class AiProviders extends React.Component<{}, {}> {
                                 showIcon={true}
                             />
                         </div>
-                    </div>
-                    <div className="flex flex-row items-center mt-[15px]">
-                        <div className="w-48 mr-[10px]"></div>
-                        <div className="flex flex-row items-center gap-[10px]">
-                            {shouldShowVerify("azure") && (
-                                <Button
-                                    variant="secondary" size="sm"
-                                    onClick={() => this.handleVerifyProvider("azure")}
-                                    disabled={this.isVerifying}
-                                >
-                                    Verify
-                                </Button>
-                            )}
-                            {getConnectionStatus("azure")}
+                        <div className="flex items-center">
+                            <div className="w-48"></div>
+                            <div className="flex items-center gap-2">
+                                {shouldShowVerify("azure") && (
+                                    <Button
+                                        variant="secondary"
+                                        size="sm"
+                                        onClick={() => this.handleVerifyProvider("azure")}
+                                        disabled={this.isVerifying}
+                                    >
+                                        Verify
+                                    </Button>
+                                )}
+                                {getConnectionStatus("azure")}
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div className="border border-gray-600 rounded-[5px] p-[10px] mt-5">
-                    <div className="font-bold text-[1.1em] mb-[10px]">
-                        <div>Default Provider</div>
+
+                {/* Gemini Settings */}
+                <div className="flex flex-col space-y-2">
+                    <div className="flex items-center justify-between">
+                        <h3 className="font-bold text-lg">Gemini</h3>
+                        <Toggle
+                            checked={geminiOpts.enabled || false}
+                            onCheckedChange={(enabled) => this.handleToggleProvider("gemini", enabled)}
+                        />
                     </div>
-                    <div className="flex flex-row items-center mt-[15px]">
-                        <div className="w-48 mr-[10px]">Select Default</div>
-                        <div className="flex flex-row items-center">
-                            <select 
-                                value={defaultProvider} 
-                                onChange={(e) => {
-                                    const newDefault = e.target.value as "gemini" | "openai" | "azure";
-                                    const newAiOpts = { ...aiOpts, default: newDefault };
-                                    this.handleAiOptsChange(newAiOpts);
-                                }}
-                                className="px-2.5 py-1.5 border border-gray-700 rounded bg-black text-white text-sm outline-none focus:border-green-500"
-                            >
-                                <option value="openai">OpenAI</option>
-                                <option value="gemini">Gemini</option>
-                                <option value="azure">Azure OpenAI</option>
-                            </select>
+                    <div className="pl-4 border-l-2 border-gray-700 space-y-2">
+                        <div className="flex items-center">
+                            <div className="w-48">Model</div>
+                            <InlineSettingsTextEdit
+                                placeholder="Model (e.g., gemini-pro)"
+                                text={geminiOpts.model || "(not set)"}
+                                value={geminiOpts.model || ""}
+                                onChange={(val) => this.handleProviderChange("gemini", "model", val)}
+                                maxLength={256}
+                                showIcon={true}
+                            />
+                        </div>
+                        <div className="flex items-center">
+                            <div className="w-48">API Key</div>
+                            <InlineSettingsTextEdit
+                                placeholder="API Key"
+                                text={getMaskedValue(geminiOpts.apitoken)}
+                                value={geminiOpts.apitoken || ""}
+                                onChange={(val) => this.handleProviderChange("gemini", "apitoken", val)}
+                                maxLength={256}
+                                showIcon={true}
+                            />
+                        </div>
+                        <div className="flex items-center">
+                            <div className="w-48"></div>
+                            <div className="flex items-center gap-2">
+                                {shouldShowVerify("gemini") && (
+                                    <Button
+                                        variant="secondary"
+                                        size="sm"
+                                        onClick={() => this.handleVerifyProvider("gemini")}
+                                        disabled={this.isVerifying}
+                                    >
+                                        Verify
+                                    </Button>
+                                )}
+                                {getConnectionStatus("gemini")}
+                            </div>
                         </div>
                     </div>
+                </div>
+
+                {/* Default Provider */}
+                <div className="flex items-center">
+                    <div className="w-48 font-bold">Default Provider</div>
+                    <select
+                        value={defaultProvider}
+                        onChange={(e) => {
+                            const newDefault = e.target.value as "gemini" | "openai" | "azure";
+                            const newAiOpts = { ...aiOpts, default: newDefault };
+                            this.handleAiOptsChange(newAiOpts);
+                        }}
+                        className="px-2.5 py-1.5 border border-gray-700 rounded bg-black text-white text-sm outline-none focus:border-green-500"
+                    >
+                        <option value="openai">OpenAI</option>
+                        <option value="gemini">Gemini</option>
+                        <option value="azure">Azure OpenAI</option>
+                    </select>
                 </div>
             </div>
         );

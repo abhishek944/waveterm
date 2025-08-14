@@ -148,65 +148,69 @@ const MainSideBar: React.FC<MainSideBarProps> = observer(({ parentRef }) => {
             position="left"
             ref={parentRef}
         >
-            <div
-                className="title-bar-drag flex items-center relative border-b border-gray-800 flex-shrink-0"
-                style={{ height: "calc(var(--screentabs-height) + 1px)" }}
-            >
-                <div
-                    className="close-button absolute right-0 h-full flex items-center p-2.5 cursor-pointer"
-                    onClick={() =>
-                        GlobalModel.mainSidebarModel.setCollapsed(!GlobalModel.mainSidebarModel.getCollapsed())
-                    }
-                >
-                    <i className="fa-sharp fa-solid fa-xmark-large" />
-                </div>
-            </div>
-            <div className="flex flex-col flex-1 min-h-0">
-                <div className="top pr-1.5 flex-shrink-0">
-                    <SideBarItem
-                        key="connections"
-                        frontIcon={<i className="fa-sharp fa-regular fa-globe icon" />}
-                        className={clsx({ "bg-gray-700": connectionsActive })}
-                        contents="Connections"
-                        onClick={handleConnectionsClick}
-                    />
-                </div>
-                <div className="separator h-px my-4 bg-gray-800 flex-shrink-0" />
-                <SideBarItem
-                    key="workspaces"
-                    className="workspaces flex-shrink-0"
-                    frontIcon={<WorkspacesIcon className="icon" />}
-                    contents="Workspaces"
-                    endIcons={[
-                        <CenteredIcon
-                            key="add-workspace"
-                            className="add-workspace hoverEffect"
-                            onClick={handleNewSession}
+            {!GlobalModel.mainSidebarModel.getCollapsed() && (
+                <>
+                    <div
+                        className="title-bar-drag flex items-center relative border-b border-gray-800 flex-shrink-0"
+                        style={{ height: "calc(var(--screentabs-height) + 1px)" }}
+                    >
+                        <div
+                            className="close-button absolute right-0 h-full flex items-center p-2.5 cursor-pointer"
+                            onClick={() =>
+                                GlobalModel.mainSidebarModel.setCollapsed(!GlobalModel.mainSidebarModel.getCollapsed())
+                            }
                         >
-                            <i className="fa-sharp fa-solid fa-plus"></i>
-                        </CenteredIcon>,
-                    ]}
-                />
-                <OverlayScrollbarsComponent
-                    element="div"
-                    className="middle p-1 border-b border-gray-800 flex-1 min-h-0 overflow-y-auto"
-                    id="sidebar-middle"
-                    options={{ scrollbars: { autoHide: "leave" } }}
-                >
-                    {getSessions()}
-                </OverlayScrollbarsComponent>
+                            <i className="fa-sharp fa-solid fa-xmark-large" />
+                        </div>
+                    </div>
+                    <div className="flex flex-col flex-1 min-h-0">
+                        <div className="top pr-1.5 flex-shrink-0">
+                            <SideBarItem
+                                key="connections"
+                                frontIcon={<i className="fa-sharp fa-regular fa-globe icon" />}
+                                className={clsx({ "bg-gray-700": connectionsActive })}
+                                contents="Connections"
+                                onClick={handleConnectionsClick}
+                            />
+                        </div>
+                        <div className="separator h-px my-4 bg-gray-800 flex-shrink-0" />
+                        <SideBarItem
+                            key="workspaces"
+                            className="workspaces flex-shrink-0"
+                            frontIcon={<WorkspacesIcon className="icon" />}
+                            contents="Workspaces"
+                            endIcons={[
+                                <CenteredIcon
+                                    key="add-workspace"
+                                    className="add-workspace hoverEffect"
+                                    onClick={handleNewSession}
+                                >
+                                    <i className="fa-sharp fa-solid fa-plus"></i>
+                                </CenteredIcon>,
+                            ]}
+                        />
+                        <OverlayScrollbarsComponent
+                            element="div"
+                            className="middle p-1 border-b border-gray-800 flex-1 min-h-0 overflow-y-auto"
+                            id="sidebar-middle"
+                            options={{ scrollbars: { autoHide: "leave" } }}
+                        >
+                            {getSessions()}
+                        </OverlayScrollbarsComponent>
 
-                <div className="bottom pr-1.5 flex-shrink-0 pb-4" id="sidebar-bottom">
-                    {getUpdateAppBanner()}
-                    <SideBarItem
-                        key="settings"
-                        frontIcon={<SettingsIcon className="icon" />}
-                        className={clsx({ "bg-gray-700": settingsActive })}
-                        contents="Settings"
-                        onClick={handleSettingsClick}
-                    />
-                </div>
-            </div>
+                        <div className="bottom pr-1.5 flex-shrink-0 pb-4" id="sidebar-bottom">
+                            {getUpdateAppBanner()}
+                            <SideBarItem
+                                key="settings"
+                                frontIcon={<SettingsIcon className="icon" />}
+                                className={clsx({ "bg-gray-700": settingsActive })}
+                                contents="Settings"
+                                onClick={handleSettingsClick}
+                            />
+                        </div>
+                    </div>
+                </>
+            )}
         </ResizableSidebar>
     );
 });

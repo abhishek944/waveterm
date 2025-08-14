@@ -1,0 +1,1 @@
+ALTER TABLE thread_line ADD COLUMN cmdlineid varchar(36);

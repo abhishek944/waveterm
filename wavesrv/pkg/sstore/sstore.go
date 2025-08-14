@@ -56,10 +56,11 @@ const APITokenSentinel = "--apitoken--"
 const ShellTypePref_Detect = "detect"
 
 const (
-	LineTypeCmd        = "cmd"
-	LineTypeText       = "text"
-	LineTypeAgentMode  = "agent_mode"
-	LineTypeThreadMode = "thread_mode"
+	LineTypeCmd           = "cmd"
+	LineTypeText          = "text"
+	LineTypeAgentMode     = "agent_mode"
+	LineTypeThreadMode    = "thread_mode"
+	LineTypeThreadModeCmd = "thread_mode_cmd"
 )
 
 const (
