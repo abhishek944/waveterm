@@ -52,6 +52,8 @@ func ExecuteCommandInThread(
 		RunOut:       nil,
 	}
 	
+	// Note: We don't set StatePtr or FeState here - the remote will use its current state
+	
 	// Store the mapping between thread lineId and command execution lineId for frontend use
 	// This will be used to find the command execution PTY when displaying in sidebar
 	// For now, we'll store it in the thread line's metadata
@@ -98,7 +100,7 @@ func ExecuteCommandInThread(
 		Cols: int(termOpts.Cols),
 	}
 	runPacket.Command = commandStr
-	runPacket.ReturnState = false
+	runPacket.ReturnState = true  // We want to capture state changes (e.g., cd)
 
 	// No need to write header - the command output will go directly to the PTY
 
@@ -107,32 +109,39 @@ func ExecuteCommandInThread(
 		SessionId: sessionId,
 		ScreenId:  screenId,
 		RemotePtr: *remotePtr,
+		// Don't provide StatePtr - let remote use its current state
+		// This allows us to use ReturnState=true
 	}
 	
-	// Execute command asynchronously
-	go func() {
-		// Create a background context for command execution
-		bgCtx := context.Background()
-		
-		// Run the command using remote.RunCommand
-		cmdResult, callback, err := remote.RunCommand(bgCtx, rcOpts, runPacket)
-		if err != nil {
-			log.Printf("[ExecuteCommandInThread] Error running command: %v", err)
-			// The error will be handled by remote.RunCommand and written to PTY
-			return
-		}
-		if callback != nil {
-			defer callback()
-		}
+	// Execute command synchronously
+	cmdResult, callback, err := remote.RunCommand(ctx, rcOpts, runPacket)
+	if err != nil {
+		log.Printf("[ExecuteCommandInThread] Error running command: %v", err)
+		return "", fmt.Errorf("error running command: %w", err)
+	}
+	if callback != nil {
+		defer callback()
+	}
 
-		// Wait for command to complete (command output goes directly to cmdExec PTY)
-		// The remote.RunCommand will handle writing to the PTY file
-		log.Printf("[ExecuteCommandInThread] Command execution started for lineId: %s", cmdExecLineId)
+	// Command execution started successfully
+	log.Printf("[ExecuteCommandInThread] Command execution started for lineId: %s", cmdExecLineId)
+	
+	if cmdResult != nil {
+		log.Printf("[ExecuteCommandInThread] Command status: %s", cmdResult.Status)
 		
-		if cmdResult != nil {
-			log.Printf("[ExecuteCommandInThread] Command completed with status: %s", cmdResult.Status)
+		// Update the remote state if we got new state back (important for cd commands)
+		if cmdResult.RtnState && !cmdResult.RtnStatePtr.IsEmpty() {
+			log.Printf("[ExecuteCommandInThread] Got new state after command execution, updating remote state")
+			// Need to retrieve the actual shell state from the state pointer
+			shellState, _ := sstore.GetFullState(ctx, cmdResult.RtnStatePtr)
+			if shellState != nil {
+				_, err := sstore.UpdateRemoteState(ctx, sessionId, screenId, *remotePtr, cmdResult.FeState, shellState, nil)
+				if err != nil {
+					log.Printf("[ExecuteCommandInThread] Error updating remote state: %v", err)
+				}
+			}
 		}
-	}()
+	}
 
 	return cmdExecLineId, nil
 }
