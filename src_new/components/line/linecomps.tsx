@@ -57,8 +57,6 @@ const ThreadModeRenderer: React.FC<{
     const lineState = line.linestate || {};
     const cmdExecLineId = lineState.cmdexeclineid as string | undefined;
     
-    console.log("[ThreadModeRenderer] Component render - cmdExecLineId:", cmdExecLineId, "lineId:", line.lineid, "lineState:", lineState);
-    
     // Helper function to attempt JSON parsing
     const tryParseResponse = (text: string) => {
         try {
@@ -74,24 +72,14 @@ const ThreadModeRenderer: React.FC<{
     };
 
     React.useEffect(() => {
-        console.log("[ThreadModeRenderer] useEffect triggered", {
-            lineId: line.lineid,
-            lineType: line.linetype,
-            isSidebar,
-            containerType: screen.getContainerType()
-        });
         
         // No special handling for sidebar view anymore - thread lines show normally in sidebar
         // The command execution is now a separate line that gets added to sidebar
-        
-        console.log("[ThreadModeRenderer] Main view mode - registering renderer");
         // Register a lightweight renderer to receive PTY streaming (main view only)
         const model: RendererModel = {
             initialize: (_params) => {
-                console.log("[ThreadModeRenderer] Renderer initialized");
             },
             dispose: () => {
-                console.log("[ThreadModeRenderer] Renderer disposed");
             },
             reload: (_delayMs: number) => {},
             giveFocus: () => {},
@@ -99,11 +87,6 @@ const ThreadModeRenderer: React.FC<{
             setIsDone: () => {},
             receiveData: (pos: number, data: Uint8Array) => {
                 const chunk = decoderRef.current.decode(data);
-                console.log("[ThreadModeRenderer] Received data chunk", {
-                    pos,
-                    chunkLength: chunk.length,
-                    preview: chunk.substring(0, 50)
-                });
                 rawContentRef.current += chunk;
                 setContent((prev) => prev + chunk);
                 
@@ -160,7 +143,6 @@ const ThreadModeRenderer: React.FC<{
     
     // Watch for cmdexeclineid changes and update sidebar if it's showing this thread line
     React.useEffect(() => {
-        console.log("[ThreadModeRenderer] cmdExecLineId effect triggered:", cmdExecLineId);
         if (cmdExecLineId && !isSidebar) {
             const activeScreen = GlobalModel.getActiveScreen();
             if (activeScreen) {
@@ -169,7 +151,6 @@ const ThreadModeRenderer: React.FC<{
                 
                 // If sidebar is showing this thread line, update it to show the command execution
                 if (sidebarLineId === line.lineid) {
-                    console.log("[ThreadModeRenderer] Updating sidebar to show command execution line:", cmdExecLineId);
                     const newViewOpts = {
                         ...curViewOpts,
                         sidebar: {

@@ -31,6 +31,7 @@ func AddThreadModeLine(ctx context.Context, screenId string, userId string, cmd 
 	return rtnLine, nil
 }
 
+
 // makeNewLineThreadMode creates a new thread mode line
 func makeNewLineThreadMode(screenId string, userId string, lineId string) *LineType {
 	rtn := &LineType{}
