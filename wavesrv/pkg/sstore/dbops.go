@@ -2436,3 +2436,96 @@ func GetRemoteActiveShells(ctx context.Context, remoteId string) ([]string, erro
 		return utilfn.GetMapKeys(shellTypeMap), nil
 	})
 }
+
+// AI Chat Operations
+
+func GetAIChats(ctx context.Context) ([]*AIChatType, error) {
+	return WithTxRtn(ctx, func(tx *TxWrap) ([]*AIChatType, error) {
+		query := `SELECT * FROM ai_chat ORDER BY updatedts DESC`
+		chats := dbutil.SelectMapsGen[*AIChatType](tx, query)
+		return chats, nil
+	})
+}
+
+func GetAIChat(ctx context.Context, chatId string) (*AIChatType, error) {
+	return WithTxRtn(ctx, func(tx *TxWrap) (*AIChatType, error) {
+		query := `SELECT * FROM ai_chat WHERE chatid = ?`
+		chat := dbutil.GetMapGen[*AIChatType](tx, query, chatId)
+		return chat, nil
+	})
+}
+
+func GetLatestAIChat(ctx context.Context) (*AIChatType, error) {
+	return WithTxRtn(ctx, func(tx *TxWrap) (*AIChatType, error) {
+		query := `SELECT * FROM ai_chat ORDER BY updatedts DESC LIMIT 1`
+		chat := dbutil.GetMapGen[*AIChatType](tx, query)
+		return chat, nil
+	})
+}
+
+func InsertAIChat(ctx context.Context, chat *AIChatType) error {
+	return WithTx(ctx, func(tx *TxWrap) error {
+		query := `INSERT INTO ai_chat (chatid, createdts, updatedts) VALUES (?, ?, ?)`
+		tx.Exec(query, chat.ChatId, chat.CreatedTs, chat.UpdatedTs)
+		return nil
+	})
+}
+
+func UpdateAIChatTimestamp(ctx context.Context, chatId string) error {
+	return WithTx(ctx, func(tx *TxWrap) error {
+		now := time.Now().UnixMilli()
+		query := `UPDATE ai_chat SET updatedts = ? WHERE chatid = ?`
+		tx.Exec(query, now, chatId)
+		return nil
+	})
+}
+
+func DeleteAIChat(ctx context.Context, chatId string) error {
+	return WithTx(ctx, func(tx *TxWrap) error {
+		query := `DELETE FROM ai_chat WHERE chatid = ?`
+		tx.Exec(query, chatId)
+		return nil
+	})
+}
+
+func GetAIMessages(ctx context.Context, chatId string) ([]*AIMessageType, error) {
+	return WithTxRtn(ctx, func(tx *TxWrap) ([]*AIMessageType, error) {
+		query := `SELECT * FROM ai_message WHERE chatid = ? ORDER BY createdts ASC`
+		messages := dbutil.SelectMapsGen[*AIMessageType](tx, query, chatId)
+		return messages, nil
+	})
+}
+
+func InsertAIMessage(ctx context.Context, msg *AIMessageType) error {
+	return WithTx(ctx, func(tx *TxWrap) error {
+		query := `INSERT INTO ai_message (messageid, chatid, role, content, createdts) VALUES (?, ?, ?, ?, ?)`
+		tx.Exec(query, msg.MessageId, msg.ChatId, msg.Role, msg.Content, msg.CreatedTs)
+		// Update chat timestamp within the same transaction
+		now := time.Now().UnixMilli()
+		updateQuery := `UPDATE ai_chat SET updatedts = ? WHERE chatid = ?`
+		tx.Exec(updateQuery, now, msg.ChatId)
+		return nil
+	})
+}
+
+func GetAIChatHistory(ctx context.Context, chatId string) (*AIChatHistoryType, error) {
+	chat, err := GetAIChat(ctx, chatId)
+	if err != nil {
+		return nil, err
+	}
+	if chat == nil {
+		return nil, nil
+	}
+	messages, err := GetAIMessages(ctx, chatId)
+	if err != nil {
+		return nil, err
+	}
+	// Ensure messages is not nil
+	if messages == nil {
+		messages = []*AIMessageType{}
+	}
+	return &AIChatHistoryType{
+		ChatId:   chatId,
+		Messages: messages,
+	}, nil
+}

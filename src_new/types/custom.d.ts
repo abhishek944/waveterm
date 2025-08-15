@@ -398,6 +398,8 @@ declare global {
             screenid: string;
             items: Array<{ threadid: string; name: string }>;
         };
+        aichat?: AIChatType;
+        aichathistory?: AIChatHistoryType;
     };
 
     type TermThemesType = {
@@ -1029,6 +1031,27 @@ declare global {
         role?: string; // electron role (optional)
         click?: () => void; // not required if role is set
         submenu?: ContextMenuItem[];
+    };
+
+    // AI Chat Types
+    type AIChatType = {
+        chatid: string;
+        createdts: number;
+        updatedts: number;
+        remove?: boolean;
+    };
+
+    type AIMessageType = {
+        messageid: string;
+        chatid: string;
+        role: "user" | "ai";
+        content: string;
+        createdts: number;
+    };
+
+    type AIChatHistoryType = {
+        chatid: string;
+        messages: AIMessageType[];
     };
 }
 

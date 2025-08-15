@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 dayjs.extend(localizedFormat);
 
 const RightSideBar: React.FC = observer(() => {
-    const [mode, setMode] = React.useState("aichat");
+    const [mode] = React.useState("aichat");
     const timeoutIdRef = React.useRef<NodeJS.Timeout | null>(null);
 
     React.useEffect(() => {
@@ -28,11 +28,6 @@ const RightSideBar: React.FC = observer(() => {
         };
     }, []);
 
-    const handleSetMode = (newMode: string) => {
-        if (newMode !== mode) {
-            setMode(newMode);
-        }
-    };
 
     const toggleCollapse = () => {
         const isCollapsed = GlobalModel.rightSidebarModel.getCollapsed();
@@ -55,6 +50,9 @@ const RightSideBar: React.FC = observer(() => {
         <ResizableSidebar
             position="right"
             collapsed={isCollapsed}
+            initialWidth={400}
+            minWidth={300}
+            maxWidth={600}
             className={cn("flex flex-col relative", { "w-0": isCollapsed })}
         >
             {/* Gradient background */}

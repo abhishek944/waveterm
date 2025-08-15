@@ -12,6 +12,7 @@ import { PluginsView } from "@/plugins_view/plugins_view";
 import { BookmarksView } from "@/components/bookmarks/bookmarks";
 import { HistoryView } from "@/components/history/history";
 import { ConnectionsView } from "@/components/connections/connections";
+import { InfoView } from "@/components/info/info";
 import { DisconnectedModal, ClientStopModal } from "@/components/modals";
 import { ModalsProvider } from "@/components/modals/provider";
 
@@ -137,6 +138,7 @@ const App: React.FC = mobxReact.observer(() => {
                                     <BookmarksView />
                                     <ConnectionsView model={remotesModel} />
                                     <ClientSettingsView model={remotesModel} />
+                                    <InfoView />
                                 </ErrorBoundary>
                             </div>
                             <RightSideBar />

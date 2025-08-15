@@ -88,111 +88,161 @@ func GetAIOptions(clientData *sstore.ClientData, provider string) (interface{}, 
 
 // RunAICompletion is the main entry point for AI completions
 func RunAICompletion(ctx context.Context, clientData *sstore.ClientData, request *AIRequest) (*AIResponse, error) {
+	fmt.Printf("DEBUG RunAICompletion START: provider=%s, mode=%s, streaming=%v\n", request.Provider, request.Mode, request.Streaming)
+	
 	provider := request.Provider
 	if provider == "" {
+		fmt.Printf("DEBUG RunAICompletion: No provider specified, getting default\n")
 		var err error
 		provider, err = GetAIProvider(clientData)
 		if err != nil {
+			fmt.Printf("DEBUG RunAICompletion ERROR: Failed to get provider: %v\n", err)
 			return nil, err
 		}
+		fmt.Printf("DEBUG RunAICompletion: Got default provider: %s\n", provider)
 	}
 
+	fmt.Printf("DEBUG RunAICompletion: Getting options for provider: %s\n", provider)
 	opts, err := GetAIOptions(clientData, provider)
 	if err != nil {
+		fmt.Printf("DEBUG RunAICompletion ERROR: Failed to get options: %v\n", err)
 		return nil, err
 	}
+	fmt.Printf("DEBUG RunAICompletion: Got options, type=%T\n", opts)
 
+	fmt.Printf("DEBUG RunAICompletion: Switching on provider: %s\n", provider)
 	switch provider {
 	case AIProviderOpenAI:
+		fmt.Printf("DEBUG RunAICompletion: Calling runOpenAICompletion\n")
 		return runOpenAICompletion(ctx, opts.(*sstore.OpenAIOptsType), request)
 	case AIProviderGemini:
+		fmt.Printf("DEBUG RunAICompletion: Calling runGeminiCompletion\n")
 		return runGeminiCompletion(ctx, opts.(*sstore.GeminiOptsType), request)
 	case AIProviderAzure:
+		fmt.Printf("DEBUG RunAICompletion: Calling runAzureOpenAICompletion\n")
 		return runAzureOpenAICompletion(ctx, opts.(*sstore.AzureOpenAIOptsType), request)
 	default:
+		fmt.Printf("DEBUG RunAICompletion ERROR: Unsupported provider: %s\n", provider)
 		return nil, fmt.Errorf("unsupported AI provider: %s", provider)
 	}
 }
 
 // runOpenAICompletion handles OpenAI completions
 func runOpenAICompletion(ctx context.Context, opts *sstore.OpenAIOptsType, request *AIRequest) (*AIResponse, error) {
+	fmt.Printf("DEBUG runOpenAICompletion START: opts=%+v\n", opts)
+	
 	if opts.Model == "" {
 		opts.Model = openai.DefaultModel
+		fmt.Printf("DEBUG runOpenAICompletion: Using default model: %s\n", opts.Model)
 	}
 	if opts.MaxTokens == 0 {
 		opts.MaxTokens = openai.DefaultMaxTokens
+		fmt.Printf("DEBUG runOpenAICompletion: Using default max tokens: %d\n", opts.MaxTokens)
 	}
 
 	// Determine if we need structured output for thread mode
 	var responseFormat *openaiapi.ChatCompletionNewParamsResponseFormatUnion
 	if request.Mode == AIModeThread {
+		fmt.Printf("DEBUG runOpenAICompletion: Thread mode, creating response format\n")
 		responseFormat = openai.CreateThreadModeResponseFormat()
 	}
 
+	fmt.Printf("DEBUG runOpenAICompletion: Streaming=%v, prompt length=%d\n", request.Streaming, len(request.Prompt))
+	
 	if request.Streaming {
+		fmt.Printf("DEBUG runOpenAICompletion: Calling RunCompletionStreamWithFormat\n")
 		ch, err := openai.RunCompletionStreamWithFormat(ctx, opts, request.Prompt, responseFormat)
 		if err != nil {
+			fmt.Printf("DEBUG runOpenAICompletion ERROR: Stream failed: %v\n", err)
 			return nil, err
 		}
+		fmt.Printf("DEBUG runOpenAICompletion: Stream started successfully\n")
 		return &AIResponse{Stream: ch}, nil
 	} else {
+		fmt.Printf("DEBUG runOpenAICompletion: Calling RunCompletionWithFormat\n")
 		packets, err := openai.RunCompletionWithFormat(ctx, opts, request.Prompt, responseFormat)
 		if err != nil {
+			fmt.Printf("DEBUG runOpenAICompletion ERROR: Completion failed: %v\n", err)
 			return nil, err
 		}
+		fmt.Printf("DEBUG runOpenAICompletion: Got %d packets\n", len(packets))
 		return &AIResponse{Packets: packets}, nil
 	}
 }
 
 // runGeminiCompletion handles Gemini completions
 func runGeminiCompletion(ctx context.Context, opts *sstore.GeminiOptsType, request *AIRequest) (*AIResponse, error) {
+	fmt.Printf("DEBUG runGeminiCompletion START: opts=%+v\n", opts)
+	
 	if opts.Model == "" {
 		opts.Model = gemini.DefaultModel
+		fmt.Printf("DEBUG runGeminiCompletion: Using default model: %s\n", opts.Model)
 	}
 	if opts.MaxTokens == 0 {
 		opts.MaxTokens = gemini.DefaultMaxTokens
+		fmt.Printf("DEBUG runGeminiCompletion: Using default max tokens: %d\n", opts.MaxTokens)
 	}
 
 	// Determine if we need structured output for thread mode
 	var responseSchema *genai.Schema
 	if request.Mode == AIModeThread {
+		fmt.Printf("DEBUG runGeminiCompletion: Thread mode, creating response schema\n")
 		responseSchema = gemini.CreateThreadModeResponseSchema()
 	}
 
+	fmt.Printf("DEBUG runGeminiCompletion: Streaming=%v, prompt length=%d\n", request.Streaming, len(request.Prompt))
+	
 	if request.Streaming {
+		fmt.Printf("DEBUG runGeminiCompletion: Calling RunCompletionStreamWithSchema\n")
 		ch, err := gemini.RunCompletionStreamWithSchema(ctx, opts, request.Prompt, responseSchema)
 		if err != nil {
+			fmt.Printf("DEBUG runGeminiCompletion ERROR: Stream failed: %v\n", err)
 			return nil, err
 		}
+		fmt.Printf("DEBUG runGeminiCompletion: Stream started successfully\n")
 		return &AIResponse{Stream: ch}, nil
 	} else {
+		fmt.Printf("DEBUG runGeminiCompletion: Calling RunCompletionWithSchema\n")
 		packets, err := gemini.RunCompletionWithSchema(ctx, opts, request.Prompt, responseSchema)
 		if err != nil {
+			fmt.Printf("DEBUG runGeminiCompletion ERROR: Completion failed: %v\n", err)
 			return nil, err
 		}
+		fmt.Printf("DEBUG runGeminiCompletion: Got %d packets\n", len(packets))
 		return &AIResponse{Packets: packets}, nil
 	}
 }
 
 // runAzureOpenAICompletion handles Azure OpenAI completions
 func runAzureOpenAICompletion(ctx context.Context, opts *sstore.AzureOpenAIOptsType, request *AIRequest) (*AIResponse, error) {
+	fmt.Printf("DEBUG runAzureOpenAICompletion START: opts=%+v\n", opts)
+	
 	// Determine if we need structured output for thread mode
 	var responseFormat *openaiapi.ChatCompletionNewParamsResponseFormatUnion
 	if request.Mode == AIModeThread {
+		fmt.Printf("DEBUG runAzureOpenAICompletion: Thread mode, creating response format\n")
 		responseFormat = azureopenai.CreateThreadModeResponseFormat()
 	}
 
+	fmt.Printf("DEBUG runAzureOpenAICompletion: Streaming=%v, prompt length=%d\n", request.Streaming, len(request.Prompt))
+	
 	if request.Streaming {
+		fmt.Printf("DEBUG runAzureOpenAICompletion: Calling RunCompletionStreamWithFormat\n")
 		ch, err := azureopenai.RunCompletionStreamWithFormat(ctx, opts, request.Prompt, responseFormat)
 		if err != nil {
+			fmt.Printf("DEBUG runAzureOpenAICompletion ERROR: Stream failed: %v\n", err)
 			return nil, err
 		}
+		fmt.Printf("DEBUG runAzureOpenAICompletion: Stream started successfully\n")
 		return &AIResponse{Stream: ch}, nil
 	} else {
+		fmt.Printf("DEBUG runAzureOpenAICompletion: Calling RunCompletionWithFormat\n")
 		packets, err := azureopenai.RunCompletionWithFormat(ctx, opts, request.Prompt, responseFormat)
 		if err != nil {
+			fmt.Printf("DEBUG runAzureOpenAICompletion ERROR: Completion failed: %v\n", err)
 			return nil, err
 		}
+		fmt.Printf("DEBUG runAzureOpenAICompletion: Got %d packets\n", len(packets))
 		return &AIResponse{Packets: packets}, nil
 	}
 }

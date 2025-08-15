@@ -1,4 +1,5 @@
 import * as React from "react";
+import { GlobalModel, GlobalCommandRunner } from "@/models";
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 
@@ -80,7 +81,7 @@ const ChevronDownIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 const aiProviders = [
     { id: "openai", name: "OpenAI", icon: "🤖" },
-    { id: "azure-openai", name: "Azure OpenAI", icon: "☁️" },
+    { id: "azure", name: "Azure OpenAI", icon: "☁️" },
     { id: "gemini", name: "Gemini", icon: "✨" },
 ];
 
@@ -90,14 +91,19 @@ export const SimplePromptBox = React.forwardRef<
 >(({ className, ...props }, ref) => {
     const internalTextareaRef = React.useRef<HTMLTextAreaElement>(null);
     const [value, setValue] = React.useState("");
-    const [selectedProvider, setSelectedProvider] = React.useState("openai");
+    const [selectedProvider, setSelectedProvider] = React.useState(() => {
+        // Try to get the default provider from client data
+        const clientData = GlobalModel.clientData.get();
+        return clientData?.aiopts?.default || "openai";
+    });
     const [isPopoverOpen, setIsPopoverOpen] = React.useState(false);
+    const [isLoading, setIsLoading] = React.useState(false);
 
     React.useImperativeHandle(ref, () => internalTextareaRef.current!, []);
 
     React.useLayoutEffect(() => {
         const textarea = internalTextareaRef.current;
-        if (textarea) {
+        if (textarea && value) {
             textarea.style.height = "auto";
             const newHeight = Math.min(textarea.scrollHeight, 200);
             textarea.style.height = `${newHeight}px`;
@@ -107,6 +113,77 @@ export const SimplePromptBox = React.forwardRef<
     const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         setValue(e.target.value);
         if (props.onChange) props.onChange(e);
+    };
+
+    const handleSubmit = async () => {
+        if (!value.trim() || isLoading) return;
+        
+        setIsLoading(true);
+        try {
+            const chatId = GlobalModel.sidebarchatModel.getCurrentChatId();
+            console.log("Current chat ID:", chatId);
+            console.log("Chat history:", GlobalModel.sidebarchatModel.getChatHistory());
+            
+            if (!chatId) {
+                console.error("No active chat - attempting to create one");
+                // Try to create a new chat
+                const result = await GlobalCommandRunner.aiChatNew();
+                if (!result.success) {
+                    console.error("Failed to create new chat");
+                    return;
+                }
+                // Wait a bit for the update to be processed
+                await new Promise(resolve => setTimeout(resolve, 100));
+                const newChatId = GlobalModel.sidebarchatModel.getCurrentChatId();
+                if (!newChatId) {
+                    console.error("Still no chat ID after creating new chat");
+                    return;
+                }
+            }
+            
+            // Get the final chat ID (either existing or newly created)
+            const finalChatId = GlobalModel.sidebarchatModel.getCurrentChatId();
+            if (!finalChatId) {
+                console.error("Unable to get chat ID");
+                return;
+            }
+            
+            // Add the user message to the chat immediately
+            const userMessage: AIMessageType = {
+                messageid: `temp-${Date.now()}`,
+                chatid: finalChatId,
+                role: "user",
+                content: value.trim(),
+                createdts: Date.now()
+            };
+            console.log("Adding user message to history:", userMessage);
+            console.log("Current history before add:", GlobalModel.sidebarchatModel.getChatHistory());
+            GlobalModel.sidebarchatModel.addMessageToHistory(userMessage);
+            console.log("Current history after add:", GlobalModel.sidebarchatModel.getChatHistory());
+            
+            // Clear the input
+            setValue("");
+            
+            // Set loading state on the model
+            GlobalModel.sidebarchatModel.setIsLoading(true);
+            
+            // Send the message
+            await GlobalCommandRunner.aiChatSend(finalChatId, userMessage.content, selectedProvider);
+            
+            // Clear loading state (will also be cleared when response arrives)
+            GlobalModel.sidebarchatModel.setIsLoading(false);
+        } catch (error) {
+            console.error("Failed to send message:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            handleSubmit();
+        }
     };
 
     const hasValue = value.trim().length > 0;
@@ -124,8 +201,10 @@ export const SimplePromptBox = React.forwardRef<
                 rows={1}
                 value={value}
                 onChange={handleInputChange}
+                onKeyDown={handleKeyDown}
                 placeholder="Message..."
-                className="custom-scrollbar w-full resize-none border-0 bg-transparent p-3 text-white placeholder:text-gray-400 focus:ring-0 focus-visible:outline-none min-h-12"
+                className="custom-scrollbar w-full resize-none border-0 bg-transparent p-3 text-white placeholder:text-gray-400 focus:ring-0 focus-visible:outline-none"
+                disabled={isLoading}
                 {...props}
             />
 
@@ -165,8 +244,9 @@ export const SimplePromptBox = React.forwardRef<
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <button
-                                        type="submit"
-                                        disabled={!hasValue}
+                                        type="button"
+                                        onClick={handleSubmit}
+                                        disabled={!hasValue || isLoading}
                                         className="flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none bg-white/20 text-white hover:bg-white/30 disabled:bg-white/10"
                                     >
                                         <SendIcon className="h-6 w-6 text-bold" />

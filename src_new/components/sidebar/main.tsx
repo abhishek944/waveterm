@@ -76,6 +76,14 @@ const MainSideBar: React.FC<MainSideBarProps> = observer(({ parentRef }) => {
         GlobalCommandRunner.clientSettingsView();
     };
 
+    const handleInfoClick = () => {
+        if (GlobalModel.activeMainView.get() == "info") {
+            GlobalModel.showSessionView();
+            return;
+        }
+        GlobalCommandRunner.infoView();
+    };
+
     const openSessionSettings = (e: any, session: Session) => {
         e.preventDefault();
         e.stopPropagation();
@@ -140,6 +148,7 @@ const MainSideBar: React.FC<MainSideBarProps> = observer(({ parentRef }) => {
     const mainView = GlobalModel.activeMainView.get();
     const connectionsActive = mainView == "connections";
     const settingsActive = mainView == "clientsettings";
+    const infoActive = mainView == "info";
 
     return (
         <ResizableSidebar
@@ -154,6 +163,12 @@ const MainSideBar: React.FC<MainSideBarProps> = observer(({ parentRef }) => {
                         className="title-bar-drag flex items-center relative border-b border-gray-800 flex-shrink-0"
                         style={{ height: "calc(var(--screentabs-height) + 1px)" }}
                     >
+                        <WaveLogo
+                            className="w-8 h-8 cursor-pointer"
+                            onClick={() =>
+                                GlobalModel.mainSidebarModel.setCollapsed(!GlobalModel.mainSidebarModel.getCollapsed())
+                            }
+                        />
                         <div
                             className="close-button absolute right-0 h-full flex items-center p-2.5 cursor-pointer"
                             onClick={() =>
@@ -171,6 +186,13 @@ const MainSideBar: React.FC<MainSideBarProps> = observer(({ parentRef }) => {
                                 className={clsx({ "bg-gray-700": connectionsActive })}
                                 contents="Connections"
                                 onClick={handleConnectionsClick}
+                            />
+                            <SideBarItem
+                                key="info"
+                                frontIcon={<i className="fa-sharp fa-regular fa-circle-info icon" />}
+                                className={clsx({ "bg-gray-700": infoActive })}
+                                contents="Info"
+                                onClick={handleInfoClick}
                             />
                         </div>
                         <div className="separator h-px my-4 bg-gray-800 flex-shrink-0" />

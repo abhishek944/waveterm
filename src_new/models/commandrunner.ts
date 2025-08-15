@@ -312,6 +312,10 @@ class CommandRunner {
         GlobalModel.clientSettingsViewModel.showClientSettingsView();
     }
 
+    infoView() {
+        GlobalModel.infoViewModel.showInfoView();
+    }
+
     syncShellState() {
         GlobalModel.submitCommand("sync", null, null, { nohist: "1" }, false);
     }
@@ -664,6 +668,43 @@ class CommandRunner {
         console.log("[CommandRunner.verifyAIProvider] Called with provider:", provider);
         let kwargs: Record<string, string> = { nohist: "1", provider: provider };
         return GlobalModel.submitCommand("client", "verifyaiprovider", null, kwargs, false);
+    }
+
+    // AI Chat Commands
+    aiChatList(): Promise<CommandRtnType> {
+        return GlobalModel.submitCommand("aichat", "list", null, { nohist: "1" }, false);
+    }
+
+    aiChatNew(): Promise<CommandRtnType> {
+        return GlobalModel.submitCommand("aichat", "new", null, { nohist: "1" }, false);
+    }
+
+    aiChatGet(chatId?: string): Promise<CommandRtnType> {
+        let kwargs: Record<string, string> = { nohist: "1" };
+        if (chatId) {
+            kwargs.chatid = chatId;
+        }
+        return GlobalModel.submitCommand("aichat", "get", null, kwargs, false);
+    }
+
+    aiChatSend(chatId: string, message: string, provider?: string): Promise<CommandRtnType> {
+        let kwargs: Record<string, string> = { 
+            nohist: "1",
+            chatid: chatId,
+            message: message
+        };
+        if (provider) {
+            kwargs.provider = provider;
+        }
+        return GlobalModel.submitCommand("aichat", "send", null, kwargs, false);
+    }
+
+    aiChatDelete(chatId: string): Promise<CommandRtnType> {
+        let kwargs: Record<string, string> = { 
+            nohist: "1",
+            chatid: chatId
+        };
+        return GlobalModel.submitCommand("aichat", "delete", null, kwargs, false);
     }
 }
 

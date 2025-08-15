@@ -4,121 +4,70 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { observer } from "mobx-react";
 import { action } from "mobx";
-import { GlobalModel } from "@/models";
+import { GlobalModel, GlobalCommandRunner } from "@/models";
 import { Markdown } from "@/components/ui/markdown";
 import { TypingIndicator } from "@/components/ui/typingindicator";
 import type { OverlayScrollbars } from "overlayscrollbars";
 import { OverlayScrollbarsComponent, OverlayScrollbarsComponentRef } from "overlayscrollbars-react";
 import { cn } from "@/lib/utils";
-import { User, Sparkles, Send, Bot } from "lucide-react";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { User, Bot, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-// AI Provider Options
-const aiProviders = [
-  { id: 'openai', name: 'OpenAI', icon: '🤖' },
-  { id: 'azure-openai', name: 'Azure OpenAI', icon: '☁️' },
-  { id: 'gemini', name: 'Gemini', icon: '✨' },
-];
-
-interface ChatItemProps {
-    chatItem: OpenAICmdInfoChatMessageType;
-    itemCount: number;
-    onSetCmdInputValue: (cmd: string) => void;
+interface ChatMessageProps {
+    message: AIMessageType;
+    onSetCmdInputValue?: (cmd: string) => void;
 }
 
-const ChatItem: React.FC<ChatItemProps> = observer(({ chatItem, itemCount, onSetCmdInputValue }) => {
-    const { isassistantresponse, assistantresponse, userquery } = chatItem;
+const ChatMessage: React.FC<ChatMessageProps> = observer(({ message, onSetCmdInputValue }) => {
+    const isUser = message.role === "user";
     
-    const renderError = (err: string) => (
-        <div className="flex items-start gap-4 p-6">
-            <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center flex-shrink-0">
-                <Bot className="w-5 h-5 text-red-500" />
-            </div>
-            <div className="flex-1">
-                <p className="text-sm font-medium text-red-400 mb-1">Error</p>
-                <p className="text-sm text-gray-300">{err}</p>
-            </div>
-        </div>
-    );
-
-    const renderContent = () => {
-        if (!isassistantresponse) {
-            return (
-                <div className="flex items-start gap-4 p-6">
-                    <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
-                        <User className="w-5 h-5 text-white" />
-                    </div>
-                    <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-200 mb-2">You</p>
-                        <div className="text-[15px] text-gray-100 leading-relaxed">
-                            <Markdown text={userquery} />
-                        </div>
-                    </div>
-                </div>
-            );
-        }
-
-        if (assistantresponse?.error) {
-            return renderError(assistantresponse.error);
-        }
-
-        if (!assistantresponse?.message) {
-            return (
-                <div className="flex items-start gap-4 p-6">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-                        <Bot className="w-5 h-5 text-white" />
-                    </div>
-                    <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-200 mb-2">Assistant</p>
-                        <TypingIndicator className="mt-2" />
-                    </div>
-                </div>
-            );
-        }
-
-        return (
-            <div className="flex items-start gap-4 p-6">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-                    <Bot className="w-5 h-5 text-white" />
-                </div>
-                <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-200 mb-2">Assistant</p>
-                    <div className="text-[15px] text-gray-100 leading-relaxed prose prose-sm prose-invert max-w-none">
-                        <Markdown text={assistantresponse.message} onClickExecute={onSetCmdInputValue} />
-                    </div>
-                </div>
-            </div>
-        );
-    };
-
     return (
         <div className={cn(
-            "group hover:bg-white/[0.02] transition-colors duration-200",
-            itemCount % 2 === 0 ? "bg-transparent" : "bg-white/[0.01]"
+            "flex p-4",
+            isUser ? "justify-start" : "justify-end"  // User messages left, AI messages right
         )}>
-            {renderContent()}
+            <div className={cn(
+                "flex gap-3 max-w-[80%] min-w-0",
+                isUser ? "flex-row" : "flex-row-reverse"  // Icon position based on role
+            )}>
+                <div className={cn(
+                    "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-white/10"
+                )}>
+                    {isUser ? (
+                        <User className="w-4 h-4 text-white" />
+                    ) : (
+                        <Bot className="w-4 h-4 text-white" />
+                    )}
+                </div>
+                <div className={cn(
+                    "rounded-2xl px-4 py-2 overflow-hidden max-w-full bg-white/10"
+                )}>
+                    <div className="text-sm text-gray-100 break-words overflow-wrap-anywhere [&_pre]:max-w-full [&_pre]:overflow-x-auto">
+                        <Markdown 
+                            text={message.content} 
+                            onClickExecute={onSetCmdInputValue}
+                            showCopyButton={true}
+                            showExecuteButton={false}
+                            uiTheme="aichat"
+                        />
+                    </div>
+                </div>
+            </div>
         </div>
     );
 });
 
 interface ChatWindowProps {
+    messages: AIMessageType[];
+    isLoading: boolean;
     chatWindowRef: React.RefObject<HTMLDivElement>;
     onRendered: (osInstance: OverlayScrollbars) => void;
     onSetCmdInputValue: (cmd: string) => void;
 }
 
-const ChatWindow: React.FC<ChatWindowProps> = observer(({ chatWindowRef, onRendered, onSetCmdInputValue }) => {
+const ChatWindow: React.FC<ChatWindowProps> = observer(({ messages, isLoading, chatWindowRef, onRendered, onSetCmdInputValue }) => {
     const containerRef = useRef<OverlayScrollbarsComponentRef>(null);
     const osInstanceRef = useRef<OverlayScrollbars | null>(null);
-    const chatMessageItems = GlobalModel.inputModel.AICmdInfoChatItems.slice();
 
     useEffect(() => {
         if (containerRef.current && osInstanceRef.current) {
@@ -128,7 +77,7 @@ const ChatWindow: React.FC<ChatWindowProps> = observer(({ chatWindowRef, onRende
                 top: chatWindowRef.current?.scrollHeight || 0,
             });
         }
-    }, [chatMessageItems.length, chatWindowRef]);
+    }, [messages.length, chatWindowRef]);
 
     const handleScrollbarInitialized = useCallback((instance: OverlayScrollbars) => {
         osInstanceRef.current = instance;
@@ -152,16 +101,27 @@ const ChatWindow: React.FC<ChatWindowProps> = observer(({ chatWindowRef, onRende
             }}
             events={{ initialized: handleScrollbarInitialized }}
         >
-            <div ref={chatWindowRef} className="flex flex-col min-h-full pb-2">
+            <div ref={chatWindowRef} className="flex flex-col min-h-full">
                 <div className="flex-1" />
-                {chatMessageItems.map((chatItem, idx) => (
-                    <ChatItem
-                        key={idx}
-                        chatItem={chatItem}
-                        itemCount={idx + 1}
+                {messages.map((msg) => (
+                    <ChatMessage
+                        key={msg.messageid}
+                        message={msg}
                         onSetCmdInputValue={onSetCmdInputValue}
                     />
                 ))}
+                {isLoading && (
+                    <div className="flex justify-end p-4">
+                        <div className="flex gap-3 max-w-[80%] flex-row-reverse">
+                            <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
+                                <Bot className="w-4 h-4 text-white" />
+                            </div>
+                            <div className="rounded-2xl px-4 py-2 bg-white/10">
+                                <TypingIndicator />
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </OverlayScrollbarsComponent>
     );
@@ -169,337 +129,102 @@ const ChatWindow: React.FC<ChatWindowProps> = observer(({ chatWindowRef, onRende
 
 const ChatSidebar: React.FC = observer(() => {
     const sidebarRef = useRef<HTMLDivElement>(null);
-    const textAreaRef = useRef<HTMLTextAreaElement>(null);
     const chatWindowRef = useRef<HTMLDivElement>(null);
-    const [value, setValue] = useState("");
-    const [osInstance, setOsInstance] = useState<OverlayScrollbars | null>(null);
-    const [selectedProvider, setSelectedProvider] = useState('openai');
-    const termFontSize = 14;
+    
+    const sidebarchatModel = GlobalModel.sidebarchatModel;
+    const chatHistory = sidebarchatModel.getChatHistory();
+    const isLoading = sidebarchatModel.getIsLoading();
 
     useEffect(() => {
-        const hasCmdAndOutput = GlobalModel.sidebarchatModel.hasCmdAndOutput();
-        const selectedCodeBlockIndex = GlobalModel.sidebarchatModel.getSelectedCodeBlockIndex();
-
-        if (hasCmdAndOutput) {
-            const newCmdAndOutput = GlobalModel.sidebarchatModel.getCmdAndOutput();
-            const newValue = formChatMessage(newCmdAndOutput);
-            setValue(newValue);
-            GlobalModel.sidebarchatModel.resetCmdAndOutput();
-        }
-
-        if (selectedCodeBlockIndex == null) {
-            updatePreTagOutline();
-        }
-    }, [GlobalModel.sidebarchatModel.hasCmdAndOutput(), GlobalModel.sidebarchatModel.getSelectedCodeBlockIndex()]);
-
-    useEffect(() => {
-        const handleClick = (event: MouseEvent) => {
-            const target = event.target as HTMLElement;
-            if (
-                target.closest(".copy-button") ||
-                target.closest(".execute-button") ||
-                target.closest(".chat-textarea")
-            ) {
-                return;
-            }
-
-            const pre = target.closest("pre");
-            if (pre) {
-                const pres = chatWindowRef.current?.querySelectorAll("pre");
-                if (pres) {
-                    pres.forEach((preElement, idx) => {
-                        if (preElement === pre) {
-                            GlobalModel.sidebarchatModel.setSelectedCodeBlockIndex(idx);
-                            updatePreTagOutline(pre);
-                        }
-                    });
-                }
-            }
-            GlobalModel.inputModel.setChatSidebarFocus();
-        };
-
-        if (sidebarRef.current) {
-            sidebarRef.current.addEventListener("click", handleClick);
-        }
-
-        requestChatUpdate();
+        // Load initial chat on mount
+        loadInitialChat();
 
         // Register keybindings
         const keybindManager = GlobalModel.keybindManager;
-        const inputModel = GlobalModel.inputModel;
-
-        keybindManager.registerKeybinding("pane", "aichat", "generic:confirm", () => {
-            // Only handle Enter key if AI chat has focus
-            if (!GlobalModel.sidebarchatModel.hasFocus()) {
-                return false;
-            }
-            handleEnterKeyPressed();
-            return true;
-        });
-
-        keybindManager.registerKeybinding("pane", "aichat", "generic:expandTextInput", () => {
-            handleExpandInputPressed();
-            return true;
-        });
-
+        
         keybindManager.registerKeybinding("pane", "aichat", "aichat:clearHistory", () => {
-            inputModel.clearAIAssistantChat();
+            handleNewChat();
             return true;
-        });
-
-        keybindManager.registerKeybinding("pane", "aichat", "generic:selectAbove", () => {
-            return handleArrowUpPressed();
-        });
-
-        keybindManager.registerKeybinding("pane", "aichat", "generic:selectBelow", () => {
-            return handleArrowDownPressed();
         });
 
         return () => {
-            if (sidebarRef.current) {
-                sidebarRef.current.removeEventListener("click", handleClick);
-            }
             GlobalModel.keybindManager.unregisterDomain("aichat");
             GlobalModel.sidebarchatModel.resetFocus();
         };
     }, []);
 
-    useEffect(() => {
-        adjustTextAreaHeight();
-    }, [value]);
-
-    const requestChatUpdate = () => {
-        const chatMessageItems = GlobalModel.inputModel.AICmdInfoChatItems.slice();
-        if (!chatMessageItems || chatMessageItems.length === 0) {
-            // Don't submit empty message on startup
-            // submitChatMessage("");
-        }
-    };
-
-    const adjustTextAreaHeight = () => {
-        if (!textAreaRef.current) return;
-        
-        textAreaRef.current.style.height = "auto";
-        const newHeight = Math.min(textAreaRef.current.scrollHeight, 200);
-        textAreaRef.current.style.height = `${newHeight}px`;
-    };
-
-    const submitChatMessage = (messageStr: string) => {
-        GlobalModel.sidebarchatModel.resetCmdAndOutput();
-        const curLine = GlobalModel.inputModel.curLine;
-        const prtn = GlobalModel.submitChatInfoCommand(messageStr, curLine, false);
-        prtn.then((rtn) => {
-            if (!rtn.success) {
-                console.log("submit chat command error: " + rtn.error);
-            }
-        }).catch(() => {});
-    };
-
-    const handleTextAreaChange = action((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        setValue(e.target.value);
-    });
-
-    const handleTextAreaFocus = action(() => {
-        GlobalModel.inputModel.setChatSidebarFocus();
-    });
-
-    const handleTextAreaMouseDown = action(() => {
-        updatePreTagOutline();
-        GlobalModel.sidebarchatModel.resetSelectedCodeBlockIndex();
-    });
-
-    const handleEnterKeyPressed = action(() => {
-        const blockIndex = GlobalModel.sidebarchatModel.getSelectedCodeBlockIndex();
-        if (blockIndex != null) {
-            handleSetCmdInputValue();
-            return true;
-        }
-        if (value.trim()) {
-            submitChatMessage(value);
-            setValue("");
-            GlobalModel.sidebarchatModel.resetCmdAndOutput();
-        }
-        return true;
-    });
-
-    const handleExpandInputPressed = action(() => {
-        const currentRef = textAreaRef.current;
-        if (!currentRef) return;
-        currentRef.setRangeText("\n", currentRef.selectionStart, currentRef.selectionEnd, "end");
-        setValue(currentRef.value);
-    });
-
-    const handleBlur = action(() => {
-        GlobalModel.sidebarchatModel.resetFocus();
-    });
-
-    const updatePreTagOutline = (clickedPre?: Element) => {
-        const pres = chatWindowRef.current?.querySelectorAll("pre");
-        if (!pres) return;
-
-        pres.forEach((preElement, idx) => {
-            if (preElement === clickedPre) {
-                GlobalModel.sidebarchatModel.setSelectedCodeBlockIndex(idx);
-                preElement.classList.add("ring-2", "ring-indigo-500/30", "rounded-md", "bg-white/5");
+    const loadInitialChat = async () => {
+        try {
+            console.log("Loading initial chat...");
+            const result = await GlobalCommandRunner.aiChatGet();
+            if (!result.success) {
+                console.error("Failed to load chat:", result.error);
             } else {
-                preElement.classList.remove("ring-2", "ring-indigo-500/30", "bg-white/5");
+                console.log("Initial chat loaded successfully");
+                // If there's no chat history yet, initialize it
+                const history = GlobalModel.sidebarchatModel.getChatHistory();
+                const chatId = GlobalModel.sidebarchatModel.getCurrentChatId();
+                console.log("After load - Chat ID:", chatId, "History:", history);
             }
-        });
-    };
-
-    const updateScrollTop = () => {
-        const pres = chatWindowRef.current?.querySelectorAll("pre");
-        if (!pres || !osInstance) return;
-
-        const block = pres[GlobalModel.sidebarchatModel.getSelectedCodeBlockIndex()];
-        if (!block) return;
-
-        const { viewport, scrollOffsetElement } = osInstance.elements();
-        const chatWindowTop = scrollOffsetElement.scrollTop;
-        const chatWindowHeight = chatWindowRef.current?.clientHeight || 0;
-        const chatWindowBottom = chatWindowTop + chatWindowHeight;
-        const elemTop = (block as HTMLElement).offsetTop;
-        const elemBottom = elemTop + (block as HTMLElement).offsetHeight;
-        const elementIsInView = elemBottom <= chatWindowBottom && elemTop >= chatWindowTop;
-
-        if (!elementIsInView) {
-            let scrollPosition: number;
-            if (elemBottom > chatWindowBottom) {
-                scrollPosition = elemTop - chatWindowHeight + (block as HTMLElement).offsetHeight + 15;
-            } else if (elemTop < chatWindowTop) {
-                scrollPosition = elemTop - 15;
-            } else {
-                return;
-            }
-            viewport.scrollTo({
-                behavior: "smooth",
-                top: scrollPosition,
-            });
+        } catch (error) {
+            console.error("Failed to load initial chat:", error);
         }
     };
 
-    const handleChatWindowRendered = action((instance: OverlayScrollbars) => {
-        setOsInstance(instance);
-    });
-
-    const handleArrowUpPressed = action(() => {
-        if (handleTextAreaKeyDown("ArrowUp")) {
-            const pres = chatWindowRef.current?.querySelectorAll("pre");
-            let blockIndex = GlobalModel.sidebarchatModel.getSelectedCodeBlockIndex();
-            if (!pres) return false;
-
-            if (blockIndex == null) {
-                GlobalModel.sidebarchatModel.setSelectedCodeBlockIndex(pres.length - 1);
-            } else if (blockIndex > 0) {
-                blockIndex--;
-                GlobalModel.sidebarchatModel.setSelectedCodeBlockIndex(blockIndex);
-            }
-            blockIndex = GlobalModel.sidebarchatModel.getSelectedCodeBlockIndex();
-            updatePreTagOutline(pres[blockIndex]);
-            updateScrollTop();
-            return true;
-        }
-        return false;
-    });
-
-    const handleArrowDownPressed = action(() => {
-        if (handleTextAreaKeyDown("ArrowDown")) {
-            const pres = chatWindowRef.current?.querySelectorAll("pre");
-            let blockIndex = GlobalModel.sidebarchatModel.getSelectedCodeBlockIndex();
-            if (!pres) return false;
-
-            if (blockIndex == null) return false;
-
-            if (blockIndex < pres.length - 1 && blockIndex >= 0) {
-                blockIndex++;
-                GlobalModel.sidebarchatModel.setSelectedCodeBlockIndex(blockIndex);
-                updatePreTagOutline(pres[blockIndex]);
-            } else {
-                GlobalModel.sidebarchatModel.setFocus(true);
-                textAreaRef.current?.focus();
-                updatePreTagOutline();
-                GlobalModel.sidebarchatModel.setSelectedCodeBlockIndex(null);
-            }
-            updateScrollTop();
-            return true;
-        }
-        return false;
-    });
-
-    const handleTextAreaKeyDown = (key: "ArrowUp" | "ArrowDown") => {
-        const textarea = textAreaRef.current;
-        if (!textarea) return false;
-
-        const cursorPosition = textarea.selectionStart;
-        const textBeforeCursor = textarea.value.slice(0, cursorPosition);
-        const blockIndex = GlobalModel.sidebarchatModel.getSelectedCodeBlockIndex();
-
-        if ((textBeforeCursor.indexOf("\n") === -1 && cursorPosition === 0 && key === "ArrowUp") || blockIndex != null) {
-            return true;
-        }
-        GlobalModel.sidebarchatModel.setFocus(true);
-        return false;
-    };
-
-    const handleSetCmdInputValue = action((cmd?: string) => {
-        if (cmd) {
-            setCmdInputValue(cmd);
-        } else {
-            const pres = chatWindowRef.current?.querySelectorAll("pre");
-            if (pres) {
-                const selectedIdx = GlobalModel.sidebarchatModel.getSelectedCodeBlockIndex();
-                pres.forEach((preElement, idx) => {
-                    if (selectedIdx === idx) {
-                        const codeElement = preElement.querySelector("code");
-                        if (codeElement) {
-                            const command = codeElement.textContent?.replace(/\n$/, "") || "";
-                            setCmdInputValue(command);
-                        }
+    const handleNewChat = async () => {
+        try {
+            // Clear the current chat history immediately for better UX
+            GlobalModel.sidebarchatModel.setChatHistory(null);
+            
+            const result = await GlobalCommandRunner.aiChatNew();
+            if (result.success) {
+                // The update will be handled by the model update handler
+                // But we also need to ensure we get the new empty chat
+                // Load the new chat to get its empty history
+                setTimeout(async () => {
+                    const chatId = GlobalModel.sidebarchatModel.getCurrentChatId();
+                    if (chatId) {
+                        await GlobalCommandRunner.aiChatGet(chatId);
                     }
-                });
+                }, 100);
             }
+        } catch (error) {
+            console.error("Failed to create new chat:", error);
         }
-        return true;
-    });
+    };
 
-    const setCmdInputValue = action((cmd: string) => {
+    const handleChatWindowRendered = useCallback((_instance: OverlayScrollbars) => {
+        // We don't need to store the instance for now
+    }, []);
+
+    const handleSetCmdInputValue = action((cmd: string) => {
         GlobalModel.sidebarchatModel.setCmdToExec(cmd);
         GlobalModel.sidebarchatModel.resetFocus();
         GlobalModel.inputModel.curLine = cmd;
         GlobalModel.inputModel.giveFocus();
     });
 
-    const formChatMessage = (cmdAndOutput: any) => {
-        const { cmd, output, usedRows, isError } = cmdAndOutput;
-        if (!cmd) return "";
-
-        let escapedOutput = output ? output.replace(/`/g, "\\`") : "";
-        
-        if (usedRows > 100) {
-            const outputLines = escapedOutput.split("\n");
-            const leadingLines = outputLines.slice(0, 10).join("\n");
-            const trailingLines = outputLines.slice(-10).join("\n");
-            escapedOutput = `${leadingLines}\n.\n.\n.\n${trailingLines}`;
-        }
-
-        let chatMessage = `I ran the command: \`${cmd}\` and got the following output:\n\n`;
-        if (escapedOutput !== "") {
-            chatMessage += `\`\`\`\n${escapedOutput}\n\`\`\``;
-        }
-        chatMessage += isError ? "\n\nHow should I fix this?" : "\n\nWhat should I do next?";
-        
-        return chatMessage;
-    };
-
-    const chatMessageItems = GlobalModel.inputModel.AICmdInfoChatItems.slice();
-    const hasValue = value.trim().length > 0;
-    const selectedProviderData = aiProviders.find(p => p.id === selectedProvider);
+    const messages = chatHistory?.messages ?? [];
 
     return (
         <div ref={sidebarRef} className="h-full flex flex-col text-foreground relative overflow-hidden">
             <div className="absolute inset-0 w-full h-full -z-10" />
             <div className="relative z-10 flex flex-col flex-1 overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-2 border-b border-white/10">
+                    <h2 className="text-sm font-medium text-gray-200">AI Chat</h2>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleNewChat}
+                        className="h-7 w-7 rounded-full hover:bg-white/10"
+                        title="New Chat"
+                    >
+                        <Plus className="w-4 h-4" />
+                    </Button>
+                </div>
                 <ChatWindow
+                    messages={messages}
+                    isLoading={isLoading}
                     chatWindowRef={chatWindowRef}
                     onRendered={handleChatWindowRendered}
                     onSetCmdInputValue={handleSetCmdInputValue}

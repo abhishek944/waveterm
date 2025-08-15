@@ -27,6 +27,7 @@ import { BookmarksModel } from "./bookmarks";
 import { HistoryViewModel } from "./historyview";
 import { ConnectionsViewModel } from "./connectionsview";
 import { ClientSettingsViewModel } from "./clientsettingsview";
+import { InfoViewModel } from "./infoview";
 import { RemotesModel } from "./remotes";
 import { ModalsModel } from "./modals";
 import { MainSidebarModel } from "./mainsidebar";
@@ -80,7 +81,7 @@ class Model {
     isDev: boolean;
     platform: string;
     activeMainView: OV<
-        "plugins" | "session" | "history" | "bookmarks" | "webshare" | "connections" | "clientsettings"
+        "plugins" | "session" | "history" | "bookmarks" | "webshare" | "connections" | "clientsettings" | "info"
     > = mobx.observable.box("session", {
         name: "activeMainView",
     });
@@ -123,6 +124,7 @@ class Model {
     historyViewModel: HistoryViewModel;
     connectionViewModel: ConnectionsViewModel;
     clientSettingsViewModel: ClientSettingsViewModel;
+    infoViewModel: InfoViewModel;
     modalsModel: ModalsModel;
     mainSidebarModel: MainSidebarModel;
     rightSidebarModel: RightSidebarModel;
@@ -189,6 +191,7 @@ class Model {
         this.historyViewModel = new HistoryViewModel(this);
         this.connectionViewModel = new ConnectionsViewModel(this);
         this.clientSettingsViewModel = new ClientSettingsViewModel(this);
+        this.infoViewModel = new InfoViewModel(this);
         this.remotesModel = new RemotesModel(this);
         this.modalsModel = new ModalsModel();
         this.mainSidebarModel = new MainSidebarModel(this);
@@ -1167,6 +1170,9 @@ class Model {
                         case "clientsettings":
                             this.activeMainView.set("clientsettings");
                             break;
+                        case "info":
+                            this.activeMainView.set("info");
+                            break;
                         case "connections":
                             this.activeMainView.set("connections");
                             break;
@@ -1242,6 +1248,19 @@ class Model {
                     this.mergeTermThemes(update.termthemes);
                 } else if (update.sessiontombstone != null || update.screentombstone != null) {
                     // nothing (ignore)
+                } else if (update.aichat != null) {
+                    // Handle AI chat update
+                    this.sidebarchatModel.setCurrentChatId(update.aichat.chatid);
+                    this.sidebarchatModel.setChatList([update.aichat]);
+                } else if (update.aichathistory != null) {
+                    // Handle AI chat history update
+                    this.sidebarchatModel.setChatHistory(update.aichathistory);
+                    // Also set the current chat ID if not already set
+                    if (!this.sidebarchatModel.getCurrentChatId() && update.aichathistory.chatid) {
+                        this.sidebarchatModel.setCurrentChatId(update.aichathistory.chatid);
+                    }
+                    // Clear loading state when we receive a chat history update
+                    this.sidebarchatModel.setIsLoading(false);
                 } else {
                     // interactive-only updates follow below
                     // we check interactive *inside* of the conditions because of isDev console.log message

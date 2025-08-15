@@ -42,6 +42,7 @@ const additionalOptions = [
     { label: "Connections", value: "connections" },
     { label: "History", value: "history" },
     { label: "Settings", value: "clientsettings" },
+    { label: "Info", value: "info" },
 ].map((item, index) => ({
     sessionId: `additional-${index}`,
     sessionName: "",

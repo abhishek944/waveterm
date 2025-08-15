@@ -675,14 +675,24 @@ func WriteJsonSuccess(w http.ResponseWriter, data interface{}) {
 	rtnMap["success"] = true
 	if data != nil {
 		rtnMap["data"] = data
+		fmt.Printf("DEBUG WriteJsonSuccess: data type=%T\n", data)
+		if upk, ok := data.(scbus.UpdatePacket); ok {
+			fmt.Printf("DEBUG WriteJsonSuccess: UpdatePacket type=%s, isEmpty=%v\n", upk.GetType(), upk.IsEmpty())
+		}
+	} else {
+		fmt.Printf("DEBUG WriteJsonSuccess: data is nil\n")
 	}
 	barr, err := json.Marshal(rtnMap)
 	if err != nil {
+		fmt.Printf("DEBUG WriteJsonSuccess: Marshal error: %v\n", err)
 		WriteJsonError(w, err)
 		return
 	}
+	fmt.Printf("DEBUG WriteJsonSuccess: Writing %d bytes\n", len(barr))
+	fmt.Printf("DEBUG WriteJsonSuccess: Response content: %s\n", string(barr))
 	w.WriteHeader(http.StatusOK)
-	w.Write(barr)
+	n, err := w.Write(barr)
+	fmt.Printf("DEBUG WriteJsonSuccess: Wrote %d bytes, err=%v\n", n, err)
 }
 
 func HandleRunCommand(w http.ResponseWriter, r *http.Request) {
@@ -703,14 +713,21 @@ func HandleRunCommand(w http.ResponseWriter, r *http.Request) {
 		WriteJsonError(w, fmt.Errorf(ErrorDecodingJson, err))
 		return
 	}
+	fmt.Printf("DEBUG HandleRunCommand: Calling HandleCommand for cmd=%s:%s\n", commandPk.MetaCmd, commandPk.MetaSubCmd)
 	update, err := cmdrunner.HandleCommand(r.Context(), &commandPk)
+	fmt.Printf("DEBUG HandleRunCommand: HandleCommand returned, err=%v, update=%T\n", err, update)
 	if err != nil {
+		fmt.Printf("DEBUG HandleRunCommand: Error occurred: %v\n", err)
 		WriteJsonError(w, err)
 		return
 	}
 	if update != nil {
+		fmt.Printf("DEBUG HandleRunCommand: Cleaning update\n")
 		update.Clean()
+	} else {
+		fmt.Printf("DEBUG HandleRunCommand: Update is nil\n")
 	}
+	fmt.Printf("DEBUG HandleRunCommand: Writing success response\n")
 	WriteJsonSuccess(w, update)
 }
 
