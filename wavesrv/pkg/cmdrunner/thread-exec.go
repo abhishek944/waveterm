@@ -40,6 +40,19 @@ func ExecuteCommandInThread(
 	// Create a new UUID for command execution
 	cmdExecLineId := scbase.GenWaveUUID()
 	
+	// Get current remote state to populate FeState and StatePtr
+	ri, err := sstore.GetRemoteInstance(ctx, sessionId, screenId, *remotePtr)
+	if err != nil {
+		return "", fmt.Errorf("cannot get remote instance: %w", err)
+	}
+	
+	// Get the state pointer for the remote
+	statePtr, err := sstore.GetRemoteStatePtr(ctx, sessionId, screenId, *remotePtr)
+	if err != nil {
+		log.Printf("[ExecuteCommandInThread] Warning: cannot get remote state pointer: %v", err)
+		// Continue anyway, as state pointer is optional
+	}
+	
 	// Create command record with the new UUID
 	cmd := &sstore.CmdType{
 		ScreenId:     screenId,
@@ -52,7 +65,13 @@ func ExecuteCommandInThread(
 		RunOut:       nil,
 	}
 	
-	// Note: We don't set StatePtr or FeState here - the remote will use its current state
+	// Set StatePtr and FeState
+	if statePtr != nil {
+		cmd.StatePtr = *statePtr
+	}
+	if ri.FeState != nil {
+		cmd.FeState = ri.FeState
+	}
 	
 	// Store the mapping between thread lineId and command execution lineId for frontend use
 	// This will be used to find the command execution PTY when displaying in sidebar
@@ -76,7 +95,7 @@ func ExecuteCommandInThread(
 	}
 
 	// Insert the line record first (this handles its own transaction)
-	err := sstore.InsertLine(ctx, cmdLine, cmd)
+	err = sstore.InsertLine(ctx, cmdLine, cmd)
 	if err != nil {
 		return "", fmt.Errorf("cannot insert command execution line: %w", err)
 	}

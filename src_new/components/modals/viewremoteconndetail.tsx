@@ -14,6 +14,7 @@ import {
     Dialog,
     DialogHeader,
     DialogTitle,
+    DialogDescription,
     DialogContent,
     DialogFooter,
 } from "@/components/ui/modal";
@@ -32,14 +33,19 @@ const ViewRemoteConnDetailModal: React.FC = observer(() => {
     const selectedRemote = getSelectedRemote();
 
     useEffect(() => {
-        const elem = termRef.current;
-        if (elem == null) {
-            console.log("ERROR null term-remote element");
-            return;
-        }
-        model.createTermWrap(elem);
+        // Add a small delay to ensure the DOM element is ready
+        const timer = setTimeout(() => {
+            const elem = termRef.current;
+            if (elem == null) {
+                console.log("ERROR null term-remote element");
+                return;
+            }
+            
+            model.createTermWrap(elem);
+        }, 100);
 
         return () => {
+            clearTimeout(timer);
             model.disposeTerm();
         };
     }, []);
@@ -289,6 +295,7 @@ const ViewRemoteConnDetailModal: React.FC = observer(() => {
             <DialogContent className="w-auto max-w-[80vw] max-h-[90vh]">
                 <DialogHeader>
                     <DialogTitle>Connection</DialogTitle>
+                    <DialogDescription>View and manage remote connection details</DialogDescription>
                 </DialogHeader>
                 <OverlayScrollbarsComponent
                     className="flex flex-col p-5 items-start w-full h-full overflow-y-auto"

@@ -1008,6 +1008,7 @@ type HostInfoType struct {
 	ConnectMode   string
 	Ignore        bool
 	ShellPref     string
+	ProxyCommand  string  // Added ProxyCommand support
 }
 
 func createSshImportSummary(changeList map[string][]string) string {
@@ -1082,6 +1083,7 @@ func NewHostInfo(hostName string) (*HostInfoType, error) {
 	}
 	identityFile, _ := ssh_config.GetStrict(hostName, "IdentityFile")
 	passwordAuth, _ := ssh_config.GetStrict(hostName, "PasswordAuthentication")
+	proxyCommand, _ := ssh_config.GetStrict(hostName, "ProxyCommand")  // Added ProxyCommand parsing
 
 	cfgWaveOptionsStr, _ := ssh_config.GetStrict(hostName, "WaveOptions")
 	cfgWaveOptionsStr = strings.ToLower(cfgWaveOptionsStr)
@@ -1119,6 +1121,7 @@ func NewHostInfo(hostName string) (*HostInfoType, error) {
 	outHostInfo.ConnectMode = connectMode
 	outHostInfo.Ignore = shouldIgnore
 	outHostInfo.ShellPref = shellPref
+	outHostInfo.ProxyCommand = proxyCommand  // Pass ProxyCommand from SSH config
 	return outHostInfo, nil
 }
 

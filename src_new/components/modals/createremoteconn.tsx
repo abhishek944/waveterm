@@ -27,6 +27,7 @@ import {
 import { PasswordField } from "@/components/ui/passwordfield";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 
 const CreateRemoteConnModal: React.FC = observer(() => {
     const model = GlobalModel.remotesModel;

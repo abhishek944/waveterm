@@ -25,10 +25,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/alessio/shellescape"
-	"github.com/armon/circbuf"
-	"github.com/creack/pty"
-	"github.com/google/uuid"
 	"github.com/abhishek944/waveterm/waveshell/pkg/base"
 	"github.com/abhishek944/waveterm/waveshell/pkg/packet"
 	"github.com/abhishek944/waveterm/waveshell/pkg/server"
@@ -44,6 +40,10 @@ import (
 	"github.com/abhishek944/waveterm/wavesrv/pkg/sstore"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/userinput"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/waveenc"
+	"github.com/alessio/shellescape"
+	"github.com/armon/circbuf"
+	"github.com/creack/pty"
+	"github.com/google/uuid"
 
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/mod/semver"
@@ -1227,7 +1227,10 @@ func (wsh *WaveshellProc) RunInstall(autoInstall bool) {
 		wsh.WriteToPtyBuffer("*error: cannot obtain client data: %v", err)
 		return
 	}
-	hideShellPrompt := clientData.ClientOpts.ConfirmFlags["hideshellprompt"]
+	var hideShellPrompt bool
+	if clientData.ClientOpts.ConfirmFlags != nil {
+		hideShellPrompt = clientData.ClientOpts.ConfirmFlags["hideshellprompt"]
+	}
 	baseStatus := wsh.GetStatus()
 
 	if baseStatus == StatusConnected {
@@ -1285,6 +1288,9 @@ func (wsh *WaveshellProc) RunInstall(autoInstall bool) {
 			return
 		}
 		if response.CheckboxStat {
+			if clientData.ClientOpts.ConfirmFlags == nil {
+				clientData.ClientOpts.ConfirmFlags = make(map[string]bool)
+			}
 			clientData.ClientOpts.ConfirmFlags["hideshellprompt"] = true
 			err = sstore.SetClientOpts(makeClientCtx, clientData.ClientOpts)
 			if err != nil {
@@ -1318,21 +1324,54 @@ func (wsh *WaveshellProc) RunInstall(autoInstall bool) {
 		wsh.WriteToPtyBuffer("*error: %v\n", err)
 		return
 	}
+	log.Printf("[SSH] RunInstall: Checking if client is nil")
+
+	// Try to create a session, if it fails with EOF, recreate the client
+	var needNewClient bool
 	if wsh.Client == nil {
+		needNewClient = true
+		log.Printf("[SSH] RunInstall: Client is nil, need new connection")
+	} else {
+		// Test if the existing client is still valid
+		log.Printf("[SSH] RunInstall: Testing existing SSH client")
+		testSession, err := wsh.Client.NewSession()
+		if err != nil {
+			log.Printf("[SSH] RunInstall: Existing client test failed: %v, creating new connection", err)
+			needNewClient = true
+			// Close the bad client
+			wsh.Client.Close()
+			wsh.WithLock(func() {
+				wsh.Client = nil
+			})
+		} else {
+			// Close the test session, we'll create a new one for the actual install
+			testSession.Close()
+			log.Printf("[SSH] RunInstall: Existing client is valid")
+		}
+	}
+
+	if needNewClient {
+		log.Printf("[SSH] RunInstall: Creating new SSH connection")
 		remoteDisplayName := fmt.Sprintf("%s [%s]", remoteCopy.RemoteAlias, remoteCopy.RemoteCanonicalName)
 		sshAuthSock, _ := exec.CommandContext(makeClientCtx, sapi.GetLocalShellPath(), "-c", "echo \"${SSH_AUTH_SOCK}\"").CombinedOutput()
+		log.Printf("[SSH] RunInstall: SSH_AUTH_SOCK=%s", strings.TrimSpace(string(sshAuthSock)))
 		client, err := ConnectToClient(makeClientCtx, remoteCopy.SSHOpts, remoteDisplayName, strings.TrimSpace(string(sshAuthSock)))
 		if err != nil {
+			log.Printf("[SSH] RunInstall: ConnectToClient failed: %v", err)
 			statusErr := fmt.Errorf("ssh cannot connect to client: %w", err)
 			wsh.setInstallErrorStatus(statusErr)
 			return
 		}
+		log.Printf("[SSH] RunInstall: SSH client connected successfully")
 		wsh.WithLock(func() {
 			wsh.Client = client
 		})
 	}
+
+	log.Printf("[SSH] RunInstall: Creating new SSH session for installation")
 	session, err := wsh.Client.NewSession()
 	if err != nil {
+		log.Printf("[SSH] RunInstall: NewSession failed: %v", err)
 		statusErr := fmt.Errorf("ssh cannot connect to client: %w", err)
 		wsh.setInstallErrorStatus(statusErr)
 		return
@@ -1374,6 +1413,16 @@ func (wsh *WaveshellProc) RunInstall(autoInstall bool) {
 		connectMode = wsh.Remote.ConnectMode
 	})
 	wsh.WriteToPtyBuffer("successfully installed waveshell %s to ~/.mshell\n", scbase.WaveshellVersion)
+
+	// Close the existing SSH client to ensure a clean reconnection
+	if wsh.Client != nil {
+		log.Printf("[SSH] RunInstall: Closing SSH client after installation")
+		wsh.Client.Close()
+		wsh.WithLock(func() {
+			wsh.Client = nil
+		})
+	}
+
 	go wsh.NotifyRemoteUpdate()
 	if connectMode == sstore.ConnectModeStartup || connectMode == sstore.ConnectModeAuto || autoInstall {
 		// the install was successful, and we didn't click the install button with manual connect mode, try to connect
@@ -1586,6 +1635,7 @@ func (wsh *WaveshellProc) getActiveShellTypes(ctx context.Context) ([]string, er
 }
 
 func (wsh *WaveshellProc) createWaveshellSession(clientCtx context.Context, remoteCopy sstore.RemoteType) (shexec.ConnInterface, error) {
+	log.Printf("[SSH] createWaveshellSession: starting for remote %s", remoteCopy.RemoteAlias)
 	wsh.WithLock(func() {
 		wsh.Err = nil
 		wsh.ErrNoInitPk = false
@@ -1595,6 +1645,7 @@ func (wsh *WaveshellProc) createWaveshellSession(clientCtx context.Context, remo
 	})
 	sapi, err := shellapi.MakeShellApi(wsh.GetShellType())
 	if err != nil {
+		log.Printf("[SSH] createWaveshellSession: MakeShellApi failed: %v", err)
 		return nil, err
 	}
 	var wsSession shexec.ConnInterface
@@ -1613,29 +1664,52 @@ func (wsh *WaveshellProc) createWaveshellSession(clientCtx context.Context, remo
 		go wsh.WaitAndSendPasswordNew(remoteCopy.SSHOpts.SSHPassword)
 		wsSession = shexec.CmdWrap{Cmd: ecmd}
 	} else if wsh.Client == nil {
+		log.Printf("[SSH] createWaveshellSession: Client is nil, creating new SSH connection")
 		remoteDisplayName := fmt.Sprintf("%s [%s]", remoteCopy.RemoteAlias, remoteCopy.RemoteCanonicalName)
 		sshAuthSock, _ := exec.CommandContext(clientCtx, sapi.GetLocalShellPath(), "-c", "echo \"${SSH_AUTH_SOCK}\"").CombinedOutput()
+		log.Printf("[SSH] createWaveshellSession: SSH_AUTH_SOCK=%s", strings.TrimSpace(string(sshAuthSock)))
 		client, err := ConnectToClient(clientCtx, remoteCopy.SSHOpts, remoteDisplayName, strings.TrimSpace(string(sshAuthSock)))
 		if err != nil {
+			log.Printf("[SSH] createWaveshellSession: ConnectToClient failed: %v", err)
 			return nil, fmt.Errorf("ssh cannot connect to client: %w", err)
 		}
+		log.Printf("[SSH] createWaveshellSession: SSH client connected successfully")
 		wsh.WithLock(func() {
 			wsh.Client = client
 		})
 		session, err := client.NewSession()
 		if err != nil {
+			log.Printf("[SSH] createWaveshellSession: NewSession failed: %v", err)
 			return nil, fmt.Errorf("ssh cannot create session: %w", err)
 		}
-		cmd := fmt.Sprintf("%s -c %s", sapi.GetLocalShellPath(), shellescape.Quote(MakeServerCommandStr()))
+		log.Printf("[SSH] createWaveshellSession: SSH session created")
+		// Use exec to replace the shell process completely, avoiding shell exit issues
+		shellCmd := MakeServerCommandStr()
+		cmd := fmt.Sprintf("exec %s -c %s", sapi.GetLocalShellPath(), shellescape.Quote(shellCmd))
+		log.Printf("[SSH] createWaveshellSession: Running command: %s", cmd)
 		wsSession = shexec.SessionWrap{Session: session, StartCmd: cmd}
 	} else {
+		log.Printf("[SSH] createWaveshellSession: Testing existing SSH client")
 		session, err := wsh.Client.NewSession()
 		if err != nil {
-			return nil, fmt.Errorf("ssh cannot create session: %w", err)
+			log.Printf("[SSH] createWaveshellSession: NewSession failed with existing client: %v, creating new connection", err)
+			// Close the bad client and create a new one
+			wsh.Client.Close()
+			wsh.WithLock(func() {
+				wsh.Client = nil
+			})
+
+			// Recursively call to create new connection
+			return wsh.createWaveshellSession(clientCtx, remoteCopy)
 		}
-		cmd := fmt.Sprintf(`%s -c %s`, sapi.GetLocalShellPath(), shellescape.Quote(MakeServerCommandStr()))
+		log.Printf("[SSH] createWaveshellSession: SSH session created with existing client")
+		// Use exec to replace the shell process completely, avoiding shell exit issues
+		shellCmd := MakeServerCommandStr()
+		cmd := fmt.Sprintf("exec %s -c %s", sapi.GetLocalShellPath(), shellescape.Quote(shellCmd))
+		log.Printf("[SSH] createWaveshellSession: Running command: %s", cmd)
 		wsSession = shexec.SessionWrap{Session: session, StartCmd: cmd}
 	}
+	log.Printf("[SSH] createWaveshellSession: Returning session")
 	return wsSession, nil
 }
 
@@ -1678,8 +1752,10 @@ func (wsh *WaveshellProc) Launch(interactive bool) {
 	})
 	defer makeClientCancelFn()
 	wsh.WriteToPtyBuffer("connecting to %s...\n", remoteCopy.RemoteCanonicalName)
+	log.Printf("[SSH] Creating waveshell session")
 	wsSession, err := wsh.createWaveshellSession(makeClientCtx, remoteCopy)
 	if err != nil {
+		log.Printf("[SSH] Failed to create waveshell session: %v", err)
 		wsh.WriteToPtyBuffer("*error, %s\n", err.Error())
 		wsh.setErrorStatus(err)
 		wsh.WithLock(func() {
@@ -1687,11 +1763,13 @@ func (wsh *WaveshellProc) Launch(interactive bool) {
 		})
 		return
 	}
+	log.Printf("[SSH] Creating client process")
 	cproc, err := shexec.MakeClientProc(makeClientCtx, wsSession)
 	wsh.WithLock(func() {
 		wsh.MakeClientCancelFn = nil
 		wsh.MakeClientDeadline = nil
 	})
+	log.Printf("[SSH] MakeClientProc result: err=%v", err)
 	if err == context.DeadlineExceeded {
 		wsh.WriteToPtyBuffer("*connect timeout\n")
 		wsh.setErrorStatus(errors.New("connect timeout"))
@@ -1742,8 +1820,10 @@ func (wsh *WaveshellProc) Launch(interactive bool) {
 	})
 	wsh.WriteToPtyBuffer("connected to %s\n", remoteCopy.RemoteCanonicalName)
 	go func() {
+		log.Printf("[SSH] Waiting for waveshell process to exit")
 		exitErr := cproc.Cmd.Wait()
 		exitCode := utilfn.GetExitCode(exitErr)
+		log.Printf("[SSH] Waveshell process exited with code %d, error: %v", exitCode, exitErr)
 		wsh.WithLock(func() {
 			if wsh.Status == StatusConnected || wsh.Status == StatusConnecting {
 				wsh.Status = StatusDisconnected
@@ -1751,6 +1831,11 @@ func (wsh *WaveshellProc) Launch(interactive bool) {
 			}
 		})
 		wsh.WriteToPtyBuffer("*disconnected exitcode=%d\n", exitCode)
+
+		// If exit code is -1, it might be a signal or unexpected termination
+		if exitCode == -1 && exitErr != nil {
+			log.Printf("[SSH] Waveshell terminated unexpectedly: %v", exitErr)
+		}
 	}()
 	go wsh.ProcessPackets()
 	// wsh.initActiveShells()

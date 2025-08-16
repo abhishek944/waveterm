@@ -14,12 +14,13 @@ import { Markdown } from "@/components/ui/markdown";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 
-export const UserInputModal: React.FC<{ userInputRequest: UserInputRequest }> = ({ userInputRequest }) => {
+export const UserInputModal: React.FC<UserInputRequest> = (userInputRequest) => {
     const [responseText, setResponseText] = useState("");
-    const [countdown, setCountdown] = useState(Math.floor(userInputRequest.timeoutms / 1000));
+    const [countdown, setCountdown] = useState(Math.floor((userInputRequest?.timeoutms || 60000) / 1000));
     const checkboxStatus = useRef(false);
 
     const handleSendCancel = useCallback(() => {
+        if (!userInputRequest) return;
         GlobalModel.sendUserInput({
             type: "userinputresp",
             requestid: userInputRequest.requestid,
@@ -29,6 +30,7 @@ export const UserInputModal: React.FC<{ userInputRequest: UserInputRequest }> = 
     }, [userInputRequest]);
 
     const handleSendText = useCallback(() => {
+        if (!userInputRequest) return;
         GlobalModel.sendUserInput({
             type: "userinputresp",
             requestid: userInputRequest.requestid,
@@ -40,6 +42,7 @@ export const UserInputModal: React.FC<{ userInputRequest: UserInputRequest }> = 
 
     const handleSendConfirm = useCallback(
         (response: boolean) => {
+            if (!userInputRequest) return;
             console.log(`checkbox ${checkboxStatus}\n\n`);
             GlobalModel.sendUserInput({
                 type: "userinputresp",
@@ -66,24 +69,29 @@ export const UserInputModal: React.FC<{ userInputRequest: UserInputRequest }> = 
         return () => clearTimeout(timeout);
     }, [countdown]);
 
+    if (!userInputRequest) {
+        return null;
+    }
+
     return (
         <Dialog open={true} onOpenChange={handleSendCancel}>
             <DialogContent className="w-[500px]">
                 <DialogHeader>
-                    <DialogTitle>{userInputRequest.title + ` (${countdown}s)`}</DialogTitle>
+                    <DialogTitle>{(userInputRequest?.title || "Input Required") + ` (${countdown}s)`}</DialogTitle>
+                    <DialogDescription>Please provide the requested information</DialogDescription>
                 </DialogHeader>
                 <div className="px-5 pb-0">
                     <div className="py-5">
                         <div className="mb-2.5">
-                            {userInputRequest.markdown ? (
-                                <Markdown text={userInputRequest.querytext} className="mb-4" />
+                            {userInputRequest?.markdown ? (
+                                <Markdown text={userInputRequest?.querytext || ""} className="mb-4" />
                             ) : (
-                                userInputRequest.querytext
+                                userInputRequest?.querytext
                             )}
                         </div>
-                        {userInputRequest.responsetype === "text" && (
+                        {userInputRequest?.responsetype === "text" && (
                             <>
-                                {userInputRequest.publictext ? (
+                                {userInputRequest?.publictext ? (
                                     <TextField
                                         onChange={(e) => setResponseText(e.target.value)}
                                         value={responseText}
@@ -101,7 +109,7 @@ export const UserInputModal: React.FC<{ userInputRequest: UserInputRequest }> = 
                             </>
                         )}
                     </div>
-                    {userInputRequest.checkboxmsg !== "" && (
+                    {userInputRequest?.checkboxmsg && userInputRequest.checkboxmsg !== "" && (
                         <div className="flex items-center space-x-2">
                             <Checkbox
                                 onCheckedChange={() => (checkboxStatus.current = !checkboxStatus.current)}
@@ -112,14 +120,14 @@ export const UserInputModal: React.FC<{ userInputRequest: UserInputRequest }> = 
                     )}
                 </div>
                 <DialogFooter>
-                    {userInputRequest.responsetype === "text" ? (
+                    {userInputRequest?.responsetype === "text" ? (
                         <>
                             <Button variant="outline" onClick={handleSendCancel}>
                                 Cancel
                             </Button>
                             <Button onClick={handleSendText}>Continue</Button>
                         </>
-                    ) : userInputRequest.responsetype === "confirm" ? (
+                    ) : userInputRequest?.responsetype === "confirm" ? (
                         <>
                             <Button variant="outline" onClick={() => handleSendConfirm(false)}>
                                 No

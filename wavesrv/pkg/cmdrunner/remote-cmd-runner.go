@@ -85,6 +85,9 @@ func RemoteConfigParseCommand(ctx context.Context, pk *scpacket.FeCommandPacketT
 				editMap[sstore.RemoteField_SSHKey] = hostInfo.SshKeyFile
 			}
 			editMap[sstore.RemoteField_ShellPref] = hostInfo.ShellPref
+			if hostInfo.ProxyCommand != "" {
+				editMap[sstore.RemoteField_SSHProxyCommand] = hostInfo.ProxyCommand
+			}
 			wsh := remote.GetRemoteById(previouslyImportedRemote.RemoteId)
 			if wsh == nil {
 				remoteChangeList["updateErr"] = append(remoteChangeList["updateErr"], hostInfo.CanonicalName)
@@ -115,6 +118,9 @@ func RemoteConfigParseCommand(ctx context.Context, pk *scpacket.FeCommandPacketT
 			}
 			if hostInfo.SshKeyFile != "" {
 				sshOpts.SSHIdentity = hostInfo.SshKeyFile
+			}
+			if hostInfo.ProxyCommand != "" {
+				sshOpts.SSHProxyCommand = hostInfo.ProxyCommand  // Pass ProxyCommand from SSH config
 			}
 
 			// this is new and must be created for the first time

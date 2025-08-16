@@ -728,6 +728,7 @@ type SSHOpts struct {
 	SSHIdentity string `json:"sshidentity,omitempty"`
 	SSHPort     int    `json:"sshport,omitempty"`
 	SSHPassword string `json:"sshpassword,omitempty"`
+	SSHProxyCommand string `json:"sshproxycommand,omitempty"`  // Added ProxyCommand support
 }
 
 func (opts SSHOpts) GetAuthType() string {

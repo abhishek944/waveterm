@@ -6,6 +6,29 @@ import { observer } from "mobx-react";
 import { action } from "mobx";
 import { GlobalModel, GlobalCommandRunner, RemotesModel } from "@/models";
 import * as util from "@/utils/util";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogFooter,
+    DialogTitle,
+} from "@/components/ui/modal";
+import { TextField } from "@/components/ui/textfield";
+import { InputDecoration } from "@/components/ui/inputdecoration";
+import {
+    Select,
+    SelectContent,
+    SelectGroup,
+    SelectItem,
+    SelectLabel,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { PasswordField } from "@/components/ui/passwordfield";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Dropdown } from "@/components/ui/dropdown";
 
 const PasswordUnchangedSentinel = "--unchanged--";
 
@@ -136,18 +159,22 @@ const EditRemoteConnModal: React.FC = observer(() => {
             <div className="w-full">
                 <TextField
                     label="Alias"
-                    onChange={setTempAlias}
+                    onChange={(e) => setTempAlias(e.target.value)}
                     value={tempAlias}
                     maxLength={100}
                     decoration={{
                         endDecoration: (
                             <InputDecoration>
-                                <Tooltip
-                                    message={`(Optional) A short alias to use when selecting or displaying this connection.`}
-                                    icon={<i className="fa-sharp fa-regular fa-circle-question" />}
-                                >
-                                    <i className="fa-sharp fa-regular fa-circle-question" />
-                                </Tooltip>
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger>
+                                            <i className="fa-sharp fa-regular fa-circle-question" />
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            {`(Optional) A short alias to use when selecting or displaying this connection.`}
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
                             </InputDecoration>
                         ),
                     }}
@@ -193,20 +220,22 @@ const EditRemoteConnModal: React.FC = observer(() => {
     const renderImportedRemoteEditWarning = () => {
         return (
             <div className="flex flex-row items-start">
-                <Tooltip
-                    message={
-                        <span>
-                            Most options for connections imported from an ssh config file cannot be edited. For these
-                            changes, you must edit the config file and import it again. The shell preference can be
-                            edited, but will return to the default if you import again. It will stay changed if you
-                            follow{" "}
-                            <a href="https://legacydocs.waveterm.dev/features/sshconfig-imports">this procedure</a>.
-                        </span>
-                    }
-                    icon={<i className="fa-sharp fa-regular fa-fw fa-triangle-exclamation" />}
-                >
-                    <i className="fa-sharp fa-regular fa-fw fa-triangle-exclamation" />
-                </Tooltip>
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger>
+                            <i className="fa-sharp fa-regular fa-fw fa-triangle-exclamation" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <span>
+                                Most options for connections imported from an ssh config file cannot be edited. For these
+                                changes, you must edit the config file and import it again. The shell preference can be
+                                edited, but will return to the default if you import again. It will stay changed if you
+                                follow{" "}
+                                <a href="https://legacydocs.waveterm.dev/features/sshconfig-imports">this procedure</a>.
+                            </span>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
                 &nbsp;SSH Config Import Behavior
             </div>
         );
@@ -230,28 +259,30 @@ const EditRemoteConnModal: React.FC = observer(() => {
                         decoration={{
                             endDecoration: (
                                 <InputDecoration>
-                                    <Tooltip
-                                        message={
-                                            <ul>
-                                                <li>
-                                                    <b>none</b> - no authentication, or authentication is already
-                                                    configured in your ssh config.
-                                                </li>
-                                                <li>
-                                                    <b>key</b> - use a private key.
-                                                </li>
-                                                <li>
-                                                    <b>password</b> - use a password.
-                                                </li>
-                                                <li>
-                                                    <b>key+password</b> - use a key with a passphrase.
-                                                </li>
-                                            </ul>
-                                        }
-                                        icon={<i className="fa-sharp fa-regular fa-circle-question" />}
-                                    >
-                                        <i className="fa-sharp fa-regular fa-circle-question" />
-                                    </Tooltip>
+                                    <TooltipProvider>
+                                        <Tooltip>
+                                            <TooltipTrigger>
+                                                <i className="fa-sharp fa-regular fa-circle-question" />
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                                <ul>
+                                                    <li>
+                                                        <b>none</b> - no authentication, or authentication is already
+                                                        configured in your ssh config.
+                                                    </li>
+                                                    <li>
+                                                        <b>key</b> - use a private key.
+                                                    </li>
+                                                    <li>
+                                                        <b>password</b> - use a password.
+                                                    </li>
+                                                    <li>
+                                                        <b>key+password</b> - use a key with a passphrase.
+                                                    </li>
+                                                </ul>
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
                                 </InputDecoration>
                             ),
                         }}
@@ -261,32 +292,38 @@ const EditRemoteConnModal: React.FC = observer(() => {
                     <TextField
                         label="SSH Keyfile"
                         placeholder="keyfile path"
-                        onChange={setTempKeyFile}
+                        onChange={(e) => setTempKeyFile(e.target.value)}
                         value={tempKeyFile}
                         maxLength={400}
                         required={true}
                         decoration={{
                             endDecoration: (
                                 <InputDecoration>
-                                    <Tooltip
-                                        message={`(Required) The path to your ssh private key file.`}
-                                        icon={<i className="fa-sharp fa-regular fa-circle-question" />}
-                                    >
-                                        <i className="fa-sharp fa-regular fa-circle-question" />
-                                    </Tooltip>
+                                    <TooltipProvider>
+                                        <Tooltip>
+                                            <TooltipTrigger>
+                                                <i className="fa-sharp fa-regular fa-circle-question" />
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                                {`(Required) The path to your ssh private key file.`}
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
                                 </InputDecoration>
                             ),
                         }}
                     />
                 )}
                 {(authMode === "password" || authMode === "key+password") && (
-                    <PasswordField
-                        label={authMode === "password" ? "SSH Password" : "Key Passphrase"}
-                        placeholder="password"
-                        onChange={setTempPassword}
-                        value={tempPassword}
-                        maxLength={400}
-                    />
+                    <div>
+                        <Label>{authMode === "password" ? "SSH Password" : "Key Passphrase"}</Label>
+                        <PasswordField
+                            placeholder="password"
+                            onChange={(e) => setTempPassword(e.target.value)}
+                            value={tempPassword}
+                            maxLength={400}
+                        />
+                    </div>
                 )}
             </>
         );
@@ -300,32 +337,36 @@ const EditRemoteConnModal: React.FC = observer(() => {
     const isImported = isImportedRemote();
 
     return (
-        <Modal className="w-[502px] min-h-[211px]">
-            <Modal.Header title="Edit Connection" onClose={model.closeModal} />
-            <div className="flex flex-col gap-5">
-                <div className="flex flex-col px-5 gap-3 w-full">
-                    <div className="flex flex-col items-start gap-3 mb-2.5">
-                        <div className="text-[var(--app-text-primary-color)] text-[15px] font-medium leading-5">
-                            {util.getRemoteName(selectedRemote)}
+        <Dialog open={true} onOpenChange={model.closeModal}>
+            <DialogContent className="w-[502px] min-h-[211px]">
+                <DialogHeader>
+                    <DialogTitle>Edit Connection</DialogTitle>
+                </DialogHeader>
+                <div className="flex flex-col gap-5">
+                    <div className="flex flex-col px-5 gap-3 w-full">
+                        <div className="flex flex-col items-start gap-3 mb-2.5">
+                            <div className="text-[var(--app-text-primary-color)] text-[15px] font-medium leading-5">
+                                {util.getRemoteName(selectedRemote)}
+                            </div>
                         </div>
+                        {!isLocal && !isImported && renderAlias()}
+                        {!isLocal && !isImported && renderAuthMode()}
+                        {!isLocal && !isImported && renderConnectMode()}
+                        {isImported && renderImportedRemoteEditWarning()}
+                        {renderShellPref()}
+                        {!util.isBlank(remoteEdit?.errorstr) && (
+                            <div className="settings-field settings-error">Error: {remoteEdit?.errorstr}</div>
+                        )}
                     </div>
-                    {!isLocal && !isImported && renderAlias()}
-                    {!isLocal && !isImported && renderAuthMode()}
-                    {!isLocal && !isImported && renderConnectMode()}
-                    {isImported && renderImportedRemoteEditWarning()}
-                    {renderShellPref()}
-                    {!util.isBlank(remoteEdit?.errorstr) && (
-                        <div className="settings-field settings-error">Error: {remoteEdit?.errorstr}</div>
-                    )}
                 </div>
-            </div>
-            <Modal.Footer
-                onOk={submitRemote}
-                onCancel={model.closeModal}
-                okLabel="Save"
-                keybindings={true}
-            />
-        </Modal>
+                <DialogFooter>
+                    <Button variant="outline" onClick={model.closeModal}>
+                        Cancel
+                    </Button>
+                    <Button onClick={submitRemote}>Save</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     );
 });
 

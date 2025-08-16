@@ -684,15 +684,11 @@ func WriteJsonSuccess(w http.ResponseWriter, data interface{}) {
 	}
 	barr, err := json.Marshal(rtnMap)
 	if err != nil {
-		fmt.Printf("DEBUG WriteJsonSuccess: Marshal error: %v\n", err)
 		WriteJsonError(w, err)
 		return
 	}
-	fmt.Printf("DEBUG WriteJsonSuccess: Writing %d bytes\n", len(barr))
-	fmt.Printf("DEBUG WriteJsonSuccess: Response content: %s\n", string(barr))
 	w.WriteHeader(http.StatusOK)
-	n, err := w.Write(barr)
-	fmt.Printf("DEBUG WriteJsonSuccess: Wrote %d bytes, err=%v\n", n, err)
+	w.Write(barr)
 }
 
 func HandleRunCommand(w http.ResponseWriter, r *http.Request) {

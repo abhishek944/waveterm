@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"os/exec"
 	"time"
 
@@ -83,6 +84,7 @@ func (cw CmdWrap) StderrPipe() (io.ReadCloser, error) {
 type SessionWrap struct {
 	Session  *ssh.Session
 	StartCmd string
+	stdin    io.WriteCloser // keep reference alive to prevent GC closing
 }
 
 func (sw SessionWrap) Kill() {
@@ -90,17 +92,56 @@ func (sw SessionWrap) Kill() {
 }
 
 func (sw SessionWrap) Wait() error {
-	return sw.Session.Wait()
+	log.Printf("[SSH] SessionWrap.Wait: Waiting for session to complete")
+	err := sw.Session.Wait()
+	log.Printf("[SSH] SessionWrap.Wait: Session completed with error: %v", err)
+	return err
 }
 
 func (sw SessionWrap) Start() error {
-	return sw.Session.Start(sw.StartCmd)
+	// For gcloud IAP tunnels, we need to use Shell mode instead of Start
+	// This keeps the session alive properly
+	log.Printf("[SSH] SessionWrap.Start: Setting up shell mode")
+
+	// Get stdin pipe before starting shell and keep it alive
+	stdin, err := sw.Session.StdinPipe()
+	if err != nil {
+		log.Printf("[SSH] SessionWrap.Start: StdinPipe failed: %v", err)
+		return err
+	}
+
+	// Start shell first
+	if err := sw.Session.Shell(); err != nil {
+		log.Printf("[SSH] SessionWrap.Start: Shell failed: %v", err)
+		return err
+	}
+
+	// Send the command through stdin
+	log.Printf("[SSH] SessionWrap.Start: Sending command: %s", sw.StartCmd)
+	// save writer to keep session stdin open
+	sw.stdin = stdin
+	_, err = fmt.Fprintf(sw.stdin, "%s\n", sw.StartCmd)
+	if err != nil {
+		log.Printf("[SSH] SessionWrap.Start: Failed to send command: %v", err)
+		return err
+	}
+
+	return nil
 }
 
 func (sw SessionWrap) Sender() (*packet.PacketSender, io.WriteCloser, error) {
-	inputWriter, err := sw.Session.StdinPipe()
-	if err != nil {
-		return nil, nil, fmt.Errorf("creating stdin pipe: %v", err)
+	// Reuse the stdin writer obtained during Start to avoid closing the pipe.
+	var inputWriter io.WriteCloser
+	var err error
+	if sw.stdin != nil {
+		inputWriter = sw.stdin
+	} else {
+		inputWriter, err = sw.Session.StdinPipe()
+		if err != nil {
+			return nil, nil, fmt.Errorf("creating stdin pipe: %v", err)
+		}
+		// keep reference
+		sw.stdin = inputWriter
 	}
 	sender := packet.MakePacketSender(inputWriter, nil)
 	return sender, inputWriter, nil
@@ -189,19 +230,24 @@ func (ipe InvalidPacketError) Error() string {
 
 // returns (clientproc, initpk, error)
 func MakeClientProc(ctx context.Context, ecmd ConnInterface) (*ClientProc, error) {
+	log.Printf("[SSH] MakeClientProc: starting")
 	startTs := time.Now()
 	sender, inputWriter, err := ecmd.Sender()
 	if err != nil {
+		log.Printf("[SSH] MakeClientProc: Sender() failed: %v", err)
 		return nil, err
 	}
 	packetParser, stdoutReader, stderrReader, err := ecmd.Parser()
 	if err != nil {
+		log.Printf("[SSH] MakeClientProc: Parser() failed: %v", err)
 		return nil, err
 	}
 	err = ecmd.Start()
 	if err != nil {
+		log.Printf("[SSH] MakeClientProc: Start() failed: %v", err)
 		return nil, fmt.Errorf("running local client: %w", err)
 	}
+	log.Printf("[SSH] MakeClientProc: Command started, waiting for init packet")
 	cproc := &ClientProc{
 		Cmd:          ecmd,
 		StartTs:      startTs,
@@ -215,28 +261,36 @@ func MakeClientProc(ctx context.Context, ecmd ConnInterface) (*ClientProc, error
 	var pk packet.PacketType
 	select {
 	case pk = <-packetParser.MainCh:
+		log.Printf("[SSH] MakeClientProc: Received packet")
 	case <-ctx.Done():
+		log.Printf("[SSH] MakeClientProc: Context cancelled")
 		cproc.Close()
 		return nil, ctx.Err()
 	}
 	if pk == nil {
+		log.Printf("[SSH] MakeClientProc: Received nil packet")
 		cproc.Close()
 		return nil, InvalidPacketError{}
 	}
 	if pk.GetType() != packet.InitPacketStr {
+		log.Printf("[SSH] MakeClientProc: Invalid packet type: %s", pk.GetType())
 		cproc.Close()
 		return nil, InvalidPacketError{InvalidPk: &pk}
 	}
 	initPk := pk.(*packet.InitPacketType)
+	log.Printf("[SSH] MakeClientProc: InitPacket received - NotFound=%v, Version=%s", initPk.NotFound, initPk.Version)
 	if initPk.NotFound {
+		log.Printf("[SSH] MakeClientProc: Waveshell not found on remote")
 		cproc.Close()
 		return nil, WaveshellLaunchError{InitPk: initPk}
 	}
 	if semver.MajorMinor(initPk.Version) != semver.MajorMinor(base.WaveshellVersion) {
+		log.Printf("[SSH] MakeClientProc: Version mismatch - remote=%s, expected=%s", initPk.Version, semver.MajorMinor(base.WaveshellVersion))
 		cproc.Close()
 		return nil, WaveshellLaunchError{InitPk: initPk}
 	}
 	cproc.InitPk = initPk
+	log.Printf("[SSH] MakeClientProc: Success")
 	return cproc, nil
 }
 

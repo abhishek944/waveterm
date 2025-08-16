@@ -218,6 +218,131 @@ interface RemoteEditType {
 4. **Error Handling**: Connection errors are displayed with appropriate status colors
 5. **Soft Delete**: Connections are archived rather than deleted for data recovery
 
+## SSH Connection Flow
+
+### Overview
+
+This section details the complete flow when establishing an SSH connection, from user interaction to successful connection or error handling.
+
+### 1. User Initiates Connection
+
+**File:** `src_new/components/modals/viewremoteconndetail.tsx:171`
+- User clicks "Connect Now" button in the connection details modal
+- Button triggers `connectRemote(remote.remoteid)` (line 81-83)
+- Calls `GlobalCommandRunner.connectRemote(remoteId)`
+
+### 2. Frontend Command Submission
+
+**File:** `src_new/models/commandrunner.ts:164-166`
+```typescript
+GlobalModel.submitCommand("remote", "connect", null, { nohist: "1", remote: remoteid }, true);
+```
+- Command is sent to backend via WebSocket
+
+### 3. Backend Command Processing
+
+**File:** `wavesrv/pkg/cmdrunner/remote-cmd-runner.go:312-319`
+- `RemoteConnectCommand` function handles the connection request
+- Resolves UI context and remote IDs
+- Launches connection in a goroutine: `ids.Remote.Waveshell.Launch(true)`
+- Returns immediate update with remote view
+
+### 4. Remote Launch Process
+
+**File:** `wavesrv/pkg/remote/remote.go:1642-1739`
+- `Launch` method orchestrates the connection:
+  - Validates remote status (not already connected/connecting)
+  - Creates client context with cancellation
+  - Writes "connecting to [hostname]..." to PTY buffer (line 1680)
+  - Calls `createWaveshellSession` (line 1681)
+  - Handles errors and updates connection status
+
+### 5. SSH Session Creation
+
+**File:** `wavesrv/pkg/remote/remote.go:1588-1640`
+- `createWaveshellSession` method:
+  - For SSH connections, calls `ConnectToClient` (line 1618)
+  - Passes SSH options, display name, and SSH auth socket
+  - Creates SSH session and starts waveshell server command
+
+### 6. SSH Client Connection
+
+**File:** `wavesrv/pkg/remote/sshclient.go:692-772`
+- `ConnectToClient` function:
+  - Parses SSH config keywords from ~/.ssh/config
+  - Combines with user-provided SSH options
+  - Sets up authentication methods:
+    - Public key authentication
+    - Password authentication
+    - Keyboard-interactive authentication
+  - Creates host key callback (line 752)
+  - Establishes connection with ProxyCommand support (line 767-771)
+
+### 7. Host Key Verification
+
+**File:** `wavesrv/pkg/remote/sshclient.go:415-579`
+- `createHostKeyCallback` returns a callback function that:
+  - Checks known_hosts files for the host key
+  - Three possible scenarios:
+
+#### 7a. Known Host Key (Success)
+- Key matches entry in known_hosts
+- Connection proceeds normally
+
+#### 7b. Unknown Host Key
+- **Lines 499-534:** Key not found in any known_hosts file
+- Creates user verification prompt with `createUnknownKeyVerifier` (line 506)
+- Shows modal asking user to trust the key
+- If accepted, adds key to known_hosts and retries verification
+- If rejected, returns `UserInputCancelError`
+
+#### 7c. Changed Host Key
+- **Lines 536-569:** Key exists but doesn't match
+- Shows alert warning about potential security risk
+- Returns error: "remote host identification has changed"
+
+### 8. User Input Modal for Host Verification
+
+**File:** `wavesrv/pkg/remote/sshclient.go:359-379`
+- `createUnknownKeyVerifier` creates a user input request:
+  - Title: "Known Hosts Key Missing"
+  - Shows host fingerprint and security warning
+  - Asks user to confirm adding to known_hosts
+
+**File:** `src_new/components/modals/userinput.tsx:17-142`
+- `UserInputModal` component displays the verification dialog
+- Shows "Yes" and "No" buttons for confirmation
+- Sends response back via `GlobalModel.sendUserInput`
+
+### 9. Connection Result Handling
+
+#### Success Path:
+- SSH client established
+- Waveshell session created
+- Status updated to "connected"
+- Terminal displays: "connected to [hostname]"
+
+#### Error Path:
+- Connection fails (e.g., "knownhosts: key is unknown")
+- Error written to PTY buffer: "*error, ssh cannot connect to client: [details]"
+- Status updated to "error"
+- Error displayed in terminal view within connection modal
+
+### 10. ProxyCommand Support
+
+**File:** `wavesrv/pkg/remote/sshclient.go:620-690`
+- `DialContextWithProxy` function handles ProxyCommand connections
+- Executes proxy command (e.g., `gcloud compute start-iap-tunnel`)
+- Establishes SSH connection through proxy stdin/stdout
+
+### Key Issues and Known Limitations
+
+1. **Host Key Verification Timing**: When an unknown host key is encountered, the SSH handshake fails immediately before the user can respond to the verification modal. This causes the connection to fail even if the user would accept the key.
+
+2. **No Retry Mechanism**: After a user accepts an unknown host key, there's no automatic retry of the connection. The user must manually click "Connect Now" again.
+
+3. **ProxyCommand Support**: Recently added but may have edge cases with complex proxy configurations.
+
 ## Future Enhancements
 
 Based on the current implementation, potential improvements include:
@@ -226,3 +351,5 @@ Based on the current implementation, potential improvements include:
 - Connection health monitoring
 - SSH key management UI
 - Connection templates
+- **SSH Connection Retry**: Implement automatic retry after user accepts unknown host key
+- **Improved Error Messages**: More user-friendly error descriptions for common SSH failures

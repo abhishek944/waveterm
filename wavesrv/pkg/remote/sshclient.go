@@ -4,16 +4,17 @@
 package remote
 
 import (
-	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"os"
+	"os/exec"
 	"os/user"
 	"path/filepath"
 	"strconv"
@@ -305,15 +306,6 @@ func createCombinedKbdInteractiveChallenge(connCtx context.Context, password str
 	}
 }
 
-func openKnownHostsForEdit(knownHostsFilename string) (*os.File, error) {
-	path, _ := filepath.Split(knownHostsFilename)
-	err := os.MkdirAll(path, 0700)
-	if err != nil {
-		return nil, err
-	}
-	return os.OpenFile(knownHostsFilename, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
-}
-
 func writeToKnownHosts(knownHostsFile string, newLine string, getUserVerification func() (*userinput.UserInputResponsePacketType, error)) error {
 	if getUserVerification == nil {
 		getUserVerification = func() (*userinput.UserInputResponsePacketType, error) {
@@ -336,15 +328,19 @@ func writeToKnownHosts(knownHostsFile string, newLine string, getUserVerificatio
 	// do not close writeable files with defer
 
 	// this file works, so let's ask the user for permission
+	log.Printf("[SSH] Requesting user verification for adding host key")
 	response, err := getUserVerification()
 	if err != nil {
 		f.Close()
+		log.Printf("[SSH] User verification failed: %v", err)
 		return UserInputCancelError{Err: err}
 	}
 	if !response.Confirm {
 		f.Close()
+		log.Printf("[SSH] User declined to add host key")
 		return UserInputCancelError{Err: fmt.Errorf("canceled by the user")}
 	}
+	log.Printf("[SSH] User accepted host key")
 
 	_, err = f.WriteString(newLine + "\n")
 	if err != nil {
@@ -354,7 +350,7 @@ func writeToKnownHosts(knownHostsFile string, newLine string, getUserVerificatio
 	return f.Close()
 }
 
-func createUnknownKeyVerifier(knownHostsFile string, hostname string, remote string, key ssh.PublicKey) func() (*userinput.UserInputResponsePacketType, error) {
+func createUnknownKeyVerifier(connCtx context.Context, knownHostsFile string, hostname string, remote string, key ssh.PublicKey) func() (*userinput.UserInputResponsePacketType, error) {
 	base64Key := base64.StdEncoding.EncodeToString(key.Marshal())
 	queryText := fmt.Sprintf(
 		"The authenticity of host '%s (%s)' can't be established "+
@@ -371,13 +367,13 @@ func createUnknownKeyVerifier(knownHostsFile string, hostname string, remote str
 		Title:        "Known Hosts Key Missing",
 	}
 	return func() (*userinput.UserInputResponsePacketType, error) {
-		ctx, cancelFn := context.WithTimeout(context.Background(), 60*time.Second)
+		ctx, cancelFn := context.WithTimeout(connCtx, 60*time.Second)
 		defer cancelFn()
 		return userinput.GetUserInput(ctx, scbus.MainRpcBus, request)
 	}
 }
 
-func createMissingKnownHostsVerifier(knownHostsFile string, hostname string, remote string, key ssh.PublicKey) func() (*userinput.UserInputResponsePacketType, error) {
+func createMissingKnownHostsVerifier(connCtx context.Context, knownHostsFile string, hostname string, remote string, key ssh.PublicKey) func() (*userinput.UserInputResponsePacketType, error) {
 	base64Key := base64.StdEncoding.EncodeToString(key.Marshal())
 	queryText := fmt.Sprintf(
 		"The authenticity of host '%s (%s)' can't be established "+
@@ -395,27 +391,28 @@ func createMissingKnownHostsVerifier(knownHostsFile string, hostname string, rem
 		Title:        "Known Hosts File Missing",
 	}
 	return func() (*userinput.UserInputResponsePacketType, error) {
-		ctx, cancelFn := context.WithTimeout(context.Background(), 60*time.Second)
+		ctx, cancelFn := context.WithTimeout(connCtx, 60*time.Second)
 		defer cancelFn()
 		return userinput.GetUserInput(ctx, scbus.MainRpcBus, request)
 	}
 }
 
-func lineContainsMatch(line []byte, matches [][]byte) bool {
-	for _, match := range matches {
-		if bytes.Contains(line, match) {
-			return true
-		}
-	}
-	return false
-}
-
-func createHostKeyCallback(opts *sstore.SSHOpts) (ssh.HostKeyCallback, HostKeyAlgorithms, error) {
+func createHostKeyCallback(connCtx context.Context, opts *sstore.SSHOpts) (ssh.HostKeyCallback, HostKeyAlgorithms, error) {
 	ssh_config.ReloadConfigs()
+	log.Printf("[SSH] Looking up SSH config for host: %s", opts.SSHHost)
+	
+	// Check what default is returned
+	defaultUserKnownHosts, _ := ssh_config.GetStrict("", "UserKnownHostsFile")
+	log.Printf("[SSH] Default UserKnownHostsFile: %q", defaultUserKnownHosts)
+	
 	rawUserKnownHostsFiles, _ := ssh_config.GetStrict(opts.SSHHost, "UserKnownHostsFile")
 	userKnownHostsFiles := strings.Fields(rawUserKnownHostsFiles) // TODO - smarter splitting escaped spaces and quotes
 	rawGlobalKnownHostsFiles, _ := ssh_config.GetStrict(opts.SSHHost, "GlobalKnownHostsFile")
 	globalKnownHostsFiles := strings.Fields(rawGlobalKnownHostsFiles) // TODO - smarter splitting escaped spaces and quotes
+	
+	log.Printf("[SSH] Raw UserKnownHostsFile value: %q", rawUserKnownHostsFiles)
+	log.Printf("[SSH] UserKnownHostsFile from config: %v", userKnownHostsFiles)
+	log.Printf("[SSH] GlobalKnownHostsFile from config: %v", globalKnownHostsFiles)
 
 	osUser, err := user.Current()
 	if err != nil {
@@ -437,6 +434,8 @@ func createHostKeyCallback(opts *sstore.SSHOpts) (ssh.HostKeyCallback, HostKeyAl
 	if len(knownHostsFiles) == 0 {
 		return nil, nil, fmt.Errorf("no known_hosts files provided by ssh. defaults are overridden")
 	}
+	
+	log.Printf("[SSH] Using known_hosts files: %v", knownHostsFiles)
 
 	var unreadableFiles []string
 
@@ -450,6 +449,7 @@ func createHostKeyCallback(opts *sstore.SSHOpts) (ssh.HostKeyCallback, HostKeyAl
 		keyDb, err := knownhosts.NewDB(knownHostsFiles...)
 		if serr, ok := err.(*os.PathError); ok {
 			badFile := serr.Path
+			log.Printf("[SSH] Known hosts file unreadable/missing: %s", badFile)
 			unreadableFiles = append(unreadableFiles, badFile)
 			var okFiles []string
 			for _, filename := range knownHostsFiles {
@@ -482,15 +482,19 @@ func createHostKeyCallback(opts *sstore.SSHOpts) (ssh.HostKeyCallback, HostKeyAl
 	}
 
 	waveHostKeyCallback := func(hostname string, remote net.Addr, key ssh.PublicKey) error {
+		log.Printf("[SSH] Host key verification for hostname: %s, remote: %s", hostname, remote.String())
 		err := basicCallback(hostname, remote, key)
 		if err == nil {
 			// success
+			log.Printf("[SSH] Host key verification successful for %s", hostname)
 			return nil
 		} else if _, ok := err.(*xknownhosts.RevokedError); ok {
 			// revoked credentials are refused outright
+			log.Printf("[SSH] Host key revoked for %s", hostname)
 			return err
 		} else if _, ok := err.(*xknownhosts.KeyError); !ok {
 			// this is an unknown error (note the !ok is opposite of usual)
+			log.Printf("[SSH] Unknown error in host key verification for %s: %v", hostname, err)
 			return err
 		}
 		serr, _ := err.(*xknownhosts.KeyError)
@@ -500,12 +504,15 @@ func createHostKeyCallback(opts *sstore.SSHOpts) (ssh.HostKeyCallback, HostKeyAl
 			// try to write to a file that could be read
 			err := fmt.Errorf("placeholder, should not be returned") // a null value here can cause problems with empty slice
 			for _, filename := range knownHostsFiles {
+				log.Printf("[SSH] Attempting to write host key to known_hosts file: %s", filename)
 				newLine := xknownhosts.Line([]string{xknownhosts.Normalize(hostname)}, key)
-				getUserVerification := createUnknownKeyVerifier(filename, hostname, remote.String(), key)
+				getUserVerification := createUnknownKeyVerifier(connCtx, filename, hostname, remote.String(), key)
 				err = writeToKnownHosts(filename, newLine, getUserVerification)
 				if err == nil {
+					log.Printf("[SSH] Successfully wrote host key for %s to %s", hostname, filename)
 					break
 				}
+				log.Printf("[SSH] Failed to write to %s: %v", filename, err)
 				if serr, ok := err.(UserInputCancelError); ok {
 					return serr
 				}
@@ -514,14 +521,18 @@ func createHostKeyCallback(opts *sstore.SSHOpts) (ssh.HostKeyCallback, HostKeyAl
 			// try to write to a file that could not be read (file likely doesn't exist)
 			// should catch cases where there is no known_hosts file
 			if err != nil {
+				log.Printf("[SSH] Trying unreadable/missing files: %v", unreadableFiles)
 				for _, filename := range unreadableFiles {
+					log.Printf("[SSH] Attempting to create/write to: %s", filename)
 					newLine := xknownhosts.Line([]string{xknownhosts.Normalize(hostname)}, key)
-					getUserVerification := createMissingKnownHostsVerifier(filename, hostname, remote.String(), key)
+					getUserVerification := createMissingKnownHostsVerifier(connCtx, filename, hostname, remote.String(), key)
 					err = writeToKnownHosts(filename, newLine, getUserVerification)
 					if err == nil {
 						knownHostsFiles = []string{filename}
+						log.Printf("[SSH] Successfully wrote host key for %s to %s", hostname, filename)
 						break
 					}
+					log.Printf("[SSH] Failed to write to %s: %v", filename, err)
 					if serr, ok := err.(UserInputCancelError); ok {
 						return serr
 					}
@@ -567,13 +578,138 @@ func createHostKeyCallback(opts *sstore.SSHOpts) (ssh.HostKeyCallback, HostKeyAl
 
 		updatedCallback, err := xknownhosts.New(knownHostsFiles...)
 		if err != nil {
+			log.Printf("[SSH] Failed to reload known_hosts: %v", err)
 			return err
 		}
 		// try one final time
-		return updatedCallback(hostname, remote, key)
+		log.Printf("[SSH] Retrying host key verification after adding to known_hosts")
+		finalErr := updatedCallback(hostname, remote, key)
+		if finalErr == nil {
+			log.Printf("[SSH] Host key verification successful after adding to known_hosts")
+		} else {
+			log.Printf("[SSH] Host key verification still failed after adding: %v", finalErr)
+		}
+		return finalErr
 	}
 
 	return waveHostKeyCallback, hostKeyAlgorithms, nil
+}
+
+// proxyCommandConn implements net.Conn interface for ProxyCommand connections
+type proxyCommandConn struct {
+	stdin  io.WriteCloser
+	stdout io.ReadCloser
+	cmd    *exec.Cmd
+	closed bool
+}
+
+func (c *proxyCommandConn) Read(b []byte) (n int, err error) {
+	return c.stdout.Read(b)
+}
+
+func (c *proxyCommandConn) Write(b []byte) (n int, err error) {
+	return c.stdin.Write(b)
+}
+
+func (c *proxyCommandConn) Close() error {
+	if c.closed {
+		return nil
+	}
+	c.closed = true
+	c.stdin.Close()
+	c.stdout.Close()
+	return c.cmd.Process.Kill()
+}
+
+func (c *proxyCommandConn) LocalAddr() net.Addr {
+	return &net.TCPAddr{}
+}
+
+func (c *proxyCommandConn) RemoteAddr() net.Addr {
+	return &net.TCPAddr{}
+}
+
+func (c *proxyCommandConn) SetDeadline(t time.Time) error {
+	return nil
+}
+
+func (c *proxyCommandConn) SetReadDeadline(t time.Time) error {
+	return nil
+}
+
+func (c *proxyCommandConn) SetWriteDeadline(t time.Time) error {
+	return nil
+}
+
+// DialContextWithProxy establishes an SSH connection through a ProxyCommand
+func DialContextWithProxy(ctx context.Context, proxyCommand string, addr string, config *ssh.ClientConfig) (*ssh.Client, error) {
+	log.Printf("[SSH] Executing ProxyCommand: %s", proxyCommand)
+	
+	// Parse the ProxyCommand and replace %h and %p placeholders
+	host, port, _ := net.SplitHostPort(addr)
+	proxyCmd := strings.ReplaceAll(proxyCommand, "%h", host)
+	proxyCmd = strings.ReplaceAll(proxyCmd, "%p", port)
+	
+	// Split the command into parts for exec.Command
+	parts := strings.Fields(proxyCmd)
+	if len(parts) == 0 {
+		return nil, fmt.Errorf("empty proxy command")
+	}
+	
+	cmd := exec.CommandContext(ctx, parts[0], parts[1:]...)
+	
+	// Capture stderr for debugging
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create stderr pipe: %v", err)
+	}
+	
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create stdin pipe: %v", err)
+	}
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create stdout pipe: %v", err)
+	}
+	
+	if err := cmd.Start(); err != nil {
+		return nil, fmt.Errorf("failed to start proxy command: %v", err)
+	}
+	
+	// Read stderr in background for debugging
+	go func() {
+		var stderrBuf strings.Builder
+		io.Copy(&stderrBuf, stderr)
+		if stderrBuf.Len() > 0 {
+			log.Printf("[SSH] ProxyCommand stderr: %s", stderrBuf.String())
+		}
+	}()
+	
+	// Create a custom connection that uses the proxy command's stdio
+	proxyConn := &proxyCommandConn{
+		stdin:  stdin,
+		stdout: stdout,
+		cmd:    cmd,
+	}
+	
+	// Establish SSH connection through the proxy
+	log.Printf("[SSH] Establishing SSH connection through proxy")
+	c, chans, reqs, err := ssh.NewClientConn(proxyConn, addr, config)
+	if err != nil {
+		proxyConn.Close()
+		// Check if the proxy command is still running
+		if cmd.ProcessState != nil {
+			log.Printf("[SSH] ProxyCommand exited with: %v", cmd.ProcessState)
+		}
+		if err == io.EOF {
+			log.Printf("[SSH] Got EOF from proxy connection - proxy command may have exited")
+		}
+		return nil, fmt.Errorf("failed to establish SSH connection through proxy: %v", err)
+	}
+	
+	log.Printf("[SSH] Successfully established SSH connection through proxy")
+	return ssh.NewClient(c, chans, reqs), nil
 }
 
 func DialContext(ctx context.Context, network string, addr string, config *ssh.ClientConfig) (*ssh.Client, error) {
@@ -589,16 +725,54 @@ func DialContext(ctx context.Context, network string, addr string, config *ssh.C
 	return ssh.NewClient(c, chans, reqs), nil
 }
 
+// startKeepalive starts a goroutine that sends keepalive messages to the SSH connection
+func startKeepalive(ctx context.Context, client *ssh.Client, interval int, countMax int) {
+	if interval <= 0 {
+		return
+	}
+	
+	go func() {
+		ticker := time.NewTicker(time.Duration(interval) * time.Second)
+		defer ticker.Stop()
+		
+		failureCount := 0
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				// Send a keepalive request
+				_, _, err := client.SendRequest("keepalive@openssh.com", true, nil)
+				if err != nil {
+					failureCount++
+					log.Printf("[SSH] Keepalive failed (attempt %d/%d): %v", failureCount, countMax, err)
+					if failureCount >= countMax {
+						log.Printf("[SSH] Max keepalive failures reached, closing connection")
+						client.Close()
+						return
+					}
+				} else {
+					failureCount = 0
+				}
+			}
+		}
+	}()
+}
+
 func ConnectToClient(connCtx context.Context, opts *sstore.SSHOpts, remoteDisplayName string, sshAuthSock string) (*ssh.Client, error) {
+	log.Printf("[SSH] ConnectToClient called for host: %s, user: %s", opts.SSHHost, opts.SSHUser)
 	sshConfigKeywords, err := findSshConfigKeywords(opts.SSHHost, sshAuthSock)
 	if err != nil {
+		log.Printf("[SSH] Error finding SSH config keywords: %v", err)
 		return nil, err
 	}
 
 	sshKeywords, err := combineSshKeywords(opts, sshConfigKeywords)
 	if err != nil {
+		log.Printf("[SSH] Error combining SSH keywords: %v", err)
 		return nil, err
 	}
+	log.Printf("[SSH] Connecting to %s:%s with user %s", sshKeywords.HostName, sshKeywords.Port, sshKeywords.User)
 
 	conn, err := net.Dial("unix", sshKeywords.IdentityAgent)
 	var authSockSigners []ssh.Signer
@@ -649,19 +823,52 @@ func ConnectToClient(connCtx context.Context, opts *sstore.SSHOpts, remoteDispla
 		authMethods = append(authMethods, authMethod)
 	}
 
-	hostKeyCallback, hostKeyAlgorithms, err := createHostKeyCallback(opts)
+	log.Printf("[SSH] Creating host key callback")
+	hostKeyCallback, hostKeyAlgorithms, err := createHostKeyCallback(connCtx, opts)
 	if err != nil {
+		log.Printf("[SSH] Error creating host key callback: %v", err)
 		return nil, err
 	}
 
 	networkAddr := sshKeywords.HostName + ":" + sshKeywords.Port
+	log.Printf("[SSH] Network address: %s", networkAddr)
 	clientConfig := &ssh.ClientConfig{
 		User:              sshKeywords.User,
 		Auth:              authMethods,
 		HostKeyCallback:   hostKeyCallback,
 		HostKeyAlgorithms: hostKeyAlgorithms(networkAddr),
+		Timeout:           30 * time.Second,
 	}
-	return DialContext(connCtx, "tcp", networkAddr, clientConfig)
+	// Check if ProxyCommand is specified
+	if sshKeywords.ProxyCommand != "" {
+		log.Printf("[SSH] Using ProxyCommand: %s", sshKeywords.ProxyCommand)
+		client, err := DialContextWithProxy(connCtx, sshKeywords.ProxyCommand, networkAddr, clientConfig)
+		if err != nil {
+			log.Printf("[SSH] DialContextWithProxy failed: %v", err)
+			return nil, err
+		}
+		log.Printf("[SSH] Successfully connected to %s via ProxyCommand", networkAddr)
+		// Start keepalive if configured
+		if sshKeywords.ServerAliveInterval > 0 {
+			log.Printf("[SSH] Starting keepalive with interval=%d, countMax=%d", sshKeywords.ServerAliveInterval, sshKeywords.ServerAliveCountMax)
+			startKeepalive(connCtx, client, sshKeywords.ServerAliveInterval, sshKeywords.ServerAliveCountMax)
+		}
+		return client, nil
+	}
+	
+	log.Printf("[SSH] Attempting to dial %s", networkAddr)
+	client, err := DialContext(connCtx, "tcp", networkAddr, clientConfig)
+	if err != nil {
+		log.Printf("[SSH] DialContext failed: %v", err)
+		return nil, err
+	}
+	log.Printf("[SSH] Successfully connected to %s", networkAddr)
+	// Start keepalive if configured
+	if sshKeywords.ServerAliveInterval > 0 {
+		log.Printf("[SSH] Starting keepalive with interval=%d, countMax=%d", sshKeywords.ServerAliveInterval, sshKeywords.ServerAliveCountMax)
+		startKeepalive(connCtx, client, sshKeywords.ServerAliveInterval, sshKeywords.ServerAliveCountMax)
+	}
+	return client, nil
 }
 
 type SshKeywords struct {
@@ -676,6 +883,9 @@ type SshKeywords struct {
 	PreferredAuthentications     []string
 	AddKeysToAgent               bool
 	IdentityAgent                string
+	ProxyCommand                 string  // Added ProxyCommand support
+	ServerAliveInterval          int     // Added ServerAliveInterval support
+	ServerAliveCountMax          int     // Added ServerAliveCountMax support
 }
 
 func combineSshKeywords(opts *sstore.SSHOpts, configKeywords *SshKeywords) (*SshKeywords, error) {
@@ -727,6 +937,19 @@ func combineSshKeywords(opts *sstore.SSHOpts, configKeywords *SshKeywords) (*Ssh
 	sshKeywords.PreferredAuthentications = configKeywords.PreferredAuthentications
 	sshKeywords.AddKeysToAgent = configKeywords.AddKeysToAgent
 	sshKeywords.IdentityAgent = configKeywords.IdentityAgent
+	
+	// Add ProxyCommand support
+	if opts.SSHProxyCommand != "" {
+		sshKeywords.ProxyCommand = opts.SSHProxyCommand
+		log.Printf("[SSH] Using ProxyCommand from opts: %s", opts.SSHProxyCommand)
+	} else if configKeywords.ProxyCommand != "" {
+		sshKeywords.ProxyCommand = configKeywords.ProxyCommand
+		log.Printf("[SSH] Using ProxyCommand from config: %s", configKeywords.ProxyCommand)
+	}
+
+	// Add ServerAliveInterval and ServerAliveCountMax support
+	sshKeywords.ServerAliveInterval = configKeywords.ServerAliveInterval
+	sshKeywords.ServerAliveCountMax = configKeywords.ServerAliveCountMax
 
 	return sshKeywords, nil
 }
@@ -803,6 +1026,47 @@ func findSshConfigKeywords(hostPattern string, sshAuthSock string) (*SshKeywords
 		sshKeywords.IdentityAgent = base.ExpandHomeDir(utilfn.TryTrimQuotes(strings.TrimSpace(string(sshAuthSock))))
 	} else {
 		sshKeywords.IdentityAgent = base.ExpandHomeDir(utilfn.TryTrimQuotes(identityAgentRaw))
+	}
+	
+	// Parse ProxyCommand from SSH config
+	sshKeywords.ProxyCommand, err = ssh_config.GetStrict(hostPattern, "ProxyCommand")
+	if err != nil {
+		return nil, err
+	}
+	if sshKeywords.ProxyCommand != "" {
+		log.Printf("[SSH] Found ProxyCommand in SSH config for %s: %s", hostPattern, sshKeywords.ProxyCommand)
+	}
+
+	// Parse ServerAliveInterval from SSH config
+	serverAliveIntervalRaw, err := ssh_config.GetStrict(hostPattern, "ServerAliveInterval")
+	if err != nil {
+		return nil, err
+	}
+	if serverAliveIntervalRaw != "" {
+		sshKeywords.ServerAliveInterval, err = strconv.Atoi(serverAliveIntervalRaw)
+		if err != nil {
+			log.Printf("[SSH] Invalid ServerAliveInterval value: %s", serverAliveIntervalRaw)
+			sshKeywords.ServerAliveInterval = 0
+		} else {
+			log.Printf("[SSH] Found ServerAliveInterval in SSH config for %s: %d", hostPattern, sshKeywords.ServerAliveInterval)
+		}
+	}
+
+	// Parse ServerAliveCountMax from SSH config
+	serverAliveCountMaxRaw, err := ssh_config.GetStrict(hostPattern, "ServerAliveCountMax")
+	if err != nil {
+		return nil, err
+	}
+	if serverAliveCountMaxRaw != "" {
+		sshKeywords.ServerAliveCountMax, err = strconv.Atoi(serverAliveCountMaxRaw)
+		if err != nil {
+			log.Printf("[SSH] Invalid ServerAliveCountMax value: %s", serverAliveCountMaxRaw)
+			sshKeywords.ServerAliveCountMax = 3 // default value
+		} else {
+			log.Printf("[SSH] Found ServerAliveCountMax in SSH config for %s: %d", hostPattern, sshKeywords.ServerAliveCountMax)
+		}
+	} else {
+		sshKeywords.ServerAliveCountMax = 3 // default value if not specified
 	}
 
 	return sshKeywords, nil

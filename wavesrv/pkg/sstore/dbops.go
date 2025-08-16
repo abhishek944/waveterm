@@ -1653,6 +1653,7 @@ const (
 	RemoteField_SSHPassword = "sshpassword" // string
 	RemoteField_Color       = "color"       // string
 	RemoteField_ShellPref   = "shellpref"   // string
+	RemoteField_SSHProxyCommand = "sshproxycommand" // string
 )
 
 // editMap: alias, connectmode, autoinstall, sshkey, color, sshpassword (from constants)
@@ -1687,6 +1688,10 @@ func UpdateRemote(ctx context.Context, remoteId string, editMap map[string]inter
 		if shellPref, found := editMap[RemoteField_ShellPref]; found {
 			query = `UPDATE remote SET shellpref = ? WHERE remoteid = ?`
 			tx.Exec(query, shellPref, remoteId)
+		}
+		if proxyCommand, found := editMap[RemoteField_SSHProxyCommand]; found {
+			query = `UPDATE remote SET sshopts = json_set(sshopts, '$.sshproxycommand', ?) WHERE remoteid = ?`
+			tx.Exec(query, proxyCommand, remoteId)
 		}
 		if color, found := editMap[RemoteField_Color]; found {
 			query = `UPDATE remote SET remoteopts = json_set(remoteopts, '$.color', ?) WHERE remoteid = ?`
