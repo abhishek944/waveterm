@@ -109,8 +109,18 @@ export const ScreenTabs = observer(({ session }: { session: Session }) => {
                     ))}
                 </Reorder.Group>
             </div>
-            <div className="flex-shrink-0 cursor-pointer flex items-center h-full px-2 hover:bg-gray-700" onClick={handleNewScreen}>
-                <Plus className="w-5 h-5 text-gray-400 hover:text-white" />
+            <div 
+                className={clsx("flex-shrink-0 flex items-center h-full px-2", {
+                    "cursor-pointer hover:bg-gray-700": showingScreens.length < 9,
+                    "cursor-not-allowed opacity-50": showingScreens.length >= 9
+                })} 
+                onClick={showingScreens.length < 9 ? handleNewScreen : undefined}
+                title={showingScreens.length >= 9 ? "Maximum number of tabs (9) reached" : "New Tab"}
+            >
+                <Plus className={clsx("w-5 h-5", {
+                    "text-gray-400 hover:text-white": showingScreens.length < 9,
+                    "text-gray-600": showingScreens.length >= 9
+                })} />
             </div>
             {rightSidebarCollapsed && GlobalModel.activeMainView.get() === "session" && (
                 <div className="flex-shrink-0 px-1.5 flex items-center h-full" title="Open Wave AI (Cmd-Shift-Space)">

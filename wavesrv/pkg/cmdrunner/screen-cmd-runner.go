@@ -195,6 +195,25 @@ func ScreenOpenCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (s
 	if err != nil {
 		return nil, err
 	}
+	
+	// Check if we already have 9 tabs
+	screens, err := sstore.GetSessionScreens(ctx, ids.SessionId)
+	if err != nil {
+		return nil, fmt.Errorf("error getting session screens: %v", err)
+	}
+	
+	// Count non-archived screens
+	activeScreenCount := 0
+	for _, screen := range screens {
+		if !screen.Archived {
+			activeScreenCount++
+		}
+	}
+	
+	if activeScreenCount >= 9 {
+		return nil, fmt.Errorf("maximum number of tabs (9) reached")
+	}
+	
 	activate := resolveBool(pk.Kwargs["activate"], true)
 	newName := pk.Kwargs["name"]
 	if newName != "" {

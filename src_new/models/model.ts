@@ -1495,8 +1495,6 @@ class Model {
     }
 
     setClientData(clientData: ClientDataType) {
-        console.log("[Model.setClientData] Called with clientData:", clientData);
-        console.log("[Model.setClientData] clientData.aiopts:", clientData?.aiopts);
         let curClientDataIsNull = this.clientData.get() == null;
         let newFontFamily = clientData?.feopts?.termfontfamily;
         if (newFontFamily == null) {
@@ -1515,11 +1513,9 @@ class Model {
         }
         const themeUpdated = newTheme != this.getThemeSource();
         mobx.action(() => {
-            console.log("[Model.setClientData] Inside mobx.action - setting clientData");
             this.clientData.set(clientData);
             // Load saved AI provider from config
             const savedProvider = clientData?.aiopts?.default;
-            console.log("[Model.setClientData] savedProvider:", savedProvider);
             if (savedProvider != null) {
                 this.aiProvider.set(savedProvider);
             }

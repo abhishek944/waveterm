@@ -1091,11 +1091,6 @@ const LineContent: React.FC<{
     const lineState = line.linestate || {};
     const waveMin = lineState["wave:min"];
     const isMinimized = waveMin && screen.getContainerType() === appconst.LineContainer_Main;
-    
-    // Debug logging
-    React.useEffect(() => {
-        console.log(`[LineContent] Line ${line.lineid} - isMinimized: ${isMinimized}, wave:min: ${waveMin}, linestate:`, lineState);
-    }, [line.lineid, isMinimized, waveMin, lineState]);
 
     const makeRendererModelInitializeParams = (): RendererModelInitializeParams => {
         const context = lineutil.getRendererContext(line);
