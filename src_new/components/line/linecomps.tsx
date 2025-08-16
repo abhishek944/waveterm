@@ -459,13 +459,15 @@ const getIsHidePrompt = (line: LineType): boolean => {
 
 const LineActions: React.FC<{ screen: LineContainerType; line: LineType; cmd: Cmd }> = observer(
     ({ screen, line, cmd }) => {
+        const isThreadMode = GlobalModel.isThreadMode.get();
+        
         const clickAddToThread = (e: React.MouseEvent) => {
             e.stopPropagation();
             setThreadedLine(line.lineid, !threadedLinesObs.has(line.lineid));
         };
         const clickStar = () => GlobalCommandRunner.lineStar(line.lineid, (line.star ?? 0) === 0 ? 1 : 0);
         const clickPin = () => GlobalCommandRunner.linePin(line.lineid, !line.pinned);
-        const clickBookmark = () => GlobalCommandRunner.lineBookmark(line.lineid);
+        // const clickBookmark = () => GlobalCommandRunner.lineBookmark(line.lineid);
         const clickDelete = () => GlobalCommandRunner.lineDelete(line.lineid, true);
         const clickRestart = () => GlobalCommandRunner.lineRestart(line.lineid, true);
         const clickChat = (e: React.MouseEvent) => {
@@ -482,9 +484,29 @@ const LineActions: React.FC<{ screen: LineContainerType; line: LineType; cmd: Cm
                 GlobalModel.sidebarchatModel.resetSelectedCodeBlockIndex();
             }
         };
-        const clickMinimize = () => GlobalCommandRunner.lineMinimize(line.lineid, !line.linestate["wave:min"], true);
+        const clickMinimize = () => {
+            const currentMinimized = line.linestate?.["wave:min"] ?? false;
+            const newMinimizedState = !currentMinimized;
+            console.log(`[clickMinimize] Line ${line.lineid} - current: ${currentMinimized}, new: ${newMinimizedState}, linestate:`, line.linestate);
+            
+            // Use setLineState to update the wave:min property
+            const newLineState = { ...(line.linestate || {}), "wave:min": newMinimizedState };
+            GlobalCommandRunner.setLineState(line.screenid, line.lineid, newLineState, true)
+                .then((result) => {
+                    console.log("setLineState result:", result);
+                    if (result.update) {
+                        console.log("setLineState update:", result.update);
+                    }
+                })
+                .catch((error) => {
+                    console.error("setLineState error:", error);
+                });
+        };
         const clickMoveToSidebar = () => GlobalCommandRunner.screenSidebarAddLine(line.lineid);
         const clickRemoveFromSidebar = () => GlobalCommandRunner.screenSidebarRemove();
+        
+        // Check if this line is currently in the sidebar
+        const isLineInSidebar = screen.isLineIdInSidebar && screen.isLineIdInSidebar(line.lineid);
         const handleLineSettings = (e: React.MouseEvent) => {
             e.preventDefault();
             e.stopPropagation();
@@ -492,7 +514,7 @@ const LineActions: React.FC<{ screen: LineContainerType; line: LineType; cmd: Cm
             GlobalModel.modalsModel.pushModal(appconst.LINE_SETTINGS);
         };
 
-        const isMinimized = line.linestate["wave:min"];
+        const isMinimized = line.linestate?.["wave:min"] ?? false;
         const containerType = screen.getContainerType();
 
         return (
@@ -506,18 +528,20 @@ const LineActions: React.FC<{ screen: LineContainerType; line: LineType; cmd: Cm
             >
                 <Choose>
                     <When condition={containerType === appconst.LineContainer_Main}>
-                        <div
-                            key="thread"
-                            title={threadedLinesObs.has(line.lineid) ? "Added to thread" : "Add to thread"}
-                            className="px-1 cursor-pointer hover:text-[var(--line-actions-active-color)]"
-                            onClick={clickAddToThread}
-                        >
-                            {threadedLinesObs.has(line.lineid) ? (
-                                <i className="fa-sharp fa-solid fa-check fa-fw" />
-                            ) : (
-                                <i className="fa-sharp fa-regular fa-comment fa-fw" />
-                            )}
-                        </div>
+                        <If condition={isThreadMode}>
+                            <div
+                                key="thread"
+                                title={threadedLinesObs.has(line.lineid) ? "Added to thread" : "Add to thread"}
+                                className="px-1 cursor-pointer hover:text-[var(--line-actions-active-color)]"
+                                onClick={clickAddToThread}
+                            >
+                                {threadedLinesObs.has(line.lineid) ? (
+                                    <i className="fa-sharp fa-solid fa-check fa-fw" />
+                                ) : (
+                                    <i className="fa-sharp fa-regular fa-comment fa-fw" />
+                                )}
+                            </div>
+                        </If>
                         <div
                             key="chat"
                             title="Ask Wave AI"
@@ -534,64 +558,74 @@ const LineActions: React.FC<{ screen: LineContainerType; line: LineType; cmd: Cm
                         >
                             <i className="fa-sharp fa-regular fa-arrows-rotate fa-fw" />
                         </div>
-                        <div
+                        {/* <div
                             key="delete"
                             title="Delete Line (&#x2318;D)"
                             className="px-1 cursor-pointer hover:text-[var(--line-actions-active-color)]"
                             onClick={clickDelete}
                         >
                             <i className="fa-sharp fa-regular fa-trash fa-fw" />
-                        </div>
-                        <div
+                        </div> */}
+                        {/* <div
                             key="bookmark"
                             title="Bookmark"
                             className="px-1 cursor-pointer hover:text-[var(--line-actions-active-color)]"
                             onClick={clickBookmark}
                         >
                             <i className="fa-sharp fa-regular fa-bookmark fa-fw" />
-                        </div>
-                        <div
-                            key="minimize"
-                            title={isMinimized ? "Show Output" : "Hide Output"}
-                            className={clsx(
-                                "px-1 cursor-pointer hover:text-[var(--line-actions-active-color)]",
-                                isMinimized && "text-[var(--line-actions-active-color)]"
-                            )}
-                            onClick={clickMinimize}
-                        >
-                            {isMinimized ? (
-                                <i className="fa-sharp fa-regular fa-circle-plus fa-fw" />
-                            ) : (
-                                <i className="fa-sharp fa-regular fa-circle-minus fa-fw" />
-                            )}
-                        </div>
-                        <If condition={line.linetype !== "thread_mode"}>
+                        </div> */}
+                        <If condition={!isLineInSidebar}>
+                            <div
+                                key="minimize"
+                                title={isMinimized ? "Show Output" : "Hide Output"}
+                                className={clsx(
+                                    "px-1 cursor-pointer hover:text-[var(--line-actions-active-color)]",
+                                    isMinimized && "text-[var(--line-actions-active-color)]"
+                                )}
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    clickMinimize();
+                                }}
+                            >
+                                {!isMinimized ? (
+                                    <i className="fa-sharp fa-regular fa-circle-minus fa-fw" />
+                                ) : (
+                                    <i className="fa-sharp fa-regular fa-circle-plus fa-fw" />
+                                )}
+                            </div>
+                        </If>
+                        <If condition={line.linetype !== "thread_mode" && !isLineInSidebar}>
                             <div
                                 className="px-1 cursor-pointer hover:text-[var(--line-actions-active-color)]"
-                                onClick={clickMoveToSidebar}
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    clickMoveToSidebar();
+                                }}
                                 title="Move to Sidebar"
                             >
                                 <i className="fa-sharp fa-solid fa-right-to-line fa-fw" />
                             </div>
                         </If>
-                        <div
+                        {/* <div
                             key="settings"
                             title="Line Settings"
                             className="px-1 cursor-pointer hover:text-[var(--line-actions-active-color)]"
                             onClick={handleLineSettings}
                         >
                             <i className="fa-sharp fa-regular fa-ellipsis-vertical fa-fw" />
-                        </div>
+                        </div> */}
                     </When>
                     <When condition={containerType === appconst.LineContainer_Sidebar}>
-                        <div
+                        {/* <div
                             key="bookmark"
                             title="Bookmark"
                             className="px-1 cursor-pointer hover:text-[var(--line-actions-active-color)]"
                             onClick={clickBookmark}
                         >
                             <i className="fa-sharp fa-regular fa-bookmark fa-fw" />
-                        </div>
+                        </div> */}
                         <div
                             className="px-1 cursor-pointer hover:text-[var(--line-actions-active-color)]"
                             onClick={clickRemoveFromSidebar}
@@ -701,8 +735,10 @@ const LineText: React.FC<{
             data-screenid={line.screenid}
             onClick={clickHandler}
         >
-            {/* subtle hover highlight for text-only line */}
-            <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 bg-gradient-to-r from-white/10 to-transparent" />
+            {/* subtle highlight for selected text-only line */}
+            <If condition={isSelected}>
+                <div className="absolute inset-0 pointer-events-none opacity-100 transition-opacity duration-150 bg-gradient-to-r from-white/10 to-transparent" />
+            </If>
             <If condition={isSelected}>
                 <div
                     key="mask"
@@ -875,8 +911,10 @@ const LineCmd: React.FC<{
                     data-linenum={line.linenum}
                     data-screenid={line.screenid}
                 >
-                    {/* subtle hover highlight for the whole line */}
-                    <div className="absolute inset-0 rounded-md pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 bg-gradient-to-r from-white/10 to-transparent" />
+                    {/* subtle highlight for selected line */}
+                    <If condition={isSelected}>
+                        <div className="absolute inset-0 rounded-md pointer-events-none opacity-100 transition-opacity duration-150 bg-gradient-to-r from-white/10 to-transparent" />
+                    </If>
                     <If condition={isSelected || cmdError}>
                         <div className={clsx("line-mask", { "error-mask": cmdError })}></div>
                     </If>
@@ -938,7 +976,7 @@ const LineHeader: React.FC<{ line: LineType; cmd: Cmd }> = observer(({ line, cmd
         return (
             <>
                 <div
-                    className={clsx("overflow-auto max-h-24 whitespace-pre text-gray-300 font-bold w-full", {
+                    className={clsx("overflow-auto max-h-24 whitespace-pre text-gray-300 font-bold w-full mt-2", {
                         "border-l-2 border-gray-600 ml-1 pl-2": isMultiLine,
                     })}
                 >
@@ -1048,7 +1086,16 @@ const LineContent: React.FC<{
         !isBlank(line.renderer) && line.renderer !== "terminal" && line.renderer !== "none"
             ? PluginModel.getRendererPluginByName(line.renderer)
             : null;
-    const isMinimized = line.linestate["wave:min"] && screen.getContainerType() === appconst.LineContainer_Main;
+    
+    // Access linestate through a computed to ensure reactivity
+    const lineState = line.linestate || {};
+    const waveMin = lineState["wave:min"];
+    const isMinimized = waveMin && screen.getContainerType() === appconst.LineContainer_Main;
+    
+    // Debug logging
+    React.useEffect(() => {
+        console.log(`[LineContent] Line ${line.lineid} - isMinimized: ${isMinimized}, wave:min: ${waveMin}, linestate:`, lineState);
+    }, [line.lineid, isMinimized, waveMin, lineState]);
 
     const makeRendererModelInitializeParams = (): RendererModelInitializeParams => {
         const context = lineutil.getRendererContext(line);

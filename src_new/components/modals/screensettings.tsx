@@ -26,12 +26,12 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { SettingsError } from "@/components/ui/settingserror";
 import {
     TabColorSelector,
     TabIconSelector,
-    TabNameTextField,
     TabRemoteSelector,
 } from "@/components/workspace/screen/newtabsettings";
 
@@ -164,31 +164,39 @@ const ScreenSettingsModal: React.FC = observer(() => {
 
     return (
         <Dialog open={true} onOpenChange={closeModal}>
-            <DialogContent className="w-[640px]">
+            <DialogContent className="w-[720px] max-w-[90vw] bg-zinc-900 border-none">
                 <DialogHeader>
-                    <DialogTitle>Tab Settings ({screen.name.get()})</DialogTitle>
+                    <DialogTitle className="text-white">Tab Settings ({screen.name.get()})</DialogTitle>
                 </DialogHeader>
-                <div className="flex flex-col px-5 gap-4 w-full">
+                <div className="flex flex-col px-5 gap-6 w-full">
                     <div className="grid grid-cols-3 items-center gap-4">
-                        <div className="col-span-1">Name</div>
+                        <div className="col-span-1 text-gray-300">Name</div>
                         <div className="col-span-2">
-                            <TabNameTextField
-                                screen={screen}
-                                errorMessage={{ get: () => errorMessage, set: setErrorMessage } as any}
+                            <Input
+                                className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-blue-500"
+                                value={screen.name.get() ?? ""}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (util.isStrEq(val, screen.name.get())) {
+                                        return;
+                                    }
+                                    const prtn = GlobalCommandRunner.screenSetSettings(screen.screenId, { name: val }, false);
+                                    util.commandRtnHandler(prtn, { set: setErrorMessage } as any);
+                                }}
                             />
                         </div>
                     </div>
-                    <div className="grid grid-cols-3 items-center gap-4">
-                        <div className="col-span-1">Connection</div>
+                    {/* <div className="grid grid-cols-3 items-center gap-4">
+                        <div className="col-span-1 text-gray-300">Connection</div>
                         <div className="col-span-2">
                             <TabRemoteSelector
                                 screen={screen}
                                 errorMessage={{ get: () => errorMessage, set: setErrorMessage } as any}
                             />
                         </div>
-                    </div>
+                    </div> */}
                     <div className="grid grid-cols-3 items-center gap-4">
-                        <div className="col-span-1">Tab Color</div>
+                        <div className="col-span-1 text-gray-300">Tab Color</div>
                         <div className="col-span-2">
                             <TabColorSelector
                                 screen={screen}
@@ -197,7 +205,7 @@ const ScreenSettingsModal: React.FC = observer(() => {
                         </div>
                     </div>
                     <div className="grid grid-cols-3 items-center gap-4">
-                        <div className="col-span-1">Tab Icon</div>
+                        <div className="col-span-1 text-gray-300">Tab Icon</div>
                         <div className="col-span-2">
                             <TabIconSelector
                                 screen={screen}
@@ -205,17 +213,17 @@ const ScreenSettingsModal: React.FC = observer(() => {
                             />
                         </div>
                     </div>
-                    {termThemes.length > 0 && (
+                    {/* {termThemes.length > 0 && (
                         <div className="grid grid-cols-3 items-center gap-4">
-                            <div className="col-span-1">Terminal Theme</div>
+                            <div className="col-span-1 text-gray-300">Terminal Theme</div>
                             <div className="col-span-2">
                                 <Select onValueChange={handleChangeTermTheme} defaultValue={currTermTheme}>
-                                    <SelectTrigger>
+                                    <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
                                         <SelectValue placeholder="Select a theme" />
                                     </SelectTrigger>
-                                    <SelectContent>
+                                    <SelectContent className="bg-gray-800 border-gray-700">
                                         {termThemes.map((theme) => (
-                                            <SelectItem key={theme.value} value={theme.value}>
+                                            <SelectItem key={theme.value} value={theme.value} className="text-white hover:bg-gray-700">
                                                 {theme.label}
                                             </SelectItem>
                                         ))}
@@ -223,21 +231,9 @@ const ScreenSettingsModal: React.FC = observer(() => {
                                 </Select>
                             </div>
                         </div>
-                    )}
+                    )} */}
                     <div className="grid grid-cols-3 items-center gap-4">
-                        <div className="col-span-1 flex items-center">
-                            <div className="mr-2">Actions</div>
-                            <TooltipProvider>
-                                <Tooltip>
-                                    <TooltipTrigger>
-                                        <i className="fa-sharp fa-regular fa-circle-question text-sm" />
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        Delete will remove the tab, removing all commands and output.
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
-                        </div>
+                        <div className="col-span-1 text-gray-300">Actions</div>
                         <div className="col-span-2">
                             <Button onClick={handleDeleteScreen} variant="destructive" size="sm">
                                 Delete Tab
@@ -247,7 +243,7 @@ const ScreenSettingsModal: React.FC = observer(() => {
                     <SettingsError errorMessage={errorMessage} onDismiss={dismissError} />
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" onClick={closeModal}>
+                    <Button variant="outline" onClick={closeModal} className="bg-gray-800 border-gray-700 text-white hover:bg-gray-700">
                         Close
                     </Button>
                 </DialogFooter>

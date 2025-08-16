@@ -153,22 +153,16 @@ const MainSideBar: React.FC<MainSideBarProps> = observer(({ parentRef }) => {
     return (
         <ResizableSidebar
             collapsed={GlobalModel.mainSidebarModel.getCollapsed()}
-            className="flex flex-col border-r border-gray-800 rounded-tr-md rounded-br-md mr-2"
+            className="flex flex-col border border-gray-800 rounded-md mr-2"
             position="left"
             ref={parentRef}
         >
             {!GlobalModel.mainSidebarModel.getCollapsed() && (
                 <>
                     <div
-                        className="title-bar-drag flex items-center relative border-b border-gray-800 flex-shrink-0"
+                        className="title-bar-drag flex items-center relative flex-shrink-0 rounded-t-md"
                         style={{ height: "calc(var(--screentabs-height) + 1px)" }}
                     >
-                        <WaveLogo
-                            className="w-8 h-8 cursor-pointer"
-                            onClick={() =>
-                                GlobalModel.mainSidebarModel.setCollapsed(!GlobalModel.mainSidebarModel.getCollapsed())
-                            }
-                        />
                         <div
                             className="close-button absolute right-0 h-full flex items-center p-2.5 cursor-pointer"
                             onClick={() =>
@@ -180,22 +174,14 @@ const MainSideBar: React.FC<MainSideBarProps> = observer(({ parentRef }) => {
                     </div>
                     <div className="flex flex-col flex-1 min-h-0">
                         <div className="top pr-1.5 flex-shrink-0">
-                            <SideBarItem
+                            {/* <SideBarItem
                                 key="connections"
                                 frontIcon={<i className="fa-sharp fa-regular fa-globe icon" />}
                                 className={clsx({ "bg-gray-700": connectionsActive })}
                                 contents="Connections"
                                 onClick={handleConnectionsClick}
-                            />
-                            <SideBarItem
-                                key="info"
-                                frontIcon={<i className="fa-sharp fa-regular fa-circle-info icon" />}
-                                className={clsx({ "bg-gray-700": infoActive })}
-                                contents="Info"
-                                onClick={handleInfoClick}
-                            />
+                            /> */}
                         </div>
-                        <div className="separator h-px my-4 bg-gray-800 flex-shrink-0" />
                         <SideBarItem
                             key="workspaces"
                             className="workspaces flex-shrink-0"
@@ -213,7 +199,7 @@ const MainSideBar: React.FC<MainSideBarProps> = observer(({ parentRef }) => {
                         />
                         <OverlayScrollbarsComponent
                             element="div"
-                            className="middle p-1 border-b border-gray-800 flex-1 min-h-0 overflow-y-auto"
+                            className="middle p-1 flex-1 min-h-0 overflow-y-auto"
                             id="sidebar-middle"
                             options={{ scrollbars: { autoHide: "leave" } }}
                         >
@@ -222,6 +208,13 @@ const MainSideBar: React.FC<MainSideBarProps> = observer(({ parentRef }) => {
 
                         <div className="bottom pr-1.5 flex-shrink-0 pb-4" id="sidebar-bottom">
                             {getUpdateAppBanner()}
+                            <SideBarItem
+                                key="info"
+                                frontIcon={<i className="fa-sharp fa-regular fa-circle-info icon" />}
+                                className={clsx({ "bg-gray-700": infoActive })}
+                                contents="Info"
+                                onClick={handleInfoClick}
+                            />
                             <SideBarItem
                                 key="settings"
                                 frontIcon={<SettingsIcon className="icon" />}

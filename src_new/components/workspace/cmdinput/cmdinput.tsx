@@ -167,7 +167,7 @@ export const CmdInput: React.FC = observer(() => {
         <div
             ref={cmdInputRef}
             className={clsx(
-                "max-h-[max(300px,40%)] flex flex-col w-full z-20 rounded-md relative border border-[var(--app-border-color)]",
+                "max-h-[max(300px,40%)] flex flex-col w-full z-20 rounded-md relative border border-[var(--app-border-color)] bg-gradient-to-br from-blue-950/30 via-purple-950/20 to-pink-950/10 backdrop-blur-md",
                 {
                     "has-history": openView === appconst.InputAuxView_History,
                     "agent-mode": isAgentMode,
@@ -176,20 +176,24 @@ export const CmdInput: React.FC = observer(() => {
                 }
             )}
         >
+            {/* gradient overlay when focused */}
+            <If condition={focusVal}>
+                <div className="absolute inset-0 rounded-md pointer-events-none opacity-100 transition-opacity duration-150 bg-gradient-to-r from-white/10 to-transparent z-0" />
+            </If>
             <Choose>
                 <When condition={openView === appconst.InputAuxView_History}>
-                    <div className="flex-grow"></div>
+                    <div className="flex-grow relative z-10"></div>
                     <HistoryInfo />
                 </When>
                 <When condition={openView === appconst.InputAuxView_Info}>
-                    <InfoMsg key="infomsg" />
+                    <InfoMsg key="infomsg" className="relative z-10" />
                 </When>
                 <When condition={openView === appconst.InputAuxView_Suggestions}>
-                    <AutocompleteSuggestionView />
+                    <AutocompleteSuggestionView className="relative z-10" />
                 </When>
             </Choose>
             <If condition={remote && remote.status != "connected"}>
-                <div className="flex flex-row text-red-500 items-center p-2 pl-4 ml-0.5">
+                <div className="flex flex-row text-red-500 items-center p-2 pl-4 ml-0.5 relative z-10">
                     WARNING:&nbsp;
                     <span className="remote-name">[{GlobalModel.resolveRemoteIdToFullRef(remote.remoteid)}]</span>
                     &nbsp;is {remote.status}
@@ -204,7 +208,7 @@ export const CmdInput: React.FC = observer(() => {
                 </div>
             </If>
             <If condition={feState["invalidshellstate"]}>
-                <div className="flex flex-row text-red-500 items-center p-2 pl-4 ml-0.5">
+                <div className="flex flex-row text-red-500 items-center p-2 pl-4 ml-0.5 relative z-10">
                     The shell state for this tab is invalid (
                     <a target="_blank" href="https://legacydocs.waveterm.dev/reference/faq">
                         see FAQ
@@ -216,7 +220,7 @@ export const CmdInput: React.FC = observer(() => {
                 </div>
             </If>
             <If condition={ri == null && numRunningLines == 0}>
-                <div className="flex flex-row text-red-500 items-center p-2 pl-4 ml-0.5">
+                <div className="flex flex-row text-red-500 items-center p-2 pl-4 ml-0.5 relative z-10">
                     Shell is not initialized, must reset to continue.
                     <Button className="primary outlined ml-2.5 py-1 px-2.5" onClick={clickResetState}>
                         Reset Now
@@ -225,7 +229,7 @@ export const CmdInput: React.FC = observer(() => {
             </If>
             <div
                 key="base-cmdinput"
-                className={clsx("relative", {
+                className={clsx("relative z-10", {
                     "border-t border-gray-700": openView,
                 })}
                 onClick={baseCmdInputClick}

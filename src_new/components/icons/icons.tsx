@@ -60,7 +60,7 @@ export const SyncSpin: React.FC<{
     const { classRef, children, shouldSync } = props;
     const [listenerAdded, setListenerAdded] = React.useState(false);
 
-    const handleAnimationStart = (e: AnimationEvent) => {
+    const handleAnimationStart = (_e: AnimationEvent) => {
         const classRef = props.classRef;
         if (classRef.current == null) {
             return;
@@ -196,13 +196,15 @@ export const StatusIndicator: React.FC<StatusIndicatorProps> = (props) => {
     );
 };
 
-export const RotateIcon: React.FC<{ className?: string; onClick?: React.MouseEventHandler<SVGSVGElement> }> = (
+export const RotateIcon: React.FC<{ className?: string; onClick?: React.MouseEventHandler<HTMLDivElement> }> = (
     props
 ) => {
-    const iconRef = React.useRef<SVGSVGElement>();
+    const iconRef = React.useRef<HTMLDivElement>();
     return (
         <SyncSpin classRef={iconRef}>
-            <RotateIconSvg ref={iconRef} className={props.className ?? ""} onClick={props.onClick} />
+            <div ref={iconRef} className="inline-flex" onClick={props.onClick}>
+                <RotateIconSvg className={props.className ?? ""} />
+            </div>
         </SyncSpin>
     );
 };

@@ -508,10 +508,20 @@ func LineSetCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbu
 	}
 	update := scbus.MakeUpdatePacket()
 	sstore.AddLineUpdate(update, updatedLine, nil)
-	update.AddUpdate(sstore.InfoMsgType{
-		InfoMsg:   fmt.Sprintf("line updated %s", formatStrs(varsUpdated, "and", false)),
-		TimeoutMs: 2000,
-	})
+	// Only show info message for renderer/view updates, not state updates
+	showInfoMsg := false
+	for _, varName := range varsUpdated {
+		if varName != KwArgState {
+			showInfoMsg = true
+			break
+		}
+	}
+	if showInfoMsg {
+		update.AddUpdate(sstore.InfoMsgType{
+			InfoMsg:   fmt.Sprintf("line updated %s", formatStrs(varsUpdated, "and", false)),
+			TimeoutMs: 2000,
+		})
+	}
 	return update, nil
 }
 

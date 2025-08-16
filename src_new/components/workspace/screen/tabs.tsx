@@ -82,7 +82,9 @@ export const ScreenTabs = observer(({ session }: { session: Session }) => {
     return (
         <div className="flex relative overflow-hidden h-[38px] z-20">
             {mainSidebarCollapsed && (
-                <div className="flex-shrink-0 h-full px-2 cursor-pointer hover:bg-gray-700 flex items-center justify-center"
+                <div className={clsx("flex-shrink-0 h-full px-2 cursor-pointer hover:bg-gray-700 flex items-center justify-center", {
+                    "ml-16": GlobalModel.getPlatform() === "darwin",
+                })}
                      onClick={() => GlobalModel.mainSidebarModel.setCollapsed(false)}>
                     <img className="h-6 w-6" src="public/logos/wave-logo.png" alt="logo" />
                 </div>

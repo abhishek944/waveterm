@@ -13,7 +13,7 @@ class ScreenLines {
     loadError: OV<string> = mobx.observable.box(null);
     lines: OArr<LineType> = mobx.observable.array([], {
         name: "slines-lines",
-        deep: false,
+        deep: true,
     });
     cmds: Record<string, Cmd> = {}; // lineid => Cmd
 
@@ -41,17 +41,56 @@ class ScreenLines {
             if (load) {
                 this.loaded.set(true);
             }
-            genMergeSimpleData(
-                this.lines,
-                slines.lines,
-                (l: LineType) => String(l.lineid),
-                (l: LineType) => sprintf("%013d:%s", l.ts, l.lineid)
-            );
+            // Custom merge to maintain deep observability
+            this.mergeLines(slines.lines);
             let cmds = slines.cmds || [];
             for (const cmd of cmds) {
                 this.cmds[cmd.lineid] = new Cmd(cmd);
             }
         })();
+    }
+
+    private mergeLines(newLines: LineType[]) {
+        if (!newLines || newLines.length === 0) {
+            return;
+        }
+        
+        const objMap: Record<string, LineType> = {};
+        for (const line of this.lines) {
+            objMap[line.lineid] = line;
+        }
+        
+        for (const newLine of newLines) {
+            if (newLine.remove) {
+                delete objMap[newLine.lineid];
+            } else {
+                const existingLine = objMap[newLine.lineid];
+                if (existingLine) {
+                    // Update existing line properties while maintaining observability
+                    // Make sure linestate is observable
+                    if (newLine.linestate) {
+                        existingLine.linestate = mobx.observable(newLine.linestate);
+                    } else {
+                        existingLine.linestate = newLine.linestate;
+                    }
+                    // Update other properties
+                    const { linestate, ...otherProps } = newLine;
+                    Object.assign(existingLine, otherProps);
+                } else {
+                    // Make new line deeply observable
+                    const observableLine = mobx.observable(newLine);
+                    objMap[newLine.lineid] = observableLine;
+                }
+            }
+        }
+        
+        const sortedLines = Object.values(objMap).sort((a, b) => {
+            const aStr = sprintf("%013d:%s", a.ts, a.lineid);
+            const bStr = sprintf("%013d:%s", b.ts, b.lineid);
+            return aStr.localeCompare(bStr);
+        });
+        
+        this.lines.replace(sortedLines);
     }
 
     setLoadError(errStr: string) {
@@ -130,6 +169,7 @@ class ScreenLines {
                 this.mergeCmd(cmd);
             }
             if (line != null) {
+                console.log(`[addLineCmd] Updating line ${line.lineid}, linestate:`, line.linestate);
                 let lines = this.lines;
                 if (line.remove) {
                     for (let i = 0; i < lines.length; i++) {
@@ -145,7 +185,19 @@ class ScreenLines {
                     let lineId = lines[lineIdx].lineid;
                     let curTs = lines[lineIdx].ts;
                     if (lineId == line.lineid) {
-                        this.lines[lineIdx] = line;
+                        // Update existing line while maintaining deep observability
+                        const existingLine = this.lines[lineIdx];
+                        console.log(`[addLineCmd] Found existing line, old linestate:`, existingLine.linestate);
+                        // Make sure linestate is observable
+                        if (line.linestate) {
+                            existingLine.linestate = mobx.observable(line.linestate);
+                        } else {
+                            existingLine.linestate = line.linestate;
+                        }
+                        // Update other properties
+                        const { linestate, ...otherProps } = line;
+                        Object.assign(existingLine, otherProps);
+                        console.log(`[addLineCmd] Updated line, new linestate:`, existingLine.linestate);
                         return;
                     }
                     if (curTs > line.ts || (curTs == line.ts && lineId > line.lineid)) {
@@ -153,10 +205,14 @@ class ScreenLines {
                     }
                 }
                 if (lineIdx == lines.length) {
-                    this.lines.push(line);
+                    // Make new line deeply observable before adding
+                    const observableLine = mobx.observable(line);
+                    this.lines.push(observableLine);
                     return;
                 }
-                this.lines.splice(lineIdx, 0, line);
+                // Make new line deeply observable before adding
+                const observableLine = mobx.observable(line);
+                this.lines.splice(lineIdx, 0, observableLine);
             }
         })();
     }

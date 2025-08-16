@@ -510,7 +510,7 @@ class CommandRunner {
     }
 
     screenSidebarAddLine(lineId: string) {
-        // Optimistically update UI first: set sidebar open + target line id, and minimize the line locally
+        // Update the sidebar view options to open it with the line
         const activeScreen = GlobalModel.getActiveScreen();
         if (activeScreen) {
             const curViewOpts: any = activeScreen.viewOpts.get() || {};
@@ -524,23 +524,25 @@ class CommandRunner {
             };
             mobx.action(() => {
                 activeScreen.viewOpts.set(newViewOpts);
-                const line = activeScreen.getLineById(lineId);
-                if (line) {
-                    line.linestate = { ...(line.linestate || {}), ["wave:min"]: true } as any;
-                }
             })();
         }
-        // Then fire backend commands asynchronously (no updates expected back)
-        setTimeout(() => {
-            GlobalModel.submitCommand("sidebar", "add", null, { nohist: "1", line: lineId }, false);
-            this.lineMinimize(lineId, true, false);
-        }, 0);
+        
+        // Submit the backend command
+        GlobalModel.submitCommand("sidebar", "add", null, { nohist: "1", line: lineId }, false);
+        
+        // Use setLineState to minimize the line
+        const line = activeScreen?.getLineById(lineId);
+        if (line && !line.linestate?.["wave:min"]) {
+            const newLineState = { ...(line.linestate || {}), "wave:min": true };
+            this.setLineState(activeScreen.screenId, lineId, newLineState, false);
+        }
     }
 
     screenSidebarRemove() {
-        // Optimistically update UI first: close sidebar and un-minimize the line locally
         const activeScreen = GlobalModel.getActiveScreen();
         const lineId = activeScreen?.viewOpts.get()?.sidebar?.sidebarlineid;
+        
+        // Update the sidebar view options to close it
         if (activeScreen) {
             const curViewOpts: any = activeScreen.viewOpts.get() || {};
             const newViewOpts = {
@@ -553,28 +555,27 @@ class CommandRunner {
             };
             mobx.action(() => {
                 activeScreen.viewOpts.set(newViewOpts);
-                if (lineId) {
-                    const line = activeScreen.getLineById(lineId);
-                    if (line) {
-                        const { ["wave:min"]: _omit, ...rest } = (line.linestate || {}) as any;
-                        line.linestate = { ...rest } as any;
-                    }
-                }
             })();
         }
-        // Then fire backend commands asynchronously (no updates expected back)
-        setTimeout(() => {
-            GlobalModel.submitCommand("sidebar", "remove", null, { nohist: "1" }, false);
-            if (lineId) {
-                this.lineMinimize(lineId, false, false);
+        
+        // Submit the backend command
+        GlobalModel.submitCommand("sidebar", "remove", null, { nohist: "1" }, false);
+        
+        // Use setLineState to un-minimize the line
+        if (lineId) {
+            const line = activeScreen?.getLineById(lineId);
+            if (line && line.linestate?.["wave:min"]) {
+                const newLineState = { ...(line.linestate || {}), "wave:min": false };
+                this.setLineState(activeScreen.screenId, lineId, newLineState, false);
             }
-        }, 0);
+        }
     }
 
     screenSidebarClose(): void {
-        // Optimistically update UI first: set sidebar open=false but keep the line id (matches prior backend behavior)
         const activeScreen = GlobalModel.getActiveScreen();
         const lineId = activeScreen?.viewOpts.get()?.sidebar?.sidebarlineid;
+        
+        // Update the sidebar view options to close it (but keep the line id)
         if (activeScreen) {
             const curViewOpts: any = activeScreen.viewOpts.get() || {};
             const newViewOpts = {
@@ -587,23 +588,20 @@ class CommandRunner {
             };
             mobx.action(() => {
                 activeScreen.viewOpts.set(newViewOpts);
-                // Also un-minimize the line in the main view
-                if (lineId) {
-                    const line = activeScreen.getLineById(lineId);
-                    if (line) {
-                        const { ["wave:min"]: _omit, ...rest } = (line.linestate || {}) as any;
-                        line.linestate = { ...rest } as any;
-                    }
-                }
             })();
         }
-        // Then fire backend command asynchronously (no updates expected back)
-        setTimeout(() => {
-            GlobalModel.submitCommand("sidebar", "close", null, { nohist: "1" }, false);
-            if (lineId) {
-                this.lineMinimize(lineId, false, false);
+        
+        // Submit the backend command
+        GlobalModel.submitCommand("sidebar", "close", null, { nohist: "1" }, false);
+        
+        // Use setLineState to un-minimize the line
+        if (lineId) {
+            const line = activeScreen?.getLineById(lineId);
+            if (line && line.linestate?.["wave:min"]) {
+                const newLineState = { ...(line.linestate || {}), "wave:min": false };
+                this.setLineState(activeScreen.screenId, lineId, newLineState, false);
             }
-        }, 0);
+        }
     }
 
     screenSidebarOpen(width?: string): void {

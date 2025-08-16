@@ -617,7 +617,7 @@ export const TextAreaInput: React.FC<{ screen: Screen; onHeightChange: () => voi
                     onSelect={onSelect}
                     placeholder="Type here..."
                     maxLength={MaxInputLength}
-                    className={clsx("textarea absolute top-0 left-0 resize-none overflow-auto whitespace-pre-wrap font-mono bg-transparent border-none shadow-none text-white z-20", { "display-disabled": auxViewFocused })}
+                    className={clsx("textarea absolute top-0 left-0 resize-none overflow-auto whitespace-pre-wrap font-mono bg-transparent border-none shadow-none outline-none focus:outline-none focus:ring-0 text-white placeholder:text-gray-400 z-20", { "display-disabled": auxViewFocused })}
                 ></textarea>
                 <input
                     key="history"

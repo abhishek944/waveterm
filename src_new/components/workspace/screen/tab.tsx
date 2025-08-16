@@ -34,9 +34,16 @@ export const ScreenTab: React.FC<{
     const openScreenSettings = (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        mobx.action(() => {
-            GlobalModel.tabSettingsOpen.set(!GlobalModel.tabSettingsOpen.get());
-        })();
+        const activeSession = GlobalModel.getActiveSession();
+        if (activeSession && screen) {
+            mobx.action(() => {
+                GlobalModel.screenSettingsModal.set({
+                    sessionId: activeSession.sessionId,
+                    screenId: screen.screenId
+                });
+            })();
+            GlobalModel.modalsModel.pushModal(appconst.SCREEN_SETTINGS);
+        }
     };
 
     const onContextMenu = (e: React.MouseEvent) => {
@@ -54,7 +61,7 @@ export const ScreenTab: React.FC<{
             { label: "New Tab", click: () => GlobalCommandRunner.createNewScreen() },
             { type: "separator" },
             { label: "Set Tab Color", submenu: colorSubMenu },
-            { label: "All Tab Settings", click: () => GlobalModel.tabSettingsOpen.set(true) },
+            { label: "All Tab Settings", click: () => openScreenSettings({ preventDefault: () => {}, stopPropagation: () => {} } as React.MouseEvent) },
             { type: "separator" },
             { label: "Close Tab", click: () => GlobalModel.onCloseCurrentTab() },
         ];
