@@ -2,6 +2,7 @@ import * as React from "react";
 import { GlobalModel, GlobalCommandRunner } from "@/models";
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
+import { observer } from "mobx-react";
 
 type ClassValue = string | number | boolean | null | undefined;
 function cn(...inputs: ClassValue[]): string {
@@ -85,7 +86,7 @@ const aiProviders = [
     { id: "gemini", name: "Gemini", icon: "✨" },
 ];
 
-export const SimplePromptBox = React.forwardRef<
+export const SimplePromptBox = observer(React.forwardRef<
     HTMLTextAreaElement,
     React.TextareaHTMLAttributes<HTMLTextAreaElement>
 >(({ className, ...props }, ref) => {
@@ -98,8 +99,49 @@ export const SimplePromptBox = React.forwardRef<
     });
     const [isPopoverOpen, setIsPopoverOpen] = React.useState(false);
     const [isLoading, setIsLoading] = React.useState(false);
+    const lastCmdRef = React.useRef<string>("");
 
     React.useImperativeHandle(ref, () => internalTextareaRef.current!, []);
+
+    // Get cmdAndOutput from the observable - this will trigger re-renders when it changes
+    const cmdAndOutput = GlobalModel.sidebarchatModel.getCmdAndOutput();
+    
+    // Watch for cmdAndOutput changes and populate the textarea
+    React.useEffect(() => {
+        if (cmdAndOutput && (cmdAndOutput.cmd || cmdAndOutput.output)) {
+            let formattedContent = "";
+            
+            // For regular cmd lines, we get separate cmd and output
+            if (cmdAndOutput.cmd && cmdAndOutput.output) {
+                // Format with both command and output, add newline at end for cursor position
+                formattedContent = `**Command:**\n\`\`\`bash\n${cmdAndOutput.cmd}\n\`\`\`\n\n**Output:**\n\`\`\`\n${cmdAndOutput.output}\n\`\`\`\n\n`;
+            } else if (cmdAndOutput.cmd) {
+                // For other line types (agent_mode), the cmd already contains formatted content
+                formattedContent = cmdAndOutput.cmd;
+                // Add newline at end if not present
+                if (!formattedContent.endsWith('\n')) {
+                    formattedContent += '\n\n';
+                }
+            }
+            
+            if (formattedContent && formattedContent !== lastCmdRef.current) {
+                lastCmdRef.current = formattedContent;
+                setValue(formattedContent);
+                // Focus the textarea and set cursor at the end
+                if (internalTextareaRef.current) {
+                    internalTextareaRef.current.focus();
+                    // Set cursor position to the end
+                    const length = internalTextareaRef.current.value.length;
+                    internalTextareaRef.current.setSelectionRange(length, length);
+                }
+                // Reset cmdAndOutput after using it
+                setTimeout(() => {
+                    GlobalModel.sidebarchatModel.resetCmdAndOutput();
+                    lastCmdRef.current = "";
+                }, 100);
+            }
+        }
+    }, [cmdAndOutput]);
 
     React.useLayoutEffect(() => {
         const textarea = internalTextareaRef.current;
@@ -263,5 +305,5 @@ export const SimplePromptBox = React.forwardRef<
             </div>
         </div>
     );
-});
+}));
 SimplePromptBox.displayName = "SimplePromptBox";

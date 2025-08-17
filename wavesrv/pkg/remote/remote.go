@@ -2048,9 +2048,11 @@ func RunCommand(ctx context.Context, rcOpts RunCommandOpts, runPacket *packet.Ru
 	// get current remote-instance state
 	var statePtr *packet.ShellStatePtr
 	if rcOpts.StatePtr != nil {
+		log.Printf("[DEBUG] RunCommand: Using provided StatePtr=%+v\n", *rcOpts.StatePtr)
 		statePtr = rcOpts.StatePtr
 	} else {
 		var err error
+		log.Printf("[DEBUG] RunCommand: Getting remote state for sessionId=%s, screenId=%s, remotePtr=%+v\n", sessionId, screenId, remotePtr)
 		statePtr, err = sstore.GetRemoteStatePtr(ctx, sessionId, screenId, remotePtr)
 		if err != nil {
 			log.Printf("[error] RunCommand: cannot get remote state: %v\n", err)
@@ -2062,15 +2064,34 @@ func RunCommand(ctx context.Context, rcOpts RunCommandOpts, runPacket *packet.Ru
 		}
 	}
 	// statePtr will not be nil
-	runPacket.StatePtr = statePtr
-	currentState, err := sstore.GetFullState(ctx, *statePtr)
+	log.Printf("[DEBUG] RunCommand: Final statePtr=%+v\n", *statePtr)
+	
+	// Check if statePtr has empty BaseHash and use returnState to get initial state
+	if statePtr.BaseHash == "" {
+		log.Printf("[DEBUG] RunCommand: StatePtr has empty BaseHash, will request state from waveshell\n")
+		// Don't use the empty statePtr, let waveshell return the current state
+		statePtr = nil
+		runPacket.ReturnState = true
+	}
+	
+	var currentState *packet.ShellState
+	var err error
+	
+	if statePtr != nil {
+		runPacket.StatePtr = statePtr
+		currentState, err = sstore.GetFullState(ctx, *statePtr)
+	} else {
+		// statePtr is nil, waveshell will return the current state
+		currentState = nil
+		err = nil
+	}
 
 	if rcOpts.EphemeralOpts != nil {
 		// Setting UsePty to false will ensure that the outputs get written to the correct file descriptors to extract stdout and stderr
 		runPacket.UsePty = rcOpts.EphemeralOpts.UsePty
 
 		// Ephemeral commands can override the current working directory. We need to expand the home dir if it's relative.
-		if rcOpts.EphemeralOpts.OverrideCwd != "" {
+		if rcOpts.EphemeralOpts.OverrideCwd != "" && currentState != nil {
 			overrideCwd := rcOpts.EphemeralOpts.OverrideCwd
 			if !strings.HasPrefix(overrideCwd, "/") {
 				expandedCwd, err := wsh.GetRemoteRuntimeState().ExpandHomeDir(overrideCwd)
@@ -2088,7 +2109,7 @@ func RunCommand(ctx context.Context, rcOpts RunCommandOpts, runPacket *packet.Ru
 		}
 
 		// Ephemeral commands can override the env without persisting it to the DB
-		if len(rcOpts.EphemeralOpts.Env) > 0 {
+		if len(rcOpts.EphemeralOpts.Env) > 0 && currentState != nil {
 			curEnvs := shellenv.DeclMapFromState(currentState)
 			for key, val := range rcOpts.EphemeralOpts.Env {
 				curEnvs[key] = &shellenv.DeclareDeclType{Name: key, Value: val, Args: "x"}
@@ -2097,12 +2118,16 @@ func RunCommand(ctx context.Context, rcOpts RunCommandOpts, runPacket *packet.Ru
 		}
 	}
 
-	if err != nil || currentState == nil {
+	if err != nil {
 		return nil, nil, fmt.Errorf("cannot load current remote state: %w", err)
 	}
-	runPacket.State = addScVarsToState(currentState)
-	runPacket.StateComplete = true
-	runPacket.ShellType = currentState.GetShellType()
+	
+	// Only set state if we have it (not requesting ReturnState)
+	if currentState != nil {
+		runPacket.State = addScVarsToState(currentState)
+		runPacket.StateComplete = true
+		runPacket.ShellType = currentState.GetShellType()
+	}
 
 	// start cmdwait.  must be started before sending the run packet
 	// this ensures that we don't process output, or cmddone packets until we set up the line, cmd, and ptyout file
@@ -2146,14 +2171,24 @@ func RunCommand(ctx context.Context, rcOpts RunCommandOpts, runPacket *packet.Ru
 	if runPacket.Detached {
 		status = sstore.CmdStatusDetached
 	}
+	var feState sstore.FeStateType
+	if currentState != nil {
+		feState = sstore.FeStateFromShellState(currentState)
+	}
+	
+	var cmdStatePtr packet.ShellStatePtr
+	if statePtr != nil {
+		cmdStatePtr = *statePtr
+	}
+	
 	cmd := &sstore.CmdType{
 		ScreenId:   runPacket.CK.GetGroupId(),
 		LineId:     runPacket.CK.GetCmdId(),
 		CmdStr:     runPacket.Command,
 		RawCmdStr:  runPacket.Command,
 		Remote:     remotePtr,
-		FeState:    sstore.FeStateFromShellState(currentState),
-		StatePtr:   *statePtr,
+		FeState:    feState,
+		StatePtr:   cmdStatePtr,
 		TermOpts:   makeTermOpts(runPacket),
 		Status:     status,
 		ExitCode:   0,

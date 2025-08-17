@@ -3,6 +3,7 @@ package cmdrunner
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/abhishek944/waveterm/waveshell/pkg/base"
@@ -63,6 +64,15 @@ func RunCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.Up
 		return nil, fmt.Errorf("/run error, invalid 'pterm' value %q: %v", ptermVal, err)
 	}
 	runPacket.Command = strings.TrimSpace(cmdStr)
+	log.Printf("[DEBUG] RunCommand: About to execute command: %q (from cmdStr: %q)\n", runPacket.Command, cmdStr)
+	
+	// Safety check: prevent /thread and /agent commands from being executed as shell commands
+	if strings.HasPrefix(runPacket.Command, "/thread ") || runPacket.Command == "/thread" ||
+	   strings.HasPrefix(runPacket.Command, "/agent ") || runPacket.Command == "/agent" {
+		log.Printf("[ERROR] RunCommand: Attempting to execute meta-command as shell command: %q\n", runPacket.Command)
+		return nil, fmt.Errorf("cannot execute %s as a shell command - this is a Wave meta-command", strings.Fields(runPacket.Command)[0])
+	}
+	
 	runPacket.ReturnState = resolveBool(pk.Kwargs["rtnstate"], isRtnStateCmd)
 
 	clientData, err := sstore.EnsureClientData(ctx)

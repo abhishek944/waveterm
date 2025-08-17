@@ -470,18 +470,82 @@ const LineActions: React.FC<{ screen: LineContainerType; line: LineType; cmd: Cm
         // const clickBookmark = () => GlobalCommandRunner.lineBookmark(line.lineid);
         const clickDelete = () => GlobalCommandRunner.lineDelete(line.lineid, true);
         const clickRestart = () => GlobalCommandRunner.lineRestart(line.lineid, true);
-        const clickChat = (e: React.MouseEvent) => {
+        const clickChat = async (e: React.MouseEvent) => {
             e.stopPropagation();
-            const termWrap = screen.getTermWrap(line.lineid);
-            if (termWrap && cmd) {
-                GlobalModel.sidebarchatModel.setCmdAndOutput(
-                    cmd.getCmdStr(),
-                    termWrap.getOutput(false),
-                    screen.getUsedRows(lineutil.getRendererContext(line), line, cmd, 300) * 2,
-                    cmdShouldMarkError(cmd)
-                );
-                GlobalModel.inputModel.setChatSidebarFocus();
-                GlobalModel.sidebarchatModel.resetSelectedCodeBlockIndex();
+            
+            // Open the right sidebar first
+            GlobalModel.rightSidebarModel.setCollapsed(false);
+            
+            // Handle different line types
+            if (line.linetype === "agent_mode") {
+                console.log("[clickChat] Agent mode - line:", line);
+                
+                // Agent mode uses PTY data, not termWrap - fetch it directly
+                const cmd = screen.getCmd(line);
+                if (!cmd) {
+                    console.log("[clickChat] Agent mode - No cmd found");
+                    return;
+                }
+                console.log("[clickChat] Agent mode - cmd object:", cmd);
+                console.log("[clickChat] Agent mode - cmd properties:", Object.keys(cmd));
+                console.log("[clickChat] Agent mode - cmd.getCmdStr():", cmd.getCmdStr?.());
+                
+                const termContext = { screenId: cmd.screenId, lineId: line.lineid, lineNum: line.linenum };
+                
+                try {
+                    const ptyDataResult = await getTermPtyData(termContext);
+                    console.log("[clickChat] Agent mode - PTY data result:", ptyDataResult);
+                    if (ptyDataResult?.data) {
+                        const decoder = new TextDecoder();
+                        const aiOutput = decoder.decode(ptyDataResult.data);
+                        console.log("[clickChat] Agent mode - AI output:", aiOutput);
+                        // For agent mode, get the user input from cmd.getCmdStr()
+                        let userInput = cmd.getCmdStr() || line.text || "";
+                        console.log("[clickChat] Agent mode - User input from cmd.getCmdStr():", userInput);
+                        console.log("[clickChat] Agent mode - User input from line.text:", line.text);
+                        
+                        // Remove /agent prefix if present
+                        if (userInput.startsWith("/agent ")) {
+                            userInput = userInput.substring(7).trim();
+                        }
+                        const formattedContent = `**User Input:**\n\`\`\`\n${userInput}\n\`\`\`\n\n**AI Output:**\n\`\`\`\n${aiOutput}\n\`\`\`\n\n`;
+                        console.log("[clickChat] Agent mode - Formatted content:", formattedContent);
+                        
+                        GlobalModel.sidebarchatModel.setCmdAndOutput(
+                            formattedContent,
+                            "", // No separate output for agent mode
+                            10, // Default rows for agent mode
+                            false
+                        );
+                        // Add a small delay to ensure sidebar is open before setting focus
+                        setTimeout(() => {
+                            GlobalModel.inputModel.setChatSidebarFocus();
+                        }, 100);
+                        GlobalModel.sidebarchatModel.resetSelectedCodeBlockIndex();
+                    } else {
+                        console.log("[clickChat] Agent mode - No PTY data found");
+                    }
+                } catch (err) {
+                    console.error("[clickChat] Agent mode - Error fetching PTY data:", err);
+                }
+            } else {
+                // For regular cmd lines: get command and output
+                const termWrap = screen.getTermWrap(line.lineid);
+                if (termWrap && cmd) {
+                    const cmdStr = cmd.getCmdStr();
+                    const output = termWrap.getOutput(false);
+                    GlobalModel.sidebarchatModel.setCmdAndOutput(
+                        cmdStr,
+                        output,
+                        screen.getUsedRows(lineutil.getRendererContext(line), line, cmd, 300) * 2,
+                        cmdShouldMarkError(cmd)
+                    );
+                    // Add a small delay to ensure sidebar is open before setting focus
+                    setTimeout(() => {
+                        GlobalModel.inputModel.setChatSidebarFocus();
+                    }, 100);
+                    GlobalModel.sidebarchatModel.resetSelectedCodeBlockIndex();
+                }
             }
         };
         const clickMinimize = () => {
@@ -542,22 +606,26 @@ const LineActions: React.FC<{ screen: LineContainerType; line: LineType; cmd: Cm
                                 )}
                             </div>
                         </If>
-                        <div
-                            key="chat"
-                            title="Ask Wave AI"
-                            className="px-1 cursor-pointer hover:text-[var(--line-actions-active-color)]"
-                            onClick={clickChat}
-                        >
-                            <i className="fa-sharp fa-regular fa-sparkles fa-fw" />
-                        </div>
-                        <div
-                            key="restart"
-                            title="Restart Command"
-                            className="px-1 cursor-pointer hover:text-[var(--line-actions-active-color)]"
-                            onClick={clickRestart}
-                        >
-                            <i className="fa-sharp fa-regular fa-arrows-rotate fa-fw" />
-                        </div>
+                        <If condition={line.linetype !== "thread_mode"}>
+                            <div
+                                key="chat"
+                                title="Ask Wave AI"
+                                className="px-1 cursor-pointer hover:text-[var(--line-actions-active-color)]"
+                                onClick={clickChat}
+                            >
+                                <i className="fa-sharp fa-regular fa-sparkles fa-fw" />
+                            </div>
+                        </If>
+                        <If condition={line.linetype !== "thread_mode" && line.linetype !== "agent_mode"}>
+                            <div
+                                key="restart"
+                                title="Restart Command"
+                                className="px-1 cursor-pointer hover:text-[var(--line-actions-active-color)]"
+                                onClick={clickRestart}
+                            >
+                                <i className="fa-sharp fa-regular fa-arrows-rotate fa-fw" />
+                            </div>
+                        </If>
                         {/* <div
                             key="delete"
                             title="Delete Line (&#x2318;D)"

@@ -67,6 +67,7 @@ func EvalCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.U
 	if len(pk.Args) == 0 {
 		return nil, fmt.Errorf("usage: /eval [command], no command passed to eval")
 	}
+	log.Printf("[DEBUG] EvalCommand: Evaluating command: %q\n", pk.Args[0])
 	if len(pk.Args[0]) > MaxCommandLen {
 		return nil, fmt.Errorf("command length too long len:%d, max:%d", len(pk.Args[0]), MaxCommandLen)
 	}
@@ -81,6 +82,9 @@ func EvalCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.U
 	ctxWithHistory := context.WithValue(ctx, historyContextKey, &historyContext)
 	var update scbus.UpdatePacket
 	newPk, rtnErr := EvalMetaCommand(ctxWithHistory, pk)
+	if rtnErr == nil {
+		log.Printf("[DEBUG] EvalCommand: After EvalMetaCommand - MetaCmd=%s, MetaSubCmd=%s, Args=%v\n", newPk.MetaCmd, newPk.MetaSubCmd, newPk.Args)
+	}
 
 	if rtnErr == nil {
 		update, rtnErr = HandleCommand(ctxWithHistory, newPk)

@@ -41,6 +41,28 @@ class ScreenLines {
             if (load) {
                 this.loaded.set(true);
             }
+            
+            // Debug logging for thread lines
+            const threadLines = (slines.lines || []).filter(line => 
+                line.linetype === "thread_mode" || line.linetype === "thread_mode_cmd"
+            );
+            if (threadLines.length > 0) {
+                console.log(`[DEBUG] updateData: Found ${threadLines.length} thread lines`);
+                threadLines.forEach(line => {
+                    console.log(`[DEBUG] updateData: Thread line - lineId=${line.lineid}, lineType=${line.linetype}, text=${line.text}`);
+                });
+            }
+            
+            const threadCmds = (slines.cmds || []).filter(cmd => 
+                cmd.cmdstr && cmd.cmdstr.startsWith("/thread")
+            );
+            if (threadCmds.length > 0) {
+                console.log(`[DEBUG] updateData: Found ${threadCmds.length} thread commands`);
+                threadCmds.forEach(cmd => {
+                    console.log(`[DEBUG] updateData: Thread cmd - lineId=${cmd.lineid}, cmdStr=${cmd.cmdstr}, status=${cmd.status}`);
+                });
+            }
+            
             // Custom merge to maintain deep observability
             this.mergeLines(slines.lines);
             let cmds = slines.cmds || [];

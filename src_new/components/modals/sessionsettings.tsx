@@ -26,10 +26,10 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/toggle";
 import { SettingsError } from "@/components/ui/settingserror";
-import { InlineSettingsTextEdit } from "@/components/ui/inlinesettingstextedit";
 
 const SessionDeleteMessage = `
 Are you sure you want to delete this workspace?
@@ -101,35 +101,36 @@ const SessionSettingsModal: React.FC = observer(() => {
 
     return (
         <Dialog open={true} onOpenChange={closeModal}>
-            <DialogContent className="w-[640px]">
+            <DialogContent className="w-[720px] max-w-[90vw] bg-zinc-900 border-none">
                 <DialogHeader>
-                    <DialogTitle>Workspace Settings ({session.name.get()})</DialogTitle>
+                    <DialogTitle className="text-white">Workspace Settings ({session.name.get()})</DialogTitle>
                 </DialogHeader>
-                <div className="flex flex-col px-5 gap-4 w-full">
+                <div className="flex flex-col px-5 gap-6 w-full">
                     <div className="grid grid-cols-3 items-center gap-4">
-                        <div className="col-span-1">Name</div>
+                        <div className="col-span-1 text-gray-300">Name</div>
                         <div className="col-span-2">
-                            <InlineSettingsTextEdit
-                                placeholder="name"
-                                text={session.name.get() ?? "(none)"}
+                            <Input
+                                className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-blue-500"
                                 value={session.name.get() ?? ""}
-                                onChange={handleInlineChangeName}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    handleInlineChangeName(val);
+                                }}
                                 maxLength={50}
-                                showIcon={true}
                             />
                         </div>
                     </div>
-                    {termThemes.length > 0 && (
+                    {/* {termThemes.length > 0 && (
                         <div className="grid grid-cols-3 items-center gap-4">
-                            <div className="col-span-1">Terminal Theme</div>
+                            <div className="col-span-1 text-gray-300">Terminal Theme</div>
                             <div className="col-span-2">
                                 <Select onValueChange={handleChangeTermTheme} defaultValue={currTermTheme}>
-                                    <SelectTrigger>
+                                    <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
                                         <SelectValue placeholder="Select a theme" />
                                     </SelectTrigger>
-                                    <SelectContent>
+                                    <SelectContent className="bg-gray-800 border-gray-700">
                                         {termThemes.map((theme) => (
-                                            <SelectItem key={theme.value} value={theme.value}>
+                                            <SelectItem key={theme.value} value={theme.value} className="text-white hover:bg-gray-700">
                                                 {theme.label}
                                             </SelectItem>
                                         ))}
@@ -137,9 +138,9 @@ const SessionSettingsModal: React.FC = observer(() => {
                                 </Select>
                             </div>
                         </div>
-                    )}
-                    <div className="grid grid-cols-3 items-center gap-4">
-                        <div className="col-span-1 flex items-center">
+                    )} */}
+                    {/* <div className="grid grid-cols-3 items-center gap-4">
+                        <div className="col-span-1 flex items-center text-gray-300">
                             <div className="mr-2">Archived</div>
                             <TooltipProvider>
                                 <Tooltip>
@@ -156,21 +157,9 @@ const SessionSettingsModal: React.FC = observer(() => {
                         <div className="col-span-2">
                             <Switch checked={session.archived.get()} onCheckedChange={handleChangeArchived} />
                         </div>
-                    </div>
+                    </div> */}
                     <div className="grid grid-cols-3 items-center gap-4">
-                        <div className="col-span-1 flex items-center">
-                            <div className="mr-2">Actions</div>
-                            <TooltipProvider>
-                                <Tooltip>
-                                    <TooltipTrigger>
-                                        <i className="fa-sharp fa-regular fa-circle-question text-sm" />
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        Delete will remove the workspace, deleting all commands and output.
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
-                        </div>
+                        <div className="col-span-1 text-gray-300">Actions</div>
                         <div className="col-span-2">
                             <Button onClick={handleDeleteSession} variant="destructive" size="sm">
                                 Delete Workspace
@@ -180,7 +169,7 @@ const SessionSettingsModal: React.FC = observer(() => {
                     <SettingsError errorMessage={errorMessage} onDismiss={dismissError} />
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" onClick={closeModal}>
+                    <Button variant="outline" onClick={closeModal} className="bg-gray-800 border-gray-700 text-white hover:bg-gray-700">
                         Close
                     </Button>
                 </DialogFooter>

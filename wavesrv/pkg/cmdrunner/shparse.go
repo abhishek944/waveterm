@@ -6,6 +6,7 @@ package cmdrunner
 import (
 	"context"
 	"fmt"
+	"log"
 	"regexp"
 	"strings"
 
@@ -115,6 +116,7 @@ func SubMetaCmd(cmd string) string {
 func parseMetaCmd(origCommandStr string) (string, string, string) {
 	commandStr := strings.TrimSpace(origCommandStr)
 	if len(commandStr) < 2 {
+		log.Printf("[DEBUG] parseMetaCmd: Command too short, defaulting to 'run': %q\n", origCommandStr)
 		return "run", "", origCommandStr
 	}
 	fields := strings.SplitN(commandStr, " ", 2)
@@ -125,13 +127,16 @@ func parseMetaCmd(origCommandStr string) (string, string, string) {
 	}
 	for _, decl := range BareMetaCmds {
 		if firstArg == decl.CmdStr {
+			log.Printf("[DEBUG] parseMetaCmd: Found bare metacmd: %s -> %s\n", firstArg, decl.MetaCmd)
 			return decl.MetaCmd, "", rest
 		}
 	}
 	m := ValidMetaCmdRe.FindStringSubmatch(firstArg)
 	if m == nil {
+		log.Printf("[DEBUG] parseMetaCmd: Not a valid metacmd (no regex match), defaulting to 'run': %q\n", origCommandStr)
 		return "run", "", origCommandStr
 	}
+	log.Printf("[DEBUG] parseMetaCmd: Parsed metacmd: %s:%s from %q\n", SubMetaCmd(m[1]), m[2], origCommandStr)
 	return SubMetaCmd(m[1]), m[2], rest
 }
 

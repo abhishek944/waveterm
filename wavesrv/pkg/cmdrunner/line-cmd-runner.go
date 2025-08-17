@@ -83,7 +83,18 @@ func LineRestartCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (
 	if line == nil {
 		return nil, fmt.Errorf("line not found")
 	}
+	
+	log.Printf("[DEBUG] LineRestartCommand: Attempting to restart lineId=%s, lineType=%s\n", lineId, line.LineType)
+	
+	// Check if this is a thread mode or agent mode line that shouldn't be restarted
+	if line.LineType == sstore.LineTypeThreadMode || line.LineType == sstore.LineTypeAgentMode {
+		log.Printf("[DEBUG] LineRestartCommand: Silently skipping restart for %s line lineId=%s\n", line.LineType, lineId)
+		// Return empty update packet - no error, just skip the operation
+		return scbus.MakeUpdatePacket(), nil
+	}
+	
 	if cmd == nil {
+		log.Printf("[DEBUG] LineRestartCommand: No cmd found for lineId=%s, lineType=%s\n", lineId, line.LineType)
 		return nil, fmt.Errorf("cannot restart line (no cmd found)")
 	}
 	if cmd.Status == sstore.CmdStatusRunning || cmd.Status == sstore.CmdStatusDetached {
@@ -110,12 +121,18 @@ func LineRestartCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (
 	}
 	runPacket.Command = cmd.CmdStr
 	runPacket.ReturnState = false
+	log.Printf("[DEBUG] LineRestartCommand: Restarting command with StatePtr=%+v for lineId=%s\n", cmd.StatePtr, lineId)
 	rcOpts := remote.RunCommandOpts{
 		SessionId:          ids.SessionId,
 		ScreenId:           ids.ScreenId,
 		RemotePtr:          ids.Remote.RemotePtr,
-		StatePtr:           &cmd.StatePtr,
 		NoCreateCmdPtyFile: true,
+	}
+	// Only use the stored StatePtr if it has a valid BaseHash
+	if cmd.StatePtr.BaseHash != "" {
+		rcOpts.StatePtr = &cmd.StatePtr
+	} else {
+		log.Printf("[DEBUG] LineRestartCommand: Stored StatePtr has empty BaseHash, will get fresh state from remote\n")
 	}
 	cmd, callback, err := remote.RunCommand(ctx, rcOpts, runPacket)
 	if callback != nil {

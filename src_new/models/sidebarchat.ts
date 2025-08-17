@@ -40,7 +40,6 @@ class SidebarChatModel {
 
     @mobx.action
     setCmdAndOutput(cmd: string, output: string, usedRows: number, isError: boolean): void {
-        console.log("cmd", cmd);
         this.cmdAndOutput.set({
             cmd: cmd,
             output: output,

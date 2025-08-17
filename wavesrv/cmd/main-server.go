@@ -268,16 +268,49 @@ func HandlePowerMonitor(w http.ResponseWriter, r *http.Request) {
 func HandleGetScreenLines(w http.ResponseWriter, r *http.Request) {
 	qvals := r.URL.Query()
 	screenId := qvals.Get("screenid")
+	log.Printf("[DEBUG] HandleGetScreenLines: Called for screenId=%s\n", screenId)
 	if _, err := uuid.Parse(screenId); err != nil {
 		WriteJsonError(w, fmt.Errorf("invalid screenid, err: %w", err))
 		return
 	}
 	screenLines, err := sstore.GetScreenLinesById(r.Context(), screenId)
 	if err != nil {
+		log.Printf("[DEBUG] HandleGetScreenLines: Error getting screen lines: %v\n", err)
 		WriteJsonError(w, err)
 		return
 	}
+	log.Printf("[DEBUG] HandleGetScreenLines: Retrieved %d lines for screenId=%s\n", len(screenLines.Lines), screenId)
+	for idx, line := range screenLines.Lines {
+		if idx < 5 || line.LineType == sstore.LineTypeThreadMode || line.LineType == sstore.LineTypeThreadModeCmd {
+			log.Printf("[DEBUG] HandleGetScreenLines: Line[%d] lineId=%s, lineType=%s, text=%s\n", idx, line.LineId, line.LineType, line.Text)
+		}
+	}
+	for idx, cmd := range screenLines.Cmds {
+		if idx < 5 || strings.HasPrefix(cmd.CmdStr, "/thread") {
+			log.Printf("[DEBUG] HandleGetScreenLines: Cmd[%d] lineId=%s, cmdStr=%s, status=%s\n", idx, cmd.LineId, cmd.CmdStr, cmd.Status)
+		}
+	}
 	WriteJsonSuccess(w, screenLines)
+}
+
+// params: lineid
+func HandleGetThreadLine(w http.ResponseWriter, r *http.Request) {
+	qvals := r.URL.Query()
+	lineId := qvals.Get("lineid")
+	if lineId == "" {
+		WriteJsonError(w, fmt.Errorf("must specify lineid"))
+		return
+	}
+	if _, err := uuid.Parse(lineId); err != nil {
+		WriteJsonError(w, fmt.Errorf(ErrorInvalidLineId, err))
+		return
+	}
+	threadLine, err := sstore.GetThreadLineByLineId(r.Context(), lineId)
+	if err != nil {
+		WriteJsonError(w, err)
+		return
+	}
+	WriteJsonSuccess(w, threadLine)
 }
 
 func HandleRtnState(w http.ResponseWriter, r *http.Request) {
@@ -1188,6 +1221,7 @@ func main() {
 	gr.HandleFunc("/api/remote-pty", AuthKeyWrap(HandleRemotePty))
 	gr.HandleFunc("/api/rtnstate", AuthKeyWrap(HandleRtnState))
 	gr.HandleFunc("/api/get-screen-lines", AuthKeyWrap(HandleGetScreenLines))
+	gr.HandleFunc("/api/get-thread-line", AuthKeyWrap(HandleGetThreadLine))
 	gr.HandleFunc("/api/run-command", AuthKeyWrap(HandleRunCommand)).Methods("POST")
 	gr.HandleFunc("/api/run-ephemeral-command", AuthKeyWrap(HandleRunEphemeralCommand)).Methods("POST")
 	gr.HandleFunc(bufferedpipe.BufferedPipeGetterUrl, AuthKeyWrapAllowHmac(bufferedpipe.HandleGetBufferedPipeOutput))

@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math/rand"
 	"strconv"
 	"strings"
 	"sync"
@@ -27,6 +28,18 @@ import (
 var updateWriterCVar = sync.NewCond(&sync.Mutex{})
 var WebScreenPtyPosLock = &sync.Mutex{}
 var WebScreenPtyPosDelIntent = make(map[string]bool) // map[screenid + ":" + lineid] -> bool
+
+// Available tab colors and icons
+var TabColors = []string{"red", "orange", "yellow", "green", "mint", "cyan", "blue", "violet", "pink", "white"}
+var TabIcons = []string{"square", "sparkle", "fire", "ghost", "cloud", "compass", "crown", "droplet", "graduation-cap", "heart", "file"}
+
+func getRandomTabColor() string {
+	return TabColors[rand.Intn(len(TabColors))]
+}
+
+func getRandomTabIcon() string {
+	return TabIcons[rand.Intn(len(TabIcons))]
+}
 
 type SingleConnDBGetter struct {
 	SingleConnLock *sync.Mutex
@@ -341,6 +354,18 @@ func GetScreenLinesById(ctx context.Context, screenId string) (*ScreenLinesType,
 		screen.Lines = dbutil.SelectMappable[*LineType](tx, query, screen.ScreenId)
 		query = `SELECT * FROM cmd WHERE screenid = ?`
 		screen.Cmds = dbutil.SelectMapsGen[*CmdType](tx, query, screen.ScreenId)
+		
+		// Debug logging for thread lines
+		for _, line := range screen.Lines {
+			if line.LineType == LineTypeThreadMode || line.LineType == LineTypeThreadModeCmd {
+				log.Printf("[DEBUG] GetScreenLinesById: Found thread line - lineId=%s, lineType=%s, text=%s, linestate=%+v\n", line.LineId, line.LineType, line.Text, line.LineState)
+			}
+		}
+		for _, cmd := range screen.Cmds {
+			if strings.HasPrefix(cmd.CmdStr, "/thread") {
+				log.Printf("[DEBUG] GetScreenLinesById: Found thread cmd - lineId=%s, cmdStr=%s, status=%s, rawCmdStr=%s\n", cmd.LineId, cmd.CmdStr, cmd.Status, cmd.RawCmdStr)
+			}
+		}
 		return screen, nil
 	})
 }
@@ -578,12 +603,15 @@ func InsertScreen(ctx context.Context, sessionId string, origScreenName string, 
 			}
 		}
 		newScreenId = scbase.GenWaveUUID()
+		// Generate random tab color and icon
+		randomTabColor := getRandomTabColor()
+		randomTabIcon := getRandomTabIcon()
 		screen := &ScreenType{
 			SessionId:    sessionId,
 			ScreenId:     newScreenId,
 			Name:         screenName,
 			ScreenIdx:    int64(maxScreenIdx) + 1,
-			ScreenOpts:   ScreenOptsType{},
+			ScreenOpts:   ScreenOptsType{TabColor: randomTabColor, TabIcon: randomTabIcon},
 			OwnerId:      "",
 			ShareMode:    ShareModeLocal,
 			CurRemote:    RemotePtrType{RemoteId: localRemoteId},
@@ -677,6 +705,9 @@ func GetLineCmdByLineId(ctx context.Context, screenId string, lineId string) (*L
 		var cmdRtn *CmdType
 		query = `SELECT * FROM cmd WHERE screenid = ? AND lineid = ?`
 		cmdRtn = dbutil.GetMapGen[*CmdType](tx, query, screenId, lineId)
+		if cmdRtn != nil {
+			log.Printf("[DEBUG] GetLineCmdByLineId: Found cmd for lineId=%s with StatePtr=%+v\n", lineId, cmdRtn.StatePtr)
+		}
 		return lineVal, cmdRtn, nil
 	})
 }
@@ -1161,8 +1192,10 @@ func GetRemoteStatePtr(ctx context.Context, sessionId string, screenId string, r
 			return err
 		}
 		if ri == nil {
+			log.Printf("[DEBUG] GetRemoteStatePtr: RemoteInstance is nil for sessionId=%s, screenId=%s, remotePtr=%+v\n", sessionId, screenId, remotePtr)
 			return nil
 		}
+		log.Printf("[DEBUG] GetRemoteStatePtr: RemoteInstance found - StateBaseHash=%s, StateDiffHashArr=%v, remotePtr=%+v\n", ri.StateBaseHash, ri.StateDiffHashArr, remotePtr)
 		ssptr = &packet.ShellStatePtr{ri.StateBaseHash, ri.StateDiffHashArr}
 		return nil
 	})
@@ -1196,6 +1229,11 @@ func GetRemoteInstance(ctx context.Context, sessionId string, screenId string, r
 	txErr := WithTx(ctx, func(tx *TxWrap) error {
 		query := `SELECT * FROM remote_instance WHERE sessionid = ? AND screenid = ? AND remoteownerid = ? AND remoteid = ? AND name = ?`
 		ri = dbutil.GetMapGen[*RemoteInstance](tx, query, sessionId, screenId, remotePtr.OwnerId, remotePtr.RemoteId, remotePtr.Name)
+		if ri != nil {
+			log.Printf("[DEBUG] GetRemoteInstance: Found remote instance with StateBaseHash=%s, sessionId=%s, screenId=%s, remoteName=%s\n", ri.StateBaseHash, sessionId, screenId, remotePtr.Name)
+		} else {
+			log.Printf("[DEBUG] GetRemoteInstance: No remote instance found for sessionId=%s, screenId=%s, remotePtr=%+v\n", sessionId, screenId, remotePtr)
+		}
 		return nil
 	})
 	if txErr != nil {
@@ -1942,6 +1980,7 @@ func GetStateDiff(ctx context.Context, diffHash string) (*packet.ShellStateDiff,
 func GetFullState(ctx context.Context, ssPtr packet.ShellStatePtr) (*packet.ShellState, error) {
 	var state *packet.ShellState
 	if ssPtr.BaseHash == "" {
+		log.Printf("[DEBUG] GetFullState: BaseHash is empty, ssPtr=%+v\n", ssPtr)
 		return nil, fmt.Errorf("invalid empty basehash")
 	}
 	txErr := WithTx(ctx, func(tx *TxWrap) error {

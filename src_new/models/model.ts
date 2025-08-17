@@ -626,6 +626,25 @@ class Model {
         };
     }
 
+    async getThreadLineData(lineId: string): Promise<ThreadLineType | null> {
+        const usp = new URLSearchParams();
+        usp.set("lineid", lineId);
+        const url = new URL(this.getBaseHostPort() + "/api/get-thread-line?" + usp.toString());
+        const fetchHeaders = this.getFetchHeaders();
+        
+        try {
+            const response = await fetch(url, { method: "GET", headers: fetchHeaders });
+            if (!response.ok) {
+                throw new Error(`Failed to fetch thread line data: ${response.statusText}`);
+            }
+            const data = await response.json();
+            return data;
+        } catch (err) {
+            console.error("Error fetching thread line data:", err);
+            return null;
+        }
+    }
+
     docSelectionChangeHandler(e: any) {
         // nothing for now
     }

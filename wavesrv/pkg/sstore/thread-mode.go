@@ -202,3 +202,14 @@ func GetThreadById(ctx context.Context, threadId string) (*ThreadType, error) {
 		return thread, nil
 	})
 }
+
+// GetThreadLineByLineId fetches thread line data by line ID
+func GetThreadLineByLineId(ctx context.Context, lineId string) (*ThreadLineType, error) {
+	return WithTxRtn(ctx, func(tx *TxWrap) (*ThreadLineType, error) {
+		query := `SELECT tl.screenid, tl.lineid, tl.linenum, tl.userquery, tl.assistantresponse, tl.command,
+                         tl.cmdlineid, tl.created_ts
+                  FROM thread_line tl WHERE tl.lineid = ?`
+		threadLine := dbutil.GetMappable[*ThreadLineType](tx, query, lineId)
+		return threadLine, nil
+	})
+}

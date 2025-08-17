@@ -64,6 +64,10 @@ func ThreadCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus
 		Status:    sstore.CmdStatusDone, // Set as done, not running
 		RunOut:    nil,
 	}
+	// Copy StatePtr from remote if available (consistent with agent mode)
+	if ids.Remote != nil && ids.Remote.StatePtr != nil {
+		cmd.StatePtr = *ids.Remote.StatePtr
+	}
 	// Copy FeState from remote if available
 	if ids.Remote != nil && ids.Remote.FeState != nil {
 		cmd.FeState = ids.Remote.FeState
