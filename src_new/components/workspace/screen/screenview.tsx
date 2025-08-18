@@ -135,8 +135,10 @@ const SidebarLineContainer: React.FC<{ screen: Screen; winSize: WindowSize; line
 const ScreenWindowView: React.FC<{ session: Session; screen: Screen; width: string }> = observer(
     ({ session, screen, width }) => {
         const windowViewRef = React.useRef<HTMLDivElement>(null);
+        const scrollContainerRef = React.useRef<HTMLDivElement>(null);
         const [size, setSize] = React.useState({ width: 0, height: 0 });
         const [renderMode, setRenderMode] = React.useState<RenderModeType>("normal");
+        const wasAtBottomRef = React.useRef(true);  // Start with true assumption for bottom input
 
         const setSize_debounced = React.useCallback(
             (newWidth: number, newHeight: number) => {
@@ -152,6 +154,23 @@ const ScreenWindowView: React.FC<{ session: Session; screen: Screen; width: stri
 
         React.useEffect(() => {
             const wvElem = windowViewRef.current;
+            // Initialize scroll position tracking
+            if (wvElem) {
+                const inputPosition = GlobalModel.inputPosition.get();
+                setTimeout(() => {
+                    if (windowViewRef.current) {
+                        if (inputPosition === "top") {
+                            // Start at top when input is at top
+                            windowViewRef.current.scrollTop = 0;
+                            wasAtBottomRef.current = false;
+                        } else {
+                            // Start at bottom when input is at bottom
+                            windowViewRef.current.scrollTop = windowViewRef.current.scrollHeight;
+                            wasAtBottomRef.current = true;
+                        }
+                    }
+                }, 100);
+            }
             if (wvElem) {
                 const rszObs = new ResizeObserver((entries) => {
                     if (entries.length > 0) {
@@ -210,6 +229,99 @@ const ScreenWindowView: React.FC<{ session: Session; screen: Screen; width: stri
 
         const disableFilter = () => mobx.action(() => screen.filterRunning.set(false))();
 
+        // Check if scroll is at bottom before render
+        const handleScroll = React.useCallback(() => {
+            const elem = windowViewRef.current;
+            if (elem) {
+                const isAtBottom = elem.scrollHeight - elem.scrollTop - elem.clientHeight < 50;
+                wasAtBottomRef.current = isAtBottom;
+            }
+        }, []);
+
+        // Watch for new command submissions by observing nextLineNum changes
+        React.useEffect(() => {
+            const dispose = mobx.reaction(
+                () => screen.nextLineNum.get(),
+                (nextLineNum) => {
+                    // When nextLineNum increases, a new command was likely submitted
+                    if (windowViewRef.current) {
+                        const inputPosition = GlobalModel.inputPosition.get();
+                        
+                        setTimeout(() => {
+                            if (windowViewRef.current) {
+                                if (inputPosition === "top") {
+                                    // Scroll to top for new command when input is at top
+                                    windowViewRef.current.scrollTop = 0;
+                                    wasAtBottomRef.current = false;
+                                } else {
+                                    // Scroll to bottom for new command when input is at bottom
+                                    windowViewRef.current.scrollTop = windowViewRef.current.scrollHeight;
+                                    wasAtBottomRef.current = true;
+                                }
+                            }
+                        }, 100);
+                    }
+                }
+            );
+            
+            return () => dispose();
+        }, [screen]);
+
+        // Auto-scroll when content is added (respecting input position)
+        React.useEffect(() => {
+            if (!windowViewRef.current) return;
+            
+            let scrollTimeout: NodeJS.Timeout | null = null;
+            
+            // Use MutationObserver to watch for DOM changes
+            const observer = new MutationObserver((mutations) => {
+                // Check if any nodes were added
+                const hasAddedNodes = mutations.some(mutation => mutation.addedNodes.length > 0);
+                
+                if (hasAddedNodes) {
+                    const inputPosition = GlobalModel.inputPosition.get();
+                    
+                    // For top input: scroll if at top; For bottom input: scroll if at bottom
+                    const shouldScroll = inputPosition === "top" 
+                        ? windowViewRef.current.scrollTop < 50  // Near top
+                        : wasAtBottomRef.current;  // At bottom
+                    
+                    if (shouldScroll) {
+                        // Clear any existing timeout
+                        if (scrollTimeout) {
+                            clearTimeout(scrollTimeout);
+                        }
+                        
+                        // Debounce the scroll to avoid excessive scrolling
+                        scrollTimeout = setTimeout(() => {
+                            requestAnimationFrame(() => {
+                                if (windowViewRef.current) {
+                                    if (inputPosition === "top") {
+                                        windowViewRef.current.scrollTop = 0;
+                                    } else {
+                                        windowViewRef.current.scrollTop = windowViewRef.current.scrollHeight;
+                                    }
+                                }
+                            });
+                        }, 50);
+                    }
+                }
+            });
+            
+            // Observe the container for child list changes
+            observer.observe(windowViewRef.current, {
+                childList: true,
+                subtree: true
+            });
+            
+            return () => {
+                observer.disconnect();
+                if (scrollTimeout) {
+                    clearTimeout(scrollTimeout);
+                }
+            };
+        }, []);
+
         const win = getScreenLines();
         if (!win.loaded.get()) return renderError("...", true);
         if (win.loadError.get()) return renderError(`(${win.loadError.get()})`, false);
@@ -220,9 +332,10 @@ const ScreenWindowView: React.FC<{ session: Session; screen: Screen; width: stri
 
         return (
             <div
-                className="flex flex-col absolute h-full overflow-x-hidden overflow-y-auto whitespace-nowrap"
+                className="flex flex-col absolute inset-0 overflow-x-hidden overflow-y-auto whitespace-nowrap"
                 ref={windowViewRef}
                 style={{ width }}
+                onScroll={handleScroll}
             >
                 <If condition={lines.length === 0 && screen.nextLineNum.get() !== 1}>
                     <div className="flex items-center justify-center w-full p-2.5 h-full text-main">
@@ -331,7 +444,7 @@ export const ScreenView: React.FC<{ session: Session; screen: Screen }> = observ
 
     return (
         <div
-            className="flex-grow relative flex flex-col my-1"
+            className="flex-grow relative flex flex-col h-full"
             id={screen.screenId}
             data-screenid={screen.screenId}
             ref={screenViewRef}

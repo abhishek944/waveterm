@@ -256,20 +256,21 @@ class ClientSettingsView extends React.Component<{ model: RemotesModel }, { hove
         return (
             <MainView
                 title="Client Settings"
-                onClose={this.handleClose}
+                separator={true}
                 scrollable={true}
             >
                 <>
                     <If condition={!isHidden}>
                         <ClientSettingsKeybindings></ClientSettingsKeybindings>
                     </If>
-                    <div className="grid grid-cols-2 gap-4 p-4">
+                    <div className="grid grid-cols-1 gap-4 p-4">
                         <Card>
                             <CardHeader>
-                                <CardTitle>Appearance</CardTitle>
+                                <CardTitle className="pt-4">Appearance</CardTitle>
                             </CardHeader>
-                            <CardContent className="pt-2">
-                                <SettingItem title="Theme" description="Select the application theme.">
+                            <CardContent className="pt-2 flex justify-center">
+                                <div>
+                                    {/* <SettingItem title="Theme" description="Select the application theme.">
                                     <Select onValueChange={this.handleChangeThemeSource} defaultValue={curTheme}>
                                         <SelectTrigger className="w-[200px]">
                                             <SelectValue placeholder="Select theme" />
@@ -282,8 +283,8 @@ class ClientSettingsView extends React.Component<{ model: RemotesModel }, { hove
                                             ))}
                                         </SelectContent>
                                     </Select>
-                                </SettingItem>
-                                <If condition={termThemes.length > 0}>
+                                </SettingItem> */}
+                                {/* <If condition={termThemes.length > 0}>
                                     <SettingItem title="Terminal Theme" description="Select the terminal theme.">
                                         <Select onValueChange={this.handleChangeTermTheme} defaultValue={currTermTheme}>
                                             <SelectTrigger className="w-[200px]">
@@ -298,7 +299,7 @@ class ClientSettingsView extends React.Component<{ model: RemotesModel }, { hove
                                             </SelectContent>
                                         </Select>
                                     </SettingItem>
-                                </If>
+                                </If> */}
                                 <SettingItem title="Terminal Font Size" description="Select the font size for the terminal.">
                                     <Select onValueChange={this.handleChangeFontSize} defaultValue={`${curFontSize}`}>
                                         <SelectTrigger className="w-[200px]">
@@ -344,11 +345,12 @@ class ClientSettingsView extends React.Component<{ model: RemotesModel }, { hove
                                         </SelectContent>
                                     </Select>
                                 </SettingItem>
+                                </div>
                             </CardContent>
                         </Card>
-                        <Card>
+                        {/* <Card>
                             <CardHeader>
-                                <CardTitle>Security</CardTitle>
+                                <CardTitle className="pt-4">Security</CardTitle>
                             </CardHeader>
                             <CardContent className="pt-2">
                                 <SettingItem title="Remember Sudo Password" description="Configure how sudo password is cached.">
@@ -383,10 +385,10 @@ class ClientSettingsView extends React.Component<{ model: RemotesModel }, { hove
                                     />
                                 </SettingItem>
                             </CardContent>
-                        </Card>
+                        </Card> */}
                         <Card className="col-span-2">
                             <CardHeader>
-                                <CardTitle>AI</CardTitle>
+                                <CardTitle className="pt-4">AI</CardTitle>
                             </CardHeader>
                             <CardContent className="pt-2">
                                 <AiProviders />
@@ -394,10 +396,11 @@ class ClientSettingsView extends React.Component<{ model: RemotesModel }, { hove
                         </Card>
                         <Card>
                             <CardHeader>
-                                <CardTitle>Advanced</CardTitle>
+                                <CardTitle className="pt-4">Advanced</CardTitle>
                             </CardHeader>
-                            <CardContent className="pt-2">
-                                <SettingItem title="Command Autocomplete" description="Enable or disable command autocomplete.">
+                            <CardContent className="pt-2 flex justify-center">
+                                <div>
+                                    <SettingItem title="Command Autocomplete" description="Enable or disable command autocomplete.">
                                     <Toggle
                                         checked={cdata.clientopts.autocompleteenabled ?? false}
                                         onCheckedChange={this.handleChangeAutocompleteEnabled}
@@ -429,11 +432,12 @@ class ClientSettingsView extends React.Component<{ model: RemotesModel }, { hove
                                         onCheckedChange={this.handleChangeReleaseCheck}
                                     />
                                 </SettingItem>
+                                </div>
                             </CardContent>
                         </Card>
-                        <Card>
+                        {/* <Card>
                             <CardHeader>
-                                <CardTitle>About</CardTitle>
+                                <CardTitle className="pt-4">About</CardTitle>
                             </CardHeader>
                             <CardContent className="pt-2">
                                 <SettingItem title="Client ID" description="Your unique client identifier.">
@@ -448,7 +452,7 @@ class ClientSettingsView extends React.Component<{ model: RemotesModel }, { hove
                                     <div className="flex flex-row items-center">{cdata.dbversion}</div>
                                 </SettingItem>
                             </CardContent>
-                        </Card>
+                        </Card> */}
                         <SettingsError errorMessage={this.errorMessage.get()} onDismiss={this.dismissError} />
                     </div>
                 </>

@@ -56,12 +56,6 @@ class ScreenLines {
             const threadCmds = (slines.cmds || []).filter(cmd => 
                 cmd.cmdstr && cmd.cmdstr.startsWith("/thread")
             );
-            if (threadCmds.length > 0) {
-                console.log(`[DEBUG] updateData: Found ${threadCmds.length} thread commands`);
-                threadCmds.forEach(cmd => {
-                    console.log(`[DEBUG] updateData: Thread cmd - lineId=${cmd.lineid}, cmdStr=${cmd.cmdstr}, status=${cmd.status}`);
-                });
-            }
             
             // Custom merge to maintain deep observability
             this.mergeLines(slines.lines);

@@ -596,8 +596,14 @@ export const TextAreaInput: React.FC<{ screen: Screen; onHeightChange: () => voi
                 </If> */}
                 <If condition={primaryAutocompleteSuggestion}>
                     <div
-                        className="absolute top-0 left-0 resize-none overflow-auto whitespace-pre-wrap font-mono bg-transparent border-none shadow-none text-gray-500 z-10"
-                        style={{ height: computedInnerHeight, minHeight: computedInnerHeight, fontSize: termFontSize, padding: `${termPad}px 0` }}
+                        className="absolute top-0 left-0 resize-none overflow-auto whitespace-pre-wrap font-mono bg-transparent border-none shadow-none text-gray-500 z-10 pointer-events-none"
+                        style={{ 
+                            height: computedInnerHeight, 
+                            minHeight: computedInnerHeight, 
+                            fontSize: termFontSize, 
+                            padding: `${termPad}px 0`,
+                            lineHeight: fontSize.height + 'px'
+                        }}
                     >
                         {`${"\xa0".repeat(curLine.length)}${primaryAutocompleteSuggestion}`}
                     </div>
@@ -611,7 +617,7 @@ export const TextAreaInput: React.FC<{ screen: Screen; onHeightChange: () => voi
                     id="main-cmd-input"
                     onFocus={handleFocus}
                     onBlur={handleMainBlur}
-                    style={{ height: computedInnerHeight, minHeight: computedInnerHeight, fontSize: termFontSize, padding: `${termPad}px 0` }}
+                    style={{ height: computedInnerHeight, minHeight: computedInnerHeight, fontSize: termFontSize, padding: `${termPad}px 0`, lineHeight: fontSize.height + 'px' }}
                     value={curLine}
                     onChange={onChange}
                     onSelect={onSelect}

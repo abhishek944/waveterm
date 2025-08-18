@@ -127,8 +127,8 @@ class TermWrap {
         if (opts.winSize == null) {
             this.termSize = { rows: opts.termOpts.rows, cols: opts.termOpts.cols };
         } else {
-            let cols = windowWidthToCols(opts.winSize.width, opts.fontSize);
-            this.termSize = { rows: opts.termOpts.rows, cols: cols };
+            // Start with a reasonable default, will be adjusted after initialization
+            this.termSize = { rows: opts.termOpts.rows, cols: opts.termOpts.cols || 80 };
         }
         let theme = getThemeFromCSSVars(this.connectedElem);
         this.terminal = new Terminal({
@@ -176,6 +176,7 @@ class TermWrap {
             return state;
         });
         this.terminal.open(elem);
+        
         if (opts.keyHandler != null) {
             //this.terminal.onKey((e) => opts.keyHandler(e, this));
         }
@@ -200,7 +201,36 @@ class TermWrap {
         if (opts.customKeyHandler != null) {
             this.terminal.attachCustomKeyEventHandler((e) => opts.customKeyHandler(e, this));
         }
-        setTimeout(() => this.reload(0), 10);
+        setTimeout(() => {
+            this.reload(0);
+            // Wait for terminal to be fully initialized and rendered
+            setTimeout(() => {
+                if (this.terminal && this.connectedElem && this.winSize.width > 0) {
+                    // Let xterm measure its own character dimensions
+                    const core = this.terminal._core;
+                    if (core && core._charSizeService) {
+                        // Force measurement
+                        core._charSizeService.measure();
+                        
+                        // Get the character dimensions
+                        setTimeout(() => {
+                            const charWidth = core._charSizeService?.width;
+                            
+                            if (charWidth && charWidth > 0) {
+                                // Calculate columns based on container width and actual character width
+                                const containerWidth = this.connectedElem.clientWidth;
+                                const cols = Math.floor(containerWidth / charWidth);
+                                
+                                
+                                if (cols > 0 && cols !== this.terminal.cols) {
+                                    this.resize({ rows: this.terminal.rows, cols });
+                                }
+                            }
+                        }, 100);
+                    }
+                }
+            }, 200);
+        }, 10);
     }
 
     getUsedRows(): number {
@@ -355,7 +385,21 @@ class TermWrap {
     }
 
     resizeCols(cols: number): void {
-        this.resize({ rows: this.termSize.rows, cols: cols });
+        // Instead of using the calculated cols directly, use xterm's character width
+        if (this.terminal && this.connectedElem) {
+            const core = this.terminal._core;
+            if (core && core._charSizeService && core._charSizeService.width > 0) {
+                const containerWidth = this.connectedElem.clientWidth;
+                const charWidth = core._charSizeService.width;
+                const actualCols = Math.floor(containerWidth / charWidth);
+                this.resize({ rows: this.termSize.rows, cols: actualCols });
+            } else {
+                // Fallback to requested cols if char width not available
+                this.resize({ rows: this.termSize.rows, cols: cols });
+            }
+        } else {
+            this.resize({ rows: this.termSize.rows, cols: cols });
+        }
     }
 
     resize(size: TermWinSize): void {
@@ -369,6 +413,8 @@ class TermWrap {
         }
         this.termSize = newSize;
         this.terminal.resize(newSize.cols, newSize.rows);
+        
+        
         this.updateUsedRows(true, "resize");
     }
 

@@ -47,14 +47,19 @@ const RightSideBar: React.FC = observer(() => {
     const isCollapsed = GlobalModel.rightSidebarModel.getCollapsed();
 
     return (
-        <ResizableSidebar
-            position="right"
-            collapsed={isCollapsed}
-            initialWidth={400}
-            minWidth={300}
-            maxWidth={600}
-            className={cn("flex flex-col relative", { "w-0": isCollapsed })}
-        >
+        <div className="h-full pr-2 py-2">
+            <ResizableSidebar
+                position="right"
+                collapsed={isCollapsed}
+                initialWidth={400}
+                minWidth={300}
+                maxWidth={600}
+                className={cn("flex flex-col relative h-full rounded-md overflow-hidden", 
+                    { 
+                        "w-0": isCollapsed,
+                        "border border-gray-800": !isCollapsed 
+                    })}
+            >
             {/* Gradient background */}
             <div
                 className="absolute inset-0 z-0"
@@ -86,7 +91,8 @@ const RightSideBar: React.FC = observer(() => {
                     <SimplePromptBox />
                 </SidebarFooter>
             </div>
-        </ResizableSidebar>
+            </ResizableSidebar>
+        </div>
     );
 });
 

@@ -26,6 +26,17 @@ function getMonoFontSize(fontSize: number): MonoFontSize {
     const size = measureText("W", { pre: true, mono: true, fontSize: fontSize });
     if (size.height != 0 && size.width != 0) {
         MonoFontSizes[fontSize] = size;
+    } else {
+        // Fallback calculation based on font size
+        // Typical monospace fonts have width ~0.6 of their height
+        const fallbackSize = {
+            width: fontSize * 0.6,
+            height: fontSize * 1.2,
+            pad: Math.floor(fontSize * 0.6),
+            fontSize: fontSize
+        };
+        MonoFontSizes[fontSize] = fallbackSize;
+        return fallbackSize;
     }
     return size;
 }
@@ -44,6 +55,7 @@ function measureText(text: string, textOpts: { pre?: boolean; mono?: boolean; fo
     }
     if (textOpts.mono) {
         textElem.classList.add("mono");
+        textElem.style.fontFamily = "'JetBrains Mono', 'Fira Code', Consolas, 'Courier New', monospace";
     }
     if (textOpts.fontSize != null) {
         if (typeof textOpts.fontSize == "number") {
@@ -52,21 +64,45 @@ function measureText(text: string, textOpts: { pre?: boolean; mono?: boolean; fo
             textElem.style.fontSize = textOpts.fontSize;
         }
     }
+    textElem.style.position = "absolute";
+    textElem.style.visibility = "hidden";
+    textElem.style.whiteSpace = "pre";
     textElem.innerText = text;
+    
     const measureDiv = document.getElementById("measure");
     if (measureDiv == null) {
-        throw new Error("cannot measure text, no #measure div");
+        document.body.appendChild(textElem);
+        const height = Math.ceil(textElem.offsetHeight);
+        const width = textElem.offsetWidth;
+        document.body.removeChild(textElem);
+        const pad = Math.floor(height / 2);
+        return { width, height, pad, fontSize: textOpts.fontSize };
     }
-    measureDiv.replaceChildren(textElem);
-    const height = Math.ceil(textElem.offsetHeight);
-    const width = textElem.offsetWidth;
+    
+    measureDiv.appendChild(textElem);
+    // Force layout calculation
+    const height = Math.ceil(textElem.getBoundingClientRect().height);
+    const width = textElem.getBoundingClientRect().width;
+    measureDiv.removeChild(textElem);
+    
     const pad = Math.floor(height / 2);
     return { width, height, pad, fontSize: textOpts.fontSize };
 }
 
 function windowWidthToCols(width: number, fontSize: number): number {
+    if (!fontSize || fontSize <= 0) {
+        fontSize = 13;
+    }
     const dr = getMonoFontSize(fontSize);
-    let cols = Math.trunc((width - MagicLayout.ScreenMaxContentWidthBuffer) / dr.width) - 1;
+    if (!dr || !dr.width || dr.width <= 0) {
+        // Fallback: assume ~8px per character for 13px font
+        const fallbackWidth = fontSize * 0.6;
+        let cols = Math.floor((width - MagicLayout.ScreenMaxContentWidthBuffer) / fallbackWidth);
+        cols = boundInt(cols, MinTermCols, MaxTermCols);
+        return cols;
+    }
+    // Use floor instead of trunc for more accurate calculation
+    let cols = Math.floor((width - MagicLayout.ScreenMaxContentWidthBuffer) / dr.width);
     cols = boundInt(cols, MinTermCols, MaxTermCols);
     return cols;
 }

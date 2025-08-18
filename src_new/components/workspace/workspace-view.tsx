@@ -109,13 +109,23 @@ export const WorkspaceView: React.FC = observer(() => {
             </If>
             <ScreenTabs key={"tabs-" + sessionId} session={session} />
             <ErrorBoundary key="eb">
-                <div className="flex flex-col flex-1 overflow-hidden pr-2">
+                <div className="flex flex-col flex-1 overflow-hidden">
                     <If condition={activeScreen != null && inputPosition === "top"}>
-                        <CmdInput key={"cmdinput-" + sessionId} />
+                        <div className="px-2 pt-2">
+                            <div className="my-1">
+                                <CmdInput key={"cmdinput-" + sessionId} />
+                            </div>
+                        </div>
                     </If>
-                    <ScreenView key={`screenview-${sessionId}`} session={session} screen={activeScreen} />
+                    <div className="flex-1 relative overflow-hidden px-2">
+                        <ScreenView key={`screenview-${sessionId}`} session={session} screen={activeScreen} />
+                    </div>
                     <If condition={activeScreen != null && inputPosition !== "top"}>
-                        <CmdInput key={"cmdinput-" + sessionId} />
+                        <div className="px-2 pb-2">
+                            <div className="my-1">
+                                <CmdInput key={"cmdinput-" + sessionId} />
+                            </div>
+                        </div>
                     </If>
                 </div>
             </ErrorBoundary>

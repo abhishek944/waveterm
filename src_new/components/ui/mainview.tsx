@@ -7,10 +7,11 @@ import { observer } from "mobx-react";
 
 interface MainViewProps {
     title: string;
-    onClose: () => void;
+    onClose?: () => void;
     children: React.ReactNode;
     className?: string;
     scrollable?: boolean;
+    separator?: boolean;
 }
 
 const MainView: React.FC<MainViewProps> = observer(({
@@ -19,12 +20,13 @@ const MainView: React.FC<MainViewProps> = observer(({
     children,
     className,
     scrollable = false,
+    separator = false,
 }) => {
     const sidebarModel = GlobalModel.mainSidebarModel;
     const maxWidthSubtractor = sidebarModel.getCollapsed() ? 0 : sidebarModel.getWidth();
     
     return (
-        <div 
+        <div
             className={cn("absolute inset-0 flex flex-col bg-black", className)}
             style={{ maxWidth: `calc(100vw - ${maxWidthSubtractor}px)` }}
         >
@@ -33,14 +35,7 @@ const MainView: React.FC<MainViewProps> = observer(({
                 "pl-14": sidebarModel.getCollapsed() && GlobalModel.getPlatform() !== "darwin"
             })}>
                 <header className="flex items-center justify-between h-[38px] px-2.5 select-none app-region-drag">
-                    {/* <h2 className="text-lg font-semibold text-green-500 px-2.5 leading-[38px] align-middle"></h2> */}
-                    <button 
-                        onClick={onClose} 
-                        title="Close (Escape)" 
-                        className="hover:bg-gray-700 p-1 rounded-md text-lg app-region-no-drag"
-                    >
-                        <X className="h-5 w-5" />
-                    </button>
+                    {separator && <div className="h-px w-full bg-gray-800"></div>}
                 </header>
             </div>
             {scrollable ? (

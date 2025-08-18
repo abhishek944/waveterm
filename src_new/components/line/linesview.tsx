@@ -176,18 +176,18 @@ export const LinesView: React.FC<{
         return elements;
     }, [lines, anchor, width, staticRender, renderMode, lineFactory]);
 
+
     return (
         <div
             className={clsx(
-                "flex flex-col overflow-auto p-0 flex-grow relative overflow-x-hidden flex-shrink-0",
-                "pb-[calc(var(--termlineheight)*5)]",
+                "flex flex-col p-0 flex-grow relative overflow-x-hidden flex-shrink-0",
                 renderMode === "normal" ? "lines-expanded" : "lines-collapsed",
                 {
-                    "pt-[calc(var(--termpad)+2px)] pb-[calc(var(--termlineheight)*6)]": GlobalModel.inputPosition.get() === "top",
+                    "pt-[calc(var(--termpad)+2px)] pb-[calc(var(--termlineheight)*2)]": GlobalModel.inputPosition.get() === "top",
+                    "pb-[calc(var(--termlineheight)*2)]": GlobalModel.inputPosition.get() !== "top",
                     "hide-scrollbar": false, // TODO: implement hide scrollbar logic
                 }
             )}
-            onScroll={computeVisibleMap}
             ref={linesRef}
         >
             <div className="flex-grow" />

@@ -992,7 +992,7 @@ const LineCmd: React.FC<{
                         screen={screen}
                         line={line}
                         cmd={cmd}
-                        width={width > 20 ? width - 20 : 0}
+                        width={width}
                         onHeightChange={handleHeightChange}
                     />
                 </div>

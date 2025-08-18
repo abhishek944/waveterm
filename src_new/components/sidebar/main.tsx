@@ -151,12 +151,13 @@ const MainSideBar: React.FC<MainSideBarProps> = observer(({ parentRef }) => {
     const infoActive = mainView == "info";
 
     return (
-        <ResizableSidebar
-            collapsed={GlobalModel.mainSidebarModel.getCollapsed()}
-            className="flex flex-col border border-gray-800 rounded-md mr-2"
-            position="left"
-            ref={parentRef}
-        >
+        <div className="h-full pl-2 py-2">
+            <ResizableSidebar
+                collapsed={GlobalModel.mainSidebarModel.getCollapsed()}
+                className="flex flex-col border border-gray-800 rounded-md h-full"
+                position="left"
+                ref={parentRef}
+            >
             {!GlobalModel.mainSidebarModel.getCollapsed() && (
                 <>
                     <div
@@ -226,7 +227,8 @@ const MainSideBar: React.FC<MainSideBarProps> = observer(({ parentRef }) => {
                     </div>
                 </>
             )}
-        </ResizableSidebar>
+            </ResizableSidebar>
+        </div>
     );
 });
 
