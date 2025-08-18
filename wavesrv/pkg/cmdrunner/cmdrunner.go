@@ -586,12 +586,19 @@ func getLangArg(pk *scpacket.FeCommandPacketType) (string, error) {
 	return pk.Kwargs[KwArgLang], nil
 }
 
-func doNewTabConnectLocal(ctx context.Context, screenId string, uiContext *scpacket.UIContextType) (scbus.UpdatePacket, error) {
+func doNewTabConnectLocal(ctx context.Context, screenId string, uiContext *scpacket.UIContextType, initialCwd string) (scbus.UpdatePacket, error) {
+	log.Printf("[DEBUG doNewTabConnectLocal] screenId=%s, initialCwd=%s", screenId, initialCwd)
 	crPk := scpacket.MakeFeCommandPacket()
 	crPk.MetaCmd = "connect"
 	crPk.Args = []string{"local"}
 	crPk.RawStr = "/connect local"
 	crPk.UIContext = uiContext
+	if initialCwd != "" && initialCwd != sstore.DefaultCwd {
+		crPk.Kwargs = map[string]string{"cwd": initialCwd}
+		log.Printf("[DEBUG doNewTabConnectLocal] Set kwargs[cwd]=%s", initialCwd)
+	} else {
+		log.Printf("[DEBUG doNewTabConnectLocal] No cwd to set (initialCwd=%s)", initialCwd)
+	}
 	crUpdate, err := CrCommand(ctx, crPk)
 	if err != nil {
 		return nil, fmt.Errorf("error creating tab, cannot connect to remote: %w", err)
@@ -1276,12 +1283,15 @@ func CrCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.Upd
 		if err != nil {
 			return nil, err
 		}
+		cwdFromKwargs := pk.Kwargs["cwd"]
+		log.Printf("[DEBUG CrCommand] connect command - Got cwd from kwargs: %s", cwdFromKwargs)
 		opts := connectOptsType{
 			Verbose:   verbose,
 			ShellType: shellType,
 			SessionId: ids.SessionId,
 			ScreenId:  ids.ScreenId,
 			RPtr:      *rptr,
+			InitialCwd: cwdFromKwargs,
 		}
 		go doAsyncResetCommand(newWsh, opts, cmd)
 		return update, nil
@@ -1901,6 +1911,7 @@ type connectOptsType struct {
 	SessionId string
 	ScreenId  string
 	RPtr      sstore.RemotePtrType
+	InitialCwd string // initial working directory
 }
 
 // this does the asynchroneous part of the connection reset
@@ -1932,11 +1943,33 @@ func doAsyncResetCommand(wsh *remote.WaveshellProc, opts connectOptsType, cmd *s
 		return
 	}
 	feState := sstore.FeStateFromShellState(ssPk.State)
-	remoteInst, err := sstore.UpdateRemoteState(ctx, opts.SessionId, opts.ScreenId, opts.RPtr, feState, ssPk.State, nil)
+	log.Printf("[DEBUG doAsyncResetCommand] feState[cwd]=%v, ssPk.State.Cwd=%s, opts.InitialCwd=%s", 
+		feState["cwd"], ssPk.State.Cwd, opts.InitialCwd)
+	
+	// If initial cwd is specified, create a state diff to change it
+	var stateDiff *packet.ShellStateDiff
+	if opts.InitialCwd != "" && opts.InitialCwd != sstore.DefaultCwd && opts.InitialCwd != ssPk.State.Cwd {
+		stateDiff = &packet.ShellStateDiff{
+			BaseHash: ssPk.State.GetHashVal(false),
+			Version: ssPk.State.Version,
+			Cwd: opts.InitialCwd,
+		}
+		stateDiff.GetHashVal(true) // compute the hash for the diff
+		feState["cwd"] = opts.InitialCwd
+		log.Printf("[DEBUG doAsyncResetCommand] Creating state diff with cwd=%s, hash=%s", opts.InitialCwd, stateDiff.HashVal)
+	}
+	
+	// If we have a state diff, don't pass the state (can't pass both)
+	var stateToPass *packet.ShellState
+	if stateDiff == nil {
+		stateToPass = ssPk.State
+	}
+	remoteInst, err := sstore.UpdateRemoteState(ctx, opts.SessionId, opts.ScreenId, opts.RPtr, feState, stateToPass, stateDiff)
 	if err != nil {
 		rtnErr = err
 		return
 	}
+	
 	newStatePtr := packet.ShellStatePtr{
 		BaseHash: ssPk.State.GetHashVal(false),
 	}

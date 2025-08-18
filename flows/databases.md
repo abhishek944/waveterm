@@ -126,7 +126,7 @@ CREATE TABLE cmd (
     remotename varchar(50) NOT NULL,
     cmdstr text NOT NULL,
     rawcmdstr text NOT NULL,
-    festate json,
+    festate json, -- Frontend state including cwd (current working directory)
     statebasehash varchar(36) NOT NULL,
     statediffhasharr json,
     termopts json NOT NULL DEFAULT '{"rows": 25, "cols": 80}',

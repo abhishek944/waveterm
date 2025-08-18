@@ -219,7 +219,7 @@ export const CmdInput: React.FC = observer(() => {
                     </Button>
                 </div>
             </If>
-            <If condition={ri == null && numRunningLines == 0}>
+            <If condition={ri == null && numRunningLines == 0 && screen?.nextLineNum.get() > 2}>
                 <div className="flex flex-row text-red-500 items-center p-2 pl-4 ml-0.5 relative z-10">
                     Shell is not initialized, must reset to continue.
                     <Button className="primary outlined ml-2.5 py-1 px-2.5" onClick={clickResetState}>

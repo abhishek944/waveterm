@@ -77,7 +77,7 @@ func SessionOpenCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (
 	uiContextCopy := *pk.UIContext
 	uiContextCopy.SessionId = newSessionId
 	uiContextCopy.ScreenId = newScreenId
-	crUpdate, err := doNewTabConnectLocal(ctx, newScreenId, &uiContextCopy)
+	crUpdate, err := doNewTabConnectLocal(ctx, newScreenId, &uiContextCopy, "")
 	if err != nil {
 		return nil, err
 	}

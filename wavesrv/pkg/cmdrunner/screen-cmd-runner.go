@@ -191,6 +191,7 @@ func ScreenReorderCommand(ctx context.Context, pk *scpacket.FeCommandPacketType)
 }
 
 func ScreenOpenCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {
+	log.Printf("[DEBUG ScreenOpenCommand] Called with kwargs: %v", pk.Kwargs)
 	ids, err := resolveUiIds(ctx, pk, R_Session)
 	if err != nil {
 		return nil, err
@@ -222,7 +223,36 @@ func ScreenOpenCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (s
 			return nil, err
 		}
 	}
-	sco := sstore.ScreenCreateOpts{RtnScreenId: new(string)}
+	// Get the current cwd from the remote instance's state
+	cwdVal := sstore.DefaultCwd
+	
+	// Try to get the current remote instance state
+	localRemote := remote.GetLocalRemote()
+	remotePtr := sstore.RemotePtrType{RemoteId: localRemote.RemoteId}
+	ri, err := sstore.GetRemoteInstance(ctx, ids.SessionId, ids.ScreenId, remotePtr)
+	if err == nil && ri != nil && ri.FeState != nil {
+		if cwd, ok := ri.FeState["cwd"]; ok && cwd != "" {
+			cwdVal = cwd
+			log.Printf("[DEBUG ScreenOpenCommand] Got cwdVal=%s from current remote instance festate", cwdVal)
+		}
+	} else {
+		log.Printf("[DEBUG ScreenOpenCommand] Could not get remote instance or festate: err=%v, ri=%v", err, ri)
+	}
+	
+	// If we couldn't get from remote instance, try last command
+	if cwdVal == sstore.DefaultCwd {
+		cwdVal, err = sstore.GetLastCmdCwd(ctx, ids.ScreenId)
+		if err != nil {
+			log.Printf("[DEBUG ScreenOpenCommand] Error getting cwd from last cmd: %v", err)
+			cwdVal = sstore.DefaultCwd
+		} else {
+			log.Printf("[DEBUG ScreenOpenCommand] Got cwdVal=%s from GetLastCmdCwd", cwdVal)
+		}
+	}
+	sco := sstore.ScreenCreateOpts{
+	  Cwd:         cwdVal,
+	  RtnScreenId: new(string),
+	}
 	update, err := sstore.InsertScreen(ctx, ids.SessionId, newName, sco, activate)
 	if err != nil {
 		return nil, err
@@ -232,7 +262,8 @@ func ScreenOpenCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (s
 	}
 	uiContextCopy := *pk.UIContext
 	uiContextCopy.ScreenId = *sco.RtnScreenId
-	crUpdate, err := doNewTabConnectLocal(ctx, *sco.RtnScreenId, &uiContextCopy)
+	log.Printf("[DEBUG ScreenOpenCommand] Calling doNewTabConnectLocal with screenId=%s, cwdVal=%s", *sco.RtnScreenId, cwdVal)
+	crUpdate, err := doNewTabConnectLocal(ctx, *sco.RtnScreenId, &uiContextCopy, cwdVal)
 	if err != nil {
 		return nil, err
 	}

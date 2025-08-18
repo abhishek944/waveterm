@@ -122,6 +122,46 @@ When running a command:
    - GetFullState: Verify BaseHash is not empty
    - RunCommand: Ensure StatePtr is properly initialized
 
+## New Tab Working Directory Inheritance
+
+### Overview
+When creating a new tab in Wave Terminal, the tab inherits the working directory from the last executed command in the current tab. This ensures a seamless workflow where users don't lose their context when opening new tabs.
+
+### Implementation Flow
+
+1. **Frontend (onNewTab)**:
+   - The frontend no longer passes cwd - the backend handles directory resolution
+
+2. **Backend (ScreenOpenCommand)**:
+   - First attempts to get cwd from the current remote instance's feState
+   - If unavailable, calls `GetLastCmdCwd` to retrieve cwd from the last executed command
+   - Passes the cwd to `InsertScreen` via `ScreenCreateOpts`
+
+3. **Tab Creation (doNewTabConnectLocal)**:
+   - Receives the initial cwd from ScreenOpenCommand
+   - Passes it through to `CrCommand` via kwargs
+
+4. **Shell Initialization (doAsyncResetCommand)**:
+   - When the shell is initialized (ReInit), it starts in the home directory by default
+   - If an initial cwd is specified and differs from the shell's cwd:
+     - Creates a `ShellStateDiff` with the desired cwd
+     - Updates the feState to reflect the new directory
+     - The state diff is applied to change the shell's working directory state
+   - Important: Only state OR diff can be passed to UpdateRemoteState, not both
+
+### Key Components
+
+- **GetLastCmdCwd**: Queries the database for the most recent completed command and extracts cwd from its feState JSON
+- **ShellStateDiff**: Used to apply working directory changes without executing a cd command
+- **UpdateRemoteState**: Applies either a new state OR a state diff to update the remote instance
+
+### Technical Details
+
+The solution uses Wave Terminal's state management system rather than executing shell commands. This approach:
+- Avoids executing a `cd` command after tab creation
+- Ensures the shell starts with the correct working directory in its state
+- Maintains consistency between the UI state (feState) and shell state
+
 ## Future Improvements
 
 1. **Automatic State Recovery**: Detect and recover from missing state

@@ -106,8 +106,12 @@ class CommandRunner {
         GlobalModel.submitCommand("session", "open", null, { nohist: "1" }, false);
     }
 
-    createNewScreen() {
-        GlobalModel.submitCommand("screen", "open", null, { nohist: "1" }, false);
+    createNewScreen(cwd?: string) {
+        const kwargs: Record<string, string> = { nohist: "1" };
+        if (cwd) {
+            kwargs.cwd = cwd;
+        }
+        GlobalModel.submitCommand("screen", "open", null, kwargs, false);
     }
 
     closeScreen(screen: string) {

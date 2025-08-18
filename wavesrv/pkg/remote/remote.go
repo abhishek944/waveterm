@@ -2127,6 +2127,7 @@ func RunCommand(ctx context.Context, rcOpts RunCommandOpts, runPacket *packet.Ru
 		runPacket.State = addScVarsToState(currentState)
 		runPacket.StateComplete = true
 		runPacket.ShellType = currentState.GetShellType()
+		log.Printf("[DEBUG RunCommand] Sending command with state.Cwd=%s", runPacket.State.Cwd)
 	}
 
 	// start cmdwait.  must be started before sending the run packet
