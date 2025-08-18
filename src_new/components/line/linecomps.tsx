@@ -757,8 +757,14 @@ const LineText: React.FC<{
     renderMode: RenderModeType;
     noSelect?: boolean;
 }> = observer(({ screen, line, noSelect }) => {
-    const clickHandler = React.useCallback(() => {
+    const clickHandler = React.useCallback((e: React.MouseEvent) => {
         if (noSelect) {
+            return;
+        }
+        // Check if there's a text selection - if so, don't select the line
+        const sel = window.getSelection();
+        const selText = sel ? sel.toString() : "";
+        if (sel && sel.anchorNode && e.currentTarget.contains(sel.anchorNode) && selText.length > 0) {
             return;
         }
         GlobalCommandRunner.screenSelectLine(String(line.linenum));
@@ -803,7 +809,7 @@ const LineText: React.FC<{
         >
             {/* subtle highlight for selected text-only line */}
             <If condition={isSelected}>
-                <div className="absolute inset-0 pointer-events-none opacity-100 transition-opacity duration-150 bg-gradient-to-r from-white/10 to-transparent" />
+                <div className="absolute inset-0 pointer-events-none opacity-100 transition-opacity duration-150 bg-gradient-to-r from-white/[0.13] to-transparent" />
             </If>
             <If condition={isSelected}>
                 <div
@@ -979,7 +985,7 @@ const LineCmd: React.FC<{
                 >
                     {/* subtle highlight for selected line */}
                     <If condition={isSelected}>
-                        <div className="absolute inset-0 rounded-md pointer-events-none opacity-100 transition-opacity duration-150 bg-gradient-to-r from-white/10 to-transparent" />
+                        <div className="absolute inset-0 rounded-md pointer-events-none opacity-100 transition-opacity duration-150 bg-gradient-to-r from-white/[0.13] to-transparent" />
                     </If>
                     <If condition={isSelected || cmdError}>
                         <div className={clsx("line-mask", { "error-mask": cmdError })}></div>

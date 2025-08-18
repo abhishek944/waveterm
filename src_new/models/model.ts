@@ -755,6 +755,9 @@ class Model {
         if (this.activeMainView.get() != "session") {
             return;
         }
+        
+        // This function now only handles copying entire blocks
+        // Text selection is handled by the browser's default behavior
         const activeScreen = this.getActiveScreen();
         if (activeScreen == null) {
             return;

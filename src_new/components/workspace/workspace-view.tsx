@@ -68,6 +68,43 @@ const SessionKeybindings: React.FC = () => {
             return GlobalModel.handleDeleteActiveLine();
         });
         keybindManager.registerKeybinding("pane", "screen", "app:copy", (waveEvent) => {
+            // First check if we have a terminal selection
+            const activeScreen = GlobalModel.getActiveScreen();
+            if (activeScreen) {
+                const selectedLines = activeScreen.getSelectedLines();
+                if (selectedLines && selectedLines.length > 0) {
+                    // Check if there's a terminal selection in any of the selected lines
+                    for (const lineNum of selectedLines) {
+                        const line = activeScreen.getLineByNum(lineNum);
+                        if (line) {
+                            const termWrap = activeScreen.getTermWrap(line.lineid);
+                            if (termWrap && termWrap.terminal) {
+                                const termSelection = termWrap.terminal.getSelection();
+                                console.log("Terminal selection:", termSelection);
+                                if (termSelection && termSelection.length > 0) {
+                                    console.log("Copying terminal selection:", termSelection);
+                                    navigator.clipboard.writeText(termSelection);
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Check browser text selection
+            const selection = window.getSelection();
+            const selectedText = selection ? selection.toString() : "";
+            
+            if (selectedText.length > 0) {
+                // If there's text selected, copy it to clipboard
+                console.log("Copying browser selected text:", selectedText);
+                navigator.clipboard.writeText(selectedText);
+                return true;
+            }
+            
+            // Otherwise, copy the entire block
+            console.log("No text selected, copying entire block");
             GlobalModel.copySelectedBlock();
             return true;
         });
