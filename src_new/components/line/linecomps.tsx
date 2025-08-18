@@ -460,6 +460,7 @@ const getIsHidePrompt = (line: LineType): boolean => {
 const LineActions: React.FC<{ screen: LineContainerType; line: LineType; cmd: Cmd }> = observer(
     ({ screen, line, cmd }) => {
         const isThreadMode = GlobalModel.isThreadMode.get();
+        const isImageRenderer = line.renderer === "image";
         
         const clickAddToThread = (e: React.MouseEvent) => {
             e.stopPropagation();
@@ -486,9 +487,6 @@ const LineActions: React.FC<{ screen: LineContainerType; line: LineType; cmd: Cm
                     console.log("[clickChat] Agent mode - No cmd found");
                     return;
                 }
-                console.log("[clickChat] Agent mode - cmd object:", cmd);
-                console.log("[clickChat] Agent mode - cmd properties:", Object.keys(cmd));
-                console.log("[clickChat] Agent mode - cmd.getCmdStr():", cmd.getCmdStr?.());
                 
                 const termContext = { screenId: cmd.screenId, lineId: line.lineid, lineNum: line.linenum };
                 
@@ -606,7 +604,7 @@ const LineActions: React.FC<{ screen: LineContainerType; line: LineType; cmd: Cm
                                 )}
                             </div>
                         </If>
-                        <If condition={line.linetype !== "thread_mode"}>
+                        <If condition={line.linetype !== "thread_mode" && !isImageRenderer}>
                             <div
                                 key="chat"
                                 title="Ask Wave AI"
@@ -616,7 +614,7 @@ const LineActions: React.FC<{ screen: LineContainerType; line: LineType; cmd: Cm
                                 <i className="fa-sharp fa-regular fa-sparkles fa-fw" />
                             </div>
                         </If>
-                        <If condition={line.linetype !== "thread_mode" && line.linetype !== "agent_mode"}>
+                        <If condition={line.linetype !== "thread_mode" && line.linetype !== "agent_mode" && !isImageRenderer}>
                             <div
                                 key="restart"
                                 title="Restart Command"
@@ -663,7 +661,7 @@ const LineActions: React.FC<{ screen: LineContainerType; line: LineType; cmd: Cm
                                 )}
                             </div>
                         </If>
-                        <If condition={line.linetype !== "thread_mode" && !isLineInSidebar}>
+                        <If condition={line.linetype !== "thread_mode" && !isLineInSidebar && !isImageRenderer}>
                             <div
                                 className="px-1 cursor-pointer hover:text-[var(--line-actions-active-color)]"
                                 onClick={(e) => {
@@ -1181,13 +1179,24 @@ const LineContent: React.FC<{
                 cmd.handleDataFromRenderer(data, model);
             },
         };
+        // Calculate idealSize based on renderer type
+        let idealSize = screen.getIdealContentSize();
+        if (line.renderer === "image") {
+            // For image renderer, use 70% of screen height
+            const screenHeight = window.innerHeight;
+            idealSize = {
+                ...idealSize,
+                height: Math.floor(screenHeight * 0.7)
+            };
+        }
+        
         return {
             context: context,
             isDone: !cmd.isRunning(),
             savedHeight: savedHeight,
             opts: {
                 maxSize: screen.getMaxContentSize(),
-                idealSize: screen.getIdealContentSize(),
+                idealSize: idealSize,
                 termOpts: cmd.getTermOpts(),
                 termFontSize: GlobalModel.getTermFontSize(),
                 termFontFamily: GlobalModel.getTermFontFamily(),

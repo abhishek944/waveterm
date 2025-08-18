@@ -11,7 +11,7 @@ export const debug = (...content) => {
     if (!GlobalModel.autocompleteModel.loggingEnabled) {
         return;
     }
-    console.log("[autocomplete]", ...content);
+    // console.log("[autocomplete]", ...content);
 };
 
 export default { debug };

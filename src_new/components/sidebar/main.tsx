@@ -154,12 +154,21 @@ const MainSideBar: React.FC<MainSideBarProps> = observer(({ parentRef }) => {
         <div className="h-full pl-2 py-2">
             <ResizableSidebar
                 collapsed={GlobalModel.mainSidebarModel.getCollapsed()}
-                className="flex flex-col border border-gray-800 rounded-md h-full"
+                className="flex flex-col border border-gray-800 rounded-md h-full relative overflow-hidden"
                 position="left"
                 ref={parentRef}
             >
+            {/* Gradient background */}
+            <div
+                className="absolute inset-0 z-0"
+                style={{
+                    background:
+                        "radial-gradient(ellipse at top left, rgba(172, 92, 255, 0.3) -10%, rgba(79, 70, 229, 0) 70%), radial-gradient(ellipse at top right, rgba(56, 189, 248, 0.3) -10%, rgba(79, 70, 229, 0) 70%)",
+                    filter: "blur(40px)",
+                }}
+            />
             {!GlobalModel.mainSidebarModel.getCollapsed() && (
-                <>
+                <div className="relative z-10 flex flex-col h-full">
                     <div
                         className="title-bar-drag flex items-center relative flex-shrink-0 rounded-t-md"
                         style={{ height: "calc(var(--screentabs-height) + 1px)" }}
@@ -225,7 +234,7 @@ const MainSideBar: React.FC<MainSideBarProps> = observer(({ parentRef }) => {
                             />
                         </div>
                     </div>
-                </>
+                </div>
             )}
             </ResizableSidebar>
         </div>

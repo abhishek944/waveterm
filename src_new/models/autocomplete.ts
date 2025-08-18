@@ -52,7 +52,14 @@ export class AutocompleteModel {
     @mobx.computed
     get isEnabled(): boolean {
         const clientData: ClientDataType = this.globalModel.clientData.get();
-        return clientData?.clientopts.autocompleteenabled ?? false;
+        const autoCompleteEnabled = clientData?.clientopts.autocompleteenabled ?? false;
+        
+        // Disable autocomplete in agent and thread modes
+        if (this.globalModel.isAgentMode.get() || this.globalModel.isThreadMode.get()) {
+            return false;
+        }
+        
+        return autoCompleteEnabled;
     }
 
     /**

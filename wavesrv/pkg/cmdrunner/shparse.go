@@ -52,6 +52,8 @@ var CmdParseOverrides map[string]string = map[string]string{
 	"run":     CmdParseTypeRaw,
 	"comment": CmdParseTypeRaw,
 	"chat":    CmdParseTypeRaw,
+	"agent":   CmdParseTypeRaw,
+	"thread":  CmdParseTypeRaw,
 }
 
 func DumpPacket(pk *scpacket.FeCommandPacketType) {
@@ -435,7 +437,7 @@ func EvalMetaCommand(ctx context.Context, origPk *scpacket.FeCommandPacketType) 
 		rtnPk.Kwargs[key] = val
 	}
 	if onlyRawArgs(metaCmd, metaSubCmd) {
-		// don't evaluate arguments for /run or /comment
+		// don't evaluate arguments for raw commands (run, comment, chat, agent, thread)
 		rtnPk.Args = []string{commandArgs}
 		return rtnPk, nil
 	}

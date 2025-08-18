@@ -54,7 +54,7 @@ export const SimpleImageRenderer: React.FC<{
     }
 
     return (
-        <div className="flex flex-row items-center justify-center pt-2" style={{ height: forceHeight }}>
+        <div className="flex flex-row items-center justify-center pt-2" style={{ minHeight: forceHeight || opts.idealSize.height }}>
             <img
                 ref={imageRef}
                 style={{ maxHeight: opts.idealSize.height, maxWidth: opts.idealSize.width }}

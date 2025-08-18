@@ -39,23 +39,24 @@ const AlertModal: React.FC = observer(() => {
 
     return (
         <Dialog open={true} onOpenChange={closeModal}>
-            <DialogContent className="w-[500px]">
+            <DialogContent className="w-[500px] max-w-[90vw] bg-zinc-900 border-none">
                 <DialogHeader>
-                    <DialogTitle>{title}</DialogTitle>
+                    <DialogTitle className="text-white">{title}</DialogTitle>
                 </DialogHeader>
-                <div className="px-5 py-10">
+                <div className="flex flex-col px-5 gap-6 w-full">
                     {message?.markdown ? (
-                        <Markdown text={message?.message ?? ""} className="mb-4" />
+                        <Markdown text={message?.message ?? ""} className="text-gray-300" />
                     ) : (
-                        <div>{message?.message}</div>
+                        <div className="text-gray-300">{message?.message}</div>
                     )}
                     {message?.confirmflag && (
-                        <div className="flex items-center space-x-2 mt-4">
+                        <div className="flex items-center space-x-2">
                             <Checkbox
                                 onCheckedChange={handleDontShowAgain}
                                 id="dont-show-again"
+                                className="border-gray-700 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
                             />
-                            <label htmlFor="dont-show-again" className="text-sm">
+                            <label htmlFor="dont-show-again" className="text-sm text-gray-300">
                                 Don't show me this again
                             </label>
                         </div>
@@ -64,15 +65,15 @@ const AlertModal: React.FC = observer(() => {
                 <DialogFooter>
                     {isConfirm ? (
                         <>
-                            <Button variant="outline" onClick={closeModal}>
+                            <Button variant="outline" onClick={closeModal} className="bg-gray-800 border-gray-700 text-white hover:bg-gray-700">
                                 Cancel
                             </Button>
-                            <Button autoFocus={true} onClick={handleOK}>
+                            <Button autoFocus={true} onClick={handleOK} className="bg-blue-600 text-white hover:bg-blue-700">
                                 Ok
                             </Button>
                         </>
                     ) : (
-                        <Button autoFocus={true} onClick={handleOK}>
+                        <Button autoFocus={true} onClick={handleOK} className="bg-blue-600 text-white hover:bg-blue-700">
                             Ok
                         </Button>
                     )}

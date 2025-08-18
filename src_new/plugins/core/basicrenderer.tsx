@@ -3,6 +3,7 @@
 
 import * as React from "react";
 import * as mobx from "mobx";
+import { observer } from "mobx-react";
 import { debounce } from "throttle-debounce";
 import * as util from "@/utils/util";
 import { GlobalModel } from "@/models";
@@ -164,7 +165,7 @@ export const SimpleBlobRenderer: React.FC<{
     scrollToBringIntoViewport: () => void;
     isSelected: boolean;
     shouldFocus: boolean;
-}> = (props) => {
+}> = observer((props) => {
     const { rendererContainer, lineId, plugin, onHeightChange, initParams, scrollToBringIntoViewport, isSelected, shouldFocus } = props;
     const model = React.useMemo(() => {
         const newModel = new SimpleBlobRendererModel();
@@ -234,8 +235,10 @@ export const SimpleBlobRenderer: React.FC<{
     }
 
     const { festate, cmdstr, exitcode } = initParams.rawCmd;
+    // Don't apply h-0 for image plugin as it needs to expand to show the image
+    const shouldApplyZeroHeight = model.savedHeight == 0 && plugin.name !== "image";
     return (
-        <div ref={wrapperDivRef} className={clsx("sr-wrapper", { "h-0": model.savedHeight == 0 })}>
+        <div ref={wrapperDivRef} className={clsx("sr-wrapper", { "h-0": shouldApplyZeroHeight })}>
             <Comp
                 cwd={festate.cwd}
                 cmdstr={cmdstr}
@@ -254,4 +257,4 @@ export const SimpleBlobRenderer: React.FC<{
             />
         </div>
     );
-};
+});

@@ -103,7 +103,7 @@ const SessionSettingsModal: React.FC = observer(() => {
         <Dialog open={true} onOpenChange={closeModal}>
             <DialogContent className="w-[720px] max-w-[90vw] bg-zinc-900 border-none">
                 <DialogHeader>
-                    <DialogTitle className="text-white">Workspace Settings ({session.name.get()})</DialogTitle>
+                    <DialogTitle className="text-white">Workspace Settings</DialogTitle>
                 </DialogHeader>
                 <div className="flex flex-col px-5 gap-6 w-full">
                     <div className="grid grid-cols-3 items-center gap-4">
@@ -169,7 +169,11 @@ const SessionSettingsModal: React.FC = observer(() => {
                     <SettingsError errorMessage={errorMessage} onDismiss={dismissError} />
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" onClick={closeModal} className="bg-gray-800 border-gray-700 text-white hover:bg-gray-700">
+                    <Button
+                        variant="outline"
+                        onClick={closeModal}
+                        className="bg-gray-800 border-gray-700 text-white hover:bg-gray-700"
+                    >
                         Close
                     </Button>
                 </DialogFooter>

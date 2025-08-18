@@ -65,7 +65,7 @@ const RightSideBar: React.FC = observer(() => {
                 className="absolute inset-0 z-0"
                 style={{
                     background:
-                        "radial-gradient(ellipse at bottom right, rgba(172, 92, 255, 0.7) -10%, rgba(79, 70, 229, 0) 70%), radial-gradient(ellipse at bottom left, rgba(56, 189, 248, 0.7) -10%, rgba(79, 70, 229, 0) 70%)",
+                        "radial-gradient(ellipse at bottom right, rgba(172, 92, 255, 0.3) -10%, rgba(79, 70, 229, 0) 70%), radial-gradient(ellipse at bottom left, rgba(56, 189, 248, 0.3) -10%, rgba(79, 70, 229, 0) 70%)",
                     filter: "blur(40px)",
                 }}
             />

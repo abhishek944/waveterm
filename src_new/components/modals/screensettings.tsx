@@ -166,7 +166,7 @@ const ScreenSettingsModal: React.FC = observer(() => {
         <Dialog open={true} onOpenChange={closeModal}>
             <DialogContent className="w-[720px] max-w-[90vw] bg-zinc-900 border-none">
                 <DialogHeader>
-                    <DialogTitle className="text-white">Tab Settings ({screen.name.get()})</DialogTitle>
+                    <DialogTitle className="text-white">Tab Settings</DialogTitle>
                 </DialogHeader>
                 <div className="flex flex-col px-5 gap-6 w-full">
                     <div className="grid grid-cols-3 items-center gap-4">

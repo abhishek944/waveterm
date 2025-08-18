@@ -30,14 +30,14 @@ const MainView: React.FC<MainViewProps> = observer(({
             className={cn("absolute inset-0 flex flex-col bg-black", className)}
             style={{ maxWidth: `calc(100vw - ${maxWidthSubtractor}px)` }}
         >
-            <div className={cn("border-b border-gray-800", {
+            {/* <div className={cn("", {
                 "pl-20": sidebarModel.getCollapsed() && GlobalModel.getPlatform() === "darwin",
                 "pl-14": sidebarModel.getCollapsed() && GlobalModel.getPlatform() !== "darwin"
             })}>
                 <header className="flex items-center justify-between h-[38px] px-2.5 select-none app-region-drag">
                     {separator && <div className="h-px w-full bg-gray-800"></div>}
                 </header>
-            </div>
+            </div> */}
             {scrollable ? (
                 <OverlayScrollbarsComponent
                     className="flex-1 flex flex-col overflow-hidden"
