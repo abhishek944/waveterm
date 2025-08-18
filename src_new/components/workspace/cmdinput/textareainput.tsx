@@ -140,16 +140,8 @@ const CmdInputKeybindings: React.FC<{ inputObject: any }> = ({ inputObject }) =>
 
         keybindManager.registerKeybinding("pane", "cmdinput", "generic:confirm", () => {
             GlobalModel.closeTabSettings();
-            if (GlobalModel.inputModel.isEmpty()) {
-                const activeWindow = GlobalModel.getScreenLinesForActiveScreen();
-                const activeScreen = GlobalModel.getActiveScreen();
-                if (activeScreen != null && activeWindow != null && activeWindow.lines.length > 0) {
-                    activeScreen.setSelectedLine(0);
-                    GlobalCommandRunner.screenSelectLine("E");
-                }
-            } else {
-                setTimeout(() => GlobalModel.inputModel.uiSubmitCommand(), 0);
-            }
+            // Always submit, even if empty (for blank lines)
+            setTimeout(() => GlobalModel.inputModel.uiSubmitCommand(), 0);
             return true;
         });
 

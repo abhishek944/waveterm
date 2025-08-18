@@ -70,6 +70,10 @@ function getFullCmdText(cmdText: string) {
         return "(none)";
     }
     cmdText = cmdText.trim();
+    // Special case: hide the colon command used for blank lines
+    if (cmdText === ":") {
+        return "";
+    }
     return cmdText;
 }
 

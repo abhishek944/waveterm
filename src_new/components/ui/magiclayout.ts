@@ -17,8 +17,8 @@ let MagicLayout = {
     ScreenSidebarHeaderHeight: 26,
 
     MainSidebarMinWidth: 0,
-    MainSidebarMaxWidth: 300,
-    MainSidebarSnapThreshold: 165,
+    MainSidebarMaxWidth: 240,
+    MainSidebarSnapThreshold: 140,
     MainSidebarDragResistance: 50,
     MainSidebarDefaultWidth: 240,
 

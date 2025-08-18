@@ -732,7 +732,15 @@ class InputModel {
 
     uiSubmitCommand(): void {
         let commandStr = this.curLine;
+        
+        // Handle blank lines - submit a null command to create visual separation
         if (commandStr.trim() == "") {
+            mobx.action(() => {
+                this.resetInput();
+            })();
+            // Submit a colon (:) which is a null command in shell (does nothing)
+            // This creates a visual blank line in the terminal
+            this.globalModel.submitRawCommand(":", true, true, false, false);
             return;
         }
 

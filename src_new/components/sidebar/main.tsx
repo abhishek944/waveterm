@@ -9,11 +9,9 @@ import dayjs from "dayjs";
 
 import { ReactComponent as WorkspacesIcon } from "@/assets/icons/workspaces.svg";
 import { ReactComponent as SettingsIcon } from "@/assets/icons/settings.svg";
-import { ReactComponent as WaveLogo } from "@/assets/waveterm-logo.svg";
 
 import localizedFormat from "dayjs/plugin/localizedFormat";
 import { GlobalModel, GlobalCommandRunner, Session } from "@/models";
-import { isBlank, openLink } from "@/utils/util";
 import { ResizableSidebar } from "@/components/ui/resizable-sidebar";
 import * as appconst from "@/app/appconst";
 
@@ -157,6 +155,7 @@ const MainSideBar: React.FC<MainSideBarProps> = observer(({ parentRef }) => {
                 className="flex flex-col border border-gray-800 rounded-md h-full relative overflow-hidden"
                 position="left"
                 ref={parentRef}
+                initialWidth={GlobalModel.mainSidebarModel.getWidth()}
             >
             {/* Gradient background */}
             <div
