@@ -39,7 +39,7 @@ export const ScreenTab: React.FC<{
             mobx.action(() => {
                 GlobalModel.screenSettingsModal.set({
                     sessionId: activeSession.sessionId,
-                    screenId: screen.screenId
+                    screenId: screen.screenId,
                 });
             })();
             GlobalModel.modalsModel.pushModal(appconst.SCREEN_SETTINGS);
@@ -61,7 +61,11 @@ export const ScreenTab: React.FC<{
             { label: "New Tab", click: () => GlobalCommandRunner.createNewScreen() },
             { type: "separator" },
             { label: "Set Tab Color", submenu: colorSubMenu },
-            { label: "All Tab Settings", click: () => openScreenSettings({ preventDefault: () => {}, stopPropagation: () => {} } as React.MouseEvent) },
+            {
+                label: "All Tab Settings",
+                click: () =>
+                    openScreenSettings({ preventDefault: () => {}, stopPropagation: () => {} } as React.MouseEvent),
+            },
             { type: "separator" },
             { label: "Close Tab", click: () => GlobalModel.onCloseCurrentTab() },
         ];
@@ -71,22 +75,34 @@ export const ScreenTab: React.FC<{
     const tabColor = screen.getTabColor();
     const isActive = activeScreenId === screen.screenId;
 
-    // Map tab colors to Tailwind classes
-    const colorClasses = {
-        green: { border: "border-green-500", bg: "bg-green-500" },
-        default: { border: "border-green-500", bg: "bg-green-500" },
-        orange: { border: "border-orange-500", bg: "bg-orange-500" },
-        red: { border: "border-red-500", bg: "bg-red-500" },
-        yellow: { border: "border-yellow-500", bg: "bg-yellow-500" },
-        blue: { border: "border-blue-500", bg: "bg-blue-500" },
-        mint: { border: "border-teal-500", bg: "bg-teal-500" },
-        cyan: { border: "border-cyan-500", bg: "bg-cyan-500" },
-        white: { border: "border-white", bg: "bg-white" },
-        violet: { border: "border-violet-500", bg: "bg-violet-500" },
-        pink: { border: "border-pink-500", bg: "bg-pink-500" },
+    const getTabColorStyles = (color: string): React.CSSProperties => {
+        const solidColorMap: { [key: string]: string } = {
+            green: "var(--tab-green)",
+            default: "var(--tab-green)",
+            orange: "var(--tab-orange)",
+            red: "var(--tab-red)",
+            yellow: "var(--tab-yellow)",
+            blue: "var(--tab-blue)",
+            mint: "var(--tab-mint)",
+            cyan: "var(--tab-cyan)",
+            white: "var(--tab-white)",
+            violet: "var(--tab-violet)",
+            pink: "var(--tab-pink)",
+        };
+
+        if (solidColorMap[color]) {
+            return { backgroundColor: solidColorMap[color] };
+        }
+
+        // Fallback to gradient if not a solid color
+        const startVar = `--tab-${color}-start`;
+        const endVar = `--tab-${color}-end`;
+        return {
+            backgroundImage: `linear-gradient(to right, var(${startVar}), var(${endVar}))`,
+        };
     };
 
-    const { border: borderClass, bg: bgClass } = colorClasses[tabColor] || colorClasses.default;
+    const topBarstyle = getTabColorStyles(tabColor);
 
     return (
         <Reorder.Item
@@ -94,28 +110,26 @@ export const ScreenTab: React.FC<{
             value={screen}
             id={`screentab-${screen.screenId}`}
             data-screenid={screen.screenId}
-            className={clsx(
-                "screen-tab flex flex-row relative border-t-2 bg-transparent w-[155px] h-full",
-                {
-                    "border-transparent": !isActive,
-                    [borderClass]: isActive,
-                    "text-white font-semibold": isActive,
-                    "text-gray-400": !isActive,
-                }
-            )}
+            className={clsx("screen-tab group flex flex-row relative bg-transparent w-[155px] h-full", {
+                "text-white font-semibold": isActive,
+                "text-gray-400": !isActive,
+            })}
             data-tabcolor={tabColor}
             onPointerDown={() => onSwitchScreen(screen.screenId)}
             onContextMenu={onContextMenu}
             onDragEnd={handleDragEnd}
         >
-            <div
-                className={clsx(
-                    "absolute inset-0 z-0",
-                    isActive ? bgClass : "",
-                    isActive ? "opacity-10" : ""
-                )}
-                style={{ maskImage: isActive ? "linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0) 100%)" : undefined }}
-            />
+            {/* Top color bar */}
+            {isActive && <div className="absolute top-0 left-0 right-0 h-0.5" style={topBarstyle} />}
+
+            {/* Background glow */}
+            {isActive && (
+                <div
+                    className="absolute inset-0 z-0 opacity-10"
+                    style={{ ...topBarstyle, maskImage: "linear-gradient(to top, black, transparent)" }}
+                />
+            )}
+
             <div className="relative flex flex-row items-center w-full h-full px-2 cursor-pointer z-10">
                 <div className="flex items-center justify-center w-6 h-6 flex-shrink-0">
                     <TabIcon icon={screen.getTabIcon()} color={tabColor} />
@@ -125,12 +139,15 @@ export const ScreenTab: React.FC<{
                     {screen.name.get()}
                 </div>
                 <div className="flex items-center space-x-1 flex-shrink-0">
-                    {!isActive && (
-                        <StatusIndicator level={screen.statusIndicator.get()} runningCommands={screen.numRunningCmds.get() > 0} />
-                    )}
-                    {isActive && (
+                    <div className="group-hover:hidden">
+                        <StatusIndicator
+                            level={screen.statusIndicator.get()}
+                            runningCommands={screen.numRunningCmds.get() > 0}
+                        />
+                    </div>
+                    <div className="hidden group-hover:block">
                         <ActionsIcon onClick={openScreenSettings} />
-                    )}
+                    </div>
                 </div>
             </div>
             <div className="absolute right-0 top-2.5 bottom-2.5 w-px bg-gray-700" />

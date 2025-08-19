@@ -34,6 +34,38 @@
 
         --radius: 0.5rem;
         --screentabs-height: 38px;
+
+        --tab-red: 9 81% 54%;
+        --tab-orange: 25 95% 53%;
+        --tab-yellow: 45 93% 47%;
+        --tab-green: 106 55% 51%;
+        --tab-mint: 158 70% 50%;
+        --tab-cyan: 187 100% 48%;
+        --tab-blue: 215 100% 50%;
+        --tab-violet: 262 85% 66%;
+        --tab-pink: 330 81% 54%;
+        --tab-white: 0 0% 100%;
+
+        --tab-sunset-start: #ff8a00;
+        --tab-sunset-end: #e52e71;
+        --tab-ocean-start: #00c6ff;
+        --tab-ocean-end: #0072ff;
+        --tab-minty-start: #86fde8;
+        --tab-minty-end: #86a8fd;
+        --tab-sunrise-start: #ff5f6d;
+        --tab-sunrise-end: #ffc371;
+        --tab-emerald-start: #56ab2f;
+        --tab-emerald-end: #a8e063;
+        --tab-amethyst-start: #9d50bb;
+        --tab-amethyst-end: #6e48aa;
+        --tab-lava-start: #f12711;
+        --tab-lava-end: #f5af19;
+        --tab-steel-start: #4b79a1;
+        --tab-steel-end: #283e51;
+        --tab-charcoal-start: #bdc3c7;
+        --tab-charcoal-end: #2c3e50;
+        --tab-spring-start: #d3959b;
+        --tab-spring-end: #bfe6ba;
     }
     html {
         @apply h-full m-0 p-0;

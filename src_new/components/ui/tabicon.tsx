@@ -20,7 +20,7 @@ const TabIcon: React.FC<TabIconProps> = ({ icon, color }) => {
     }
 
     // Map colors to Tailwind text color classes
-    const colorClasses = {
+    const colorClasses: { [key: string]: string } = {
         green: "text-green-500",
         orange: "text-orange-500",
         red: "text-red-500",
@@ -33,11 +33,20 @@ const TabIcon: React.FC<TabIconProps> = ({ icon, color }) => {
         pink: "text-pink-500",
     };
 
-    const textColorClass = colorClasses[color] || colorClasses.green;
+    const textColorClass = colorClasses[color];
 
-    return (
-        <i className={cn(iconClass, textColorClass)} />
-    );
+    if (!textColorClass) {
+        // Assume it's a gradient
+        const gradientStyle = {
+            backgroundImage: `linear-gradient(to right, var(--tab-${color}-start), var(--tab-${color}-end))`,
+            WebkitBackgroundClip: "text",
+            backgroundClip: "text",
+            color: "transparent",
+        };
+        return <i className={cn(iconClass)} style={gradientStyle} />;
+    }
+
+    return <i className={cn(iconClass, textColorClass)} />;
 };
 
 export { TabIcon };

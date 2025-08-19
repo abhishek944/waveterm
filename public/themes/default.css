@@ -87,6 +87,27 @@
     --tab-pink: rgb(224, 86, 119);
     --tab-white: rgb(255, 255, 255);
 
+    --tab-gradient1-start: #ff8a00;
+    --tab-gradient1-end: #e52e71;
+    --tab-gradient2-start: #00c6ff;
+    --tab-gradient2-end: #0072ff;
+    --tab-gradient3-start: #86fde8;
+    --tab-gradient3-end: #86a8fd;
+    --tab-gradient4-start: #ff5f6d;
+    --tab-gradient4-end: #ffc371;
+    --tab-gradient5-start: #56ab2f;
+    --tab-gradient5-end: #a8e063;
+    --tab-gradient6-start: #9d50bb;
+    --tab-gradient6-end: #6e48aa;
+    --tab-gradient7-start: #f12711;
+    --tab-gradient7-end: #f5af19;
+    --tab-gradient8-start: #4b79a1;
+    --tab-gradient8-end: #283e51;
+    --tab-gradient9-start: #bdc3c7;
+    --tab-gradient9-end: #2c3e50;
+    --tab-gradient10-start: #d3959b;
+    --tab-gradient10-end: #bfe6ba;
+
     --form-element-border-color: rgba(241, 246, 243, 0.15);
     --form-element-bg-color: var(--app-bg-color);
     --form-element-text-color: var(--app-text-primary-color);

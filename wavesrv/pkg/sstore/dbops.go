@@ -30,7 +30,10 @@ var WebScreenPtyPosLock = &sync.Mutex{}
 var WebScreenPtyPosDelIntent = make(map[string]bool) // map[screenid + ":" + lineid] -> bool
 
 // Available tab colors and icons
-var TabColors = []string{"red", "orange", "yellow", "green", "mint", "cyan", "blue", "violet", "pink", "white"}
+var TabColors = []string{
+	"red", "orange", "yellow", "green", "mint", "cyan", "blue", "violet", "pink", "white",
+	"sunset", "ocean", "minty", "sunrise", "emerald", "amethyst", "lava", "steel", "charcoal", "spring",
+}
 var TabIcons = []string{"square", "sparkle", "fire", "ghost", "cloud", "compass", "crown", "droplet", "graduation-cap", "heart", "file"}
 
 func getRandomTabColor() string {

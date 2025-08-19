@@ -44,12 +44,21 @@ export const TabColorSelector: React.FC<{ screen: Screen; errorMessage?: OV<stri
                     <div className="tab-color-name">{screen.getTabColor()}</div>
                 </div>
                 <div className="text-gray-500">|</div>
-                <div className="flex space-x-1">
-                    {appconst.TabColors.map((color) => (
-                        <div key={color} className="cursor-pointer" onClick={() => selectTabColor(color)}>
-                            <TabIcon icon="square" color={color} />
-                        </div>
-                    ))}
+                <div className="flex flex-col space-y-1">
+                    <div className="flex space-x-1">
+                        {appconst.TabColors.slice(0, 10).map((color) => (
+                            <div key={color} className="cursor-pointer" onClick={() => selectTabColor(color)}>
+                                <TabIcon icon="square" color={color} />
+                            </div>
+                        ))}
+                    </div>
+                    <div className="flex space-x-1">
+                        {appconst.TabColors.slice(10).map((color) => (
+                            <div key={color} className="cursor-pointer" onClick={() => selectTabColor(color)}>
+                                <TabIcon icon="square" color={color} />
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </div>
         );

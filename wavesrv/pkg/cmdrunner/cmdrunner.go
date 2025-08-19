@@ -89,7 +89,10 @@ const (
 	KwArgSudo     = "sudo"
 )
 
-var ColorNames = []string{"yellow", "blue", "pink", "mint", "cyan", "violet", "orange", "green", "red", "white"}
+var ColorNames = []string{
+	"yellow", "blue", "pink", "mint", "cyan", "violet", "orange", "green", "red", "white",
+	"sunset", "ocean", "minty", "sunrise", "emerald", "amethyst", "lava", "steel", "charcoal", "spring",
+}
 var TabIcons = []string{"square", "sparkle", "fire", "ghost", "cloud", "compass", "crown", "droplet", "graduation-cap", "heart", "file"}
 var RemoteColorNames = []string{"red", "green", "yellow", "blue", "magenta", "cyan", "white", "orange"}
 var RemoteSetArgs = []string{"alias", "connectmode", "key", "password", "autoinstall", "color"}
@@ -1736,12 +1739,12 @@ func validateRenderer(renderer string) error {
 }
 
 func validateColor(color string, typeStr string) error {
-	for _, c := range ColorNames {
+	for _, c := range sstore.TabColors {
 		if color == c {
 			return nil
 		}
 	}
-	return fmt.Errorf("invalid %s, valid colors are: %s", typeStr, formatStrs(ColorNames, "or", false))
+	return fmt.Errorf("invalid %s, valid colors are: %s", typeStr, formatStrs(sstore.TabColors, "or", false))
 }
 
 func validateRemoteColor(color string, typeStr string) error {

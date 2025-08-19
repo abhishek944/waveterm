@@ -33,7 +33,28 @@ export const MinFontSize = 8;
 export const MaxFontSize = 24;
 export const InputChunkSize = 500;
 export const RemoteColors = ["red", "green", "yellow", "blue", "magenta", "cyan", "white", "orange"];
-export const TabColors = ["red", "orange", "yellow", "green", "mint", "cyan", "blue", "violet", "pink", "white"];
+export const TabColors = [
+    "red",
+    "orange",
+    "yellow",
+    "green",
+    "mint",
+    "cyan",
+    "blue",
+    "violet",
+    "pink",
+    "white",
+    "sunset",
+    "ocean",
+    "minty",
+    "sunrise",
+    "emerald",
+    "amethyst",
+    "lava",
+    "steel",
+    "charcoal",
+    "spring",
+];
 export const TabIcons = [
     "square",
     "sparkle",
