@@ -406,6 +406,9 @@ Each thread line can contain different combinations of user input, AI response, 
 -   Updated thread prompt to be more action-oriented
 -   Thread persistence and selection
 -   Auto-naming for threads (thread-1, thread-2, etc.)
+-   Thread execution modes (Manual, Semi-Auto, Full-Auto) with Manual as default
+-   Backend execution mode checking and manual command approval flow
+-   Thread:executecmd command handler for manual execution
 
 ### Remaining
 
@@ -413,6 +416,7 @@ Each thread line can contain different combinations of user input, AI response, 
 -   Enhanced UI to show command execution status within thread lines
 -   Better visualization of command results in thread context
 -   Safety checks for potentially destructive commands
+-   Semi-Auto mode implementation with safe command auto-execution
 
 ## Recent Updates Summary
 
@@ -610,3 +614,123 @@ getNonArchivedLines(): LineType[] {
     return rtn;
 }
 ```
+
+## Thread Mode Execution Control
+
+### Overview
+
+Thread mode supports three execution modes that control how AI-suggested commands are executed:
+
+1. **Manual Mode** (default) - Requires user approval before executing any command
+2. **Semi-Auto Mode** (future) - Executes safe/read-only commands automatically, requires approval for dangerous commands  
+3. **Full-Auto Mode** - Executes all commands automatically without user approval
+
+### Implementation Details
+
+#### Frontend
+
+1. **Type Definition** (`src_new/types/ai-opts.d.ts`):
+   ```typescript
+   type ThreadExecutionMode = "manual" | "semi-auto" | "full-auto";
+   ```
+
+2. **State Management**: Execution mode is stored in `AIOptsType.threadExecutionMode` with "manual" as default
+
+3. **UI Components**:
+   - Dropdown selector in command input area (next to thread selector)
+   - Settings option in AI providers settings page
+   - Execute button shown in `ThreadModeRenderer` for manual mode
+
+4. **Command Submission**: Adds `threadexecutionmode` to command kwargs when in thread mode
+
+#### Backend
+
+1. **Execution Mode Checking** (`ThreadCommand` in `thread-cmd-runner.go`):
+   ```go
+   // Check execution mode from kwargs
+   executionMode := "manual" // default to manual
+   if mode, ok := originalPk.Kwargs["threadexecutionmode"]; ok {
+       executionMode = mode
+   }
+   
+   if executionMode == "manual" {
+       // Store command state without executing
+       lineState["commandpending"] = true
+       lineState["command"] = threadResp.Command
+   } else if executionMode == "full-auto" {
+       // Execute command immediately
+       cmdExecLineId, err := ExecuteCommandInThread(...)
+   }
+   ```
+
+2. **Thread Instruction Handler** (`ThreadInstructionCommand`):
+   - Registered as `thread:instruction` command
+   - Handles different instruction types:
+     - `cmd_accept`: Accepts and executes the pending command
+     - `cmd_reject`: Rejects the pending command
+     - `force_stop`: Stops multi-turn execution (future)
+   - Updates `cmd_execution_status` field accordingly
+   - For `cmd_accept`, continues multi-turn execution
+
+3. **Multi-turn Execution** (`startMultiTurnExecution`):
+   - Respects execution mode for subsequent commands in a conversation
+   - Only continues automated execution in full-auto mode
+   - In manual mode, stores commands as pending for user approval
+
+### User Experience
+
+#### Manual Mode (Default)
+1. User submits query to thread mode
+2. AI responds with explanation and suggested command
+3. Command is marked as "waiting" with Execute/Reject buttons
+4. User can:
+   - Click Execute to accept and run the command
+   - Click Reject to decline the command
+   - Submit a new query (automatically rejects pending command)
+5. If executed, command output appears in sidebar
+6. AI analyzes output and suggests next command
+7. Process continues with user approval for each command
+
+Note: When a new user query is submitted while a command is pending (status "waiting"), the pending command is automatically marked as "rejected" before processing the new query. This ensures clean state management and prevents confusion.
+
+#### Full-Auto Mode
+1. User submits query to thread mode  
+2. AI responds with explanation and suggested command
+3. Command executes automatically
+4. Output is analyzed by AI for follow-up actions
+5. Process continues until task is complete
+
+### Command Execution Status Tracking
+
+Each thread line with a command tracks its execution status:
+- `waiting`: Command is pending user decision (manual mode)
+- `accepted`: User approved and executed the command
+- `rejected`: User declined to execute the command
+
+This status is stored in the `cmd_execution_status` field in the thread_line table.
+
+### Instruction Types
+
+The thread mode supports different instruction types through the `thread:instruction` command:
+
+1. **user_query**: Regular user input handled by the main `thread` command
+2. **cmd_accept**: User accepts an AI-suggested command
+   - Updates cmd_execution_status to "accepted"
+   - Executes the command
+   - Continues multi-turn execution
+3. **cmd_reject**: User rejects an AI-suggested command
+   - Updates cmd_execution_status to "rejected" 
+   - Does not execute the command
+   - Stops the current flow
+4. **force_stop**: Force stops any ongoing thread execution (future implementation)
+
+### Future: Semi-Auto Mode
+
+Planned implementation would include:
+- Whitelist of safe commands (ls, pwd, cat, grep, etc.)
+- Automatic execution for read-only operations
+- Manual approval required for:
+  - File modifications (rm, mv, write operations)
+  - System changes (apt, brew, systemctl)
+  - Network operations
+  - Script executions

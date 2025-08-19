@@ -336,6 +336,27 @@ class AiProviders extends React.Component<{}, {}> {
                         </select>
                     </div>
                 </div>
+                <div className="p-4 border border-gray-700 rounded">
+                    <h3 className="font-bold text-lg">Thread Mode Execution</h3>
+                    <div className="mt-2">
+                        <div className="text-sm text-gray-400 mb-2">
+                            Control how commands are executed in thread mode
+                        </div>
+                        <select
+                            value={aiOpts.threadExecutionMode || "manual"}
+                            onChange={(e) => {
+                                const newMode = e.target.value as ThreadExecutionMode;
+                                const newAiOpts = { ...aiOpts, threadExecutionMode: newMode };
+                                this.handleAiOptsChange(newAiOpts);
+                            }}
+                            className="px-2.5 py-1.5 border border-gray-700 rounded bg-black text-white text-sm outline-none focus:border-green-500"
+                        >
+                            <option value="manual">Manual - Require user approval for each command</option>
+                            <option value="semi-auto">Semi-Auto - (Coming Soon)</option>
+                            <option value="full-auto">Full Auto - Execute commands automatically</option>
+                        </select>
+                    </div>
+                </div>
             </div>
         );
     }

@@ -1259,6 +1259,16 @@ class Model {
                             }
                         }
                     })();
+                } else if ((update as any).activethreadid != null) {
+                    // Handle active thread ID update
+                    mobx.action(() => {
+                        const u: any = (update as any).activethreadid;
+                        const activeScreen = this.getActiveScreen();
+                        if (u && u.screenid && activeScreen && activeScreen.screenId === u.screenid) {
+                            console.log("[Model] Setting activeThreadId to", u.threadid);
+                            this.activeThreadId.set(u.threadid);
+                        }
+                    })();
                 } else if (update.screenstatusindicator != null) {
                     this.updateScreenStatusIndicators([update.screenstatusindicator]);
                 } else if (update.screennumrunningcommands != null) {

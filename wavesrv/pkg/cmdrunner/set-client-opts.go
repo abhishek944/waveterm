@@ -414,6 +414,17 @@ func ClientSetCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (sc
 		aiOptsUpdated = true
 		varsUpdated = append(varsUpdated, "azureenabled")
 	}
+	// Handle thread execution mode
+	if threadExecutionMode, found := pk.Kwargs["threadexecutionmode"]; found {
+		if threadExecutionMode != "" && threadExecutionMode != "manual" && threadExecutionMode != "semi-auto" && threadExecutionMode != "full-auto" {
+			return nil, fmt.Errorf("invalid thread execution mode '%s', must be 'manual', 'semi-auto', or 'full-auto'", threadExecutionMode)
+		}
+		if threadExecutionMode != "" {
+			aiOpts.ThreadExecutionMode = threadExecutionMode
+			aiOptsUpdated = true
+			varsUpdated = append(varsUpdated, "threadexecutionmode")
+		}
+	}
 	// Update AIOpts if any changes were made
 	if aiOptsUpdated {
 		err = sstore.UpdateClientAIOpts(ctx, *aiOpts)

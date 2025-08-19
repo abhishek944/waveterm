@@ -16,6 +16,7 @@ import { Prompt } from "@/components/prompt/prompt";
 import { CenteredIcon, RotateIcon } from "@/components/icons/icons";
 import * as util from "@/utils/util";
 import * as appconst from "@/appconst";
+import { commandRtnHandler } from "@/utils/util";
 import { AutocompleteSuggestionView } from "@/components/workspace";
 import { AIProviderDropdown } from "@/components/workspace";
 import { Button } from "@/components/ui/button";
@@ -268,28 +269,57 @@ export const CmdInput: React.FC = observer(() => {
                             </span>
                             {(isThreadMode || isAgentMode) && <AIProviderDropdown />}
                             {isThreadMode && (
-                                <Select value={activeThreadId || "new-thread"} onValueChange={(value) => {
-                                    if (value === "new-thread") {
-                                        GlobalModel.setActiveThreadId(null);
-                                    } else {
-                                        GlobalModel.setActiveThreadId(value);
-                                    }
-                                }}>
-                                    <SelectTrigger 
-                                        className="ml-2 h-6 px-2 text-xs bg-black border border-gray-600 rounded min-w-[120px]"
-                                        onMouseDown={(e) => e.stopPropagation()}
+                                <>
+                                    <Select value={activeThreadId || "new-thread"} onValueChange={async (value) => {
+                                        if (value === "new-thread") {
+                                            // Create a new thread immediately
+                                            const rtn = await GlobalCommandRunner.createNewThread(screen.screenId);
+                                            commandRtnHandler(rtn, false);
+                                            // The new thread ID will be set via the update
+                                        } else {
+                                            GlobalModel.setActiveThreadId(value);
+                                        }
+                                    }}>
+                                        <SelectTrigger 
+                                            className="ml-2 h-6 px-2 text-xs bg-black border border-gray-600 rounded min-w-[120px]"
+                                            onMouseDown={(e) => e.stopPropagation()}
+                                        >
+                                            <SelectValue placeholder="New Thread…" />
+                                        </SelectTrigger>
+                                        <SelectContent className="bg-black/100 border border-gray-600 text-white text-xs z-50">
+                                            <SelectItem value="new-thread">New Thread…</SelectItem>
+                                            {threads.map((t) => (
+                                                <SelectItem key={t.threadid} value={t.threadid}>
+                                                    {t.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <Select 
+                                        value={(() => {
+                                            const clientData = GlobalModel.clientData.get();
+                                            return clientData?.aiopts?.threadExecutionMode || "manual";
+                                        })()}
+                                        onValueChange={(value: ThreadExecutionMode) => {
+                                            const prtn = GlobalCommandRunner.setAIOpts({
+                                                ...GlobalModel.clientData.get()?.aiopts,
+                                                threadExecutionMode: value
+                                            });
+                                            commandRtnHandler(prtn, null);
+                                        }}
                                     >
-                                        <SelectValue placeholder="New Thread…" />
-                                    </SelectTrigger>
-                                    <SelectContent className="bg-black/100 border border-gray-600 text-white text-xs z-50">
-                                        <SelectItem value="new-thread">New Thread…</SelectItem>
-                                        {threads.map((t) => (
-                                            <SelectItem key={t.threadid} value={t.threadid}>
-                                                {t.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                        <SelectTrigger 
+                                            className="ml-2 h-6 px-2 text-xs bg-black border border-gray-600 rounded min-w-[80px]"
+                                            onMouseDown={(e) => e.stopPropagation()}
+                                        >
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent className="bg-black/100 border border-gray-600 text-white text-xs z-50">
+                                            <SelectItem value="manual">Manual</SelectItem>
+                                            <SelectItem value="full-auto">Full Auto</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </>
                             )}
                         </div>
                     </div>

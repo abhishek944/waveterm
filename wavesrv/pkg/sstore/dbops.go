@@ -2070,6 +2070,7 @@ func UpdateLineState(ctx context.Context, screenId string, lineId string, lineSt
 	if len(qjs) > MaxLineStateSize {
 		return fmt.Errorf("linestate for line[%s:%s] exceeds maxsize, size[%d] max[%d]", screenId, lineId, len(qjs), MaxLineStateSize)
 	}
+	log.Printf("[UpdateLineState] Updating line %s with linestate: %s", lineId, qjs)
 	return WithTx(ctx, func(tx *TxWrap) error {
 		query := `UPDATE line SET linestate = ? WHERE screenid = ? AND lineid = ?`
 		tx.Exec(query, qjs, screenId, lineId)

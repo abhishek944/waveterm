@@ -6,5 +6,6 @@ type ThreadLineType = {
     assistantresponse: string;
     command?: string;
     cmdlineid?: string;
+    cmdexecutionstatus?: string;
     createdts: number;
 };

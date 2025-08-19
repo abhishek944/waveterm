@@ -46,12 +46,12 @@ class ScreenLines {
             const threadLines = (slines.lines || []).filter(line => 
                 line.linetype === "thread_mode" || line.linetype === "thread_mode_cmd"
             );
-            if (threadLines.length > 0) {
-                console.log(`[DEBUG] updateData: Found ${threadLines.length} thread lines`);
-                threadLines.forEach(line => {
-                    console.log(`[DEBUG] updateData: Thread line - lineId=${line.lineid}, lineType=${line.linetype}, text=${line.text}`);
-                });
-            }
+            // if (threadLines.length > 0) {
+            //     console.log(`[DEBUG] updateData: Found ${threadLines.length} thread lines`);
+            //     threadLines.forEach(line => {
+            //         console.log(`[DEBUG] updateData: Thread line - lineId=${line.lineid}, lineType=${line.linetype}, text=${line.text}`);
+            //     });
+            // }
             
             const threadCmds = (slines.cmds || []).filter(cmd => 
                 cmd.cmdstr && cmd.cmdstr.startsWith("/thread")

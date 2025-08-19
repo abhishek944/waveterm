@@ -778,10 +778,11 @@ type AzureOpenAIOptsType struct {
 }
 
 type AIOptsType struct {
-	Default string               `json:"default"`
-	Gemini  *GeminiOptsType      `json:"gemini,omitempty"`
-	OpenAI  *OpenAIOptsType      `json:"openai,omitempty"`
-	Azure   *AzureOpenAIOptsType `json:"azure,omitempty"`
+	Default              string               `json:"default"`
+	ThreadExecutionMode  string               `json:"threadExecutionMode,omitempty"`
+	Gemini               *GeminiOptsType      `json:"gemini,omitempty"`
+	OpenAI               *OpenAIOptsType      `json:"openai,omitempty"`
+	Azure                *AzureOpenAIOptsType `json:"azure,omitempty"`
 }
 
 const (

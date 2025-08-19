@@ -56,6 +56,7 @@ const ThreadModeRenderer: React.FC<{
     // Track linestate changes to ensure reactivity
     const lineState = line.linestate || {};
     const cmdExecLineId = lineState.cmdexeclineid as string | undefined;
+    const cmdExecutionStatus = lineState.cmdexecutionstatus as string | undefined;
     
     // Helper function to attempt JSON parsing
     const tryParseResponse = (text: string) => {
@@ -285,16 +286,102 @@ const ThreadModeRenderer: React.FC<{
                     )}
                     {parsedResponse.command && (
                         <>
-                            <div className="text-white/50 text-xs mb-2">Command executed:</div>
+                            <div className="text-white/50 text-xs mb-2">
+                                {(() => {
+                                    const clientData = GlobalModel.clientData.get();
+                                    const executionMode = clientData?.aiopts?.threadExecutionMode || "manual";
+                                    const isExecuted = !!cmdExecLineId;
+                                    
+                                    if (cmdExecutionStatus === "waiting") {
+                                        return "Command suggested:";
+                                    } else if (cmdExecutionStatus === "rejected") {
+                                        return "Command rejected:";
+                                    } else if (isExecuted || cmdExecutionStatus === "accepted") {
+                                        return "Command executed:";
+                                    } else if (executionMode === "full-auto") {
+                                        return "Command pending:";
+                                    } else {
+                                        return "Command:";
+                                    }
+                                })()}
+                            </div>
                             <div 
-                                className="mt-2 p-3 bg-black/50 rounded font-mono text-sm border border-white/10 cursor-pointer hover:bg-black/70 transition-colors"
-                                onClick={handleCommandClick}
-                                title="Click to view command execution in sidebar"
+                                className="mt-2 p-3 bg-black/50 rounded font-mono text-sm border border-white/10"
                             >
-                                <div className="flex items-center justify-between">
-                                    <div className="text-green-400">{parsedResponse.command}</div>
-                                    <div className="text-white/30 text-xs">
-                                        <i className="fa-sharp fa-regular fa-arrow-right-to-bracket" /> View in sidebar
+                                <div className="flex items-start">
+                                    {/* Command div - takes 70% width */}
+                                    <div className="w-[70%] pr-3 overflow-hidden">
+                                        <div className="text-green-400 break-words whitespace-pre-wrap">{parsedResponse.command}</div>
+                                    </div>
+                                    
+                                    {/* Buttons div - takes 30% width */}
+                                    <div className="w-[30%] flex justify-end items-center flex-shrink-0">
+                                        {(() => {
+                                            const clientData = GlobalModel.clientData.get();
+                                            const executionMode = clientData?.aiopts?.threadExecutionMode || "manual";
+                                            const isExecuted = !!cmdExecLineId;
+                                            const hasCommand = !!parsedResponse?.command;
+                                            
+                                            console.log("[ThreadModeRenderer] Button logic - executionMode:", executionMode, "cmdExecutionStatus:", cmdExecutionStatus, "isExecuted:", isExecuted, "hasCommand:", hasCommand, "cmdExecLineId:", cmdExecLineId);
+                                            
+                                            if (cmdExecutionStatus === "waiting") {
+                                                // Accept/Reject buttons
+                                                return (
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            className="px-4 py-1.5 bg-gradient-to-br from-gray-900/80 to-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded hover:border-gray-600/50 transition-all transform hover:scale-105"
+                                                            title="Execute command"
+                                                            onClick={async (e) => {
+                                                                e.stopPropagation();
+                                                                await GlobalModel.submitCommand(
+                                                                    "thread", 
+                                                                    "instruction", 
+                                                                    ["cmd_accept", line.lineid], 
+                                                                    { nohist: "1" }, 
+                                                                    false
+                                                                );
+                                                            }}
+                                                        >
+                                                            <i className="fa-sharp fa-solid fa-check text-sm text-green-400" />
+                                                        </button>
+                                                        <button
+                                                            className="px-4 py-1.5 bg-gradient-to-br from-gray-900/80 to-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded hover:border-gray-600/50 transition-all transform hover:scale-105"
+                                                            title="Reject command"
+                                                            onClick={async (e) => {
+                                                                e.stopPropagation();
+                                                                await GlobalModel.submitCommand(
+                                                                    "thread", 
+                                                                    "instruction", 
+                                                                    ["cmd_reject", line.lineid], 
+                                                                    { nohist: "1" }, 
+                                                                    false
+                                                                );
+                                                            }}
+                                                        >
+                                                            <i className="fa-sharp fa-solid fa-xmark text-sm text-red-400" />
+                                                        </button>
+                                                    </div>
+                                                );
+                                            } else if (cmdExecutionStatus === "accepted" || (cmdExecutionStatus === undefined && hasCommand)) {
+                                                // View in sidebar button (show when accepted or when status is undefined but has command)
+                                                return (
+                                                    <div 
+                                                        className="text-white/30 text-xs cursor-pointer hover:text-white/50"
+                                                        onClick={handleCommandClick}
+                                                    >
+                                                        <i className="fa-sharp fa-regular fa-arrow-right-to-bracket" /> View in sidebar
+                                                    </div>
+                                                );
+                                            } else if (cmdExecutionStatus === "rejected") {
+                                                // Show cross mark for rejected commands
+                                                return (
+                                                    <div className="text-red-500/50 text-sm">
+                                                        <i className="fa-sharp fa-solid fa-xmark" />
+                                                    </div>
+                                                );
+                                            }
+                                            return null;
+                                        })()}
                                     </div>
                                 </div>
                             </div>
@@ -321,16 +408,97 @@ const ThreadModeRenderer: React.FC<{
                         )}
                         {parsed.command && (
                             <>
-                                <div className="text-white/50 text-xs mb-2">Command executed:</div>
+                                <div className="text-white/50 text-xs mb-2">
+                                    {(() => {
+                                        const clientData = GlobalModel.clientData.get();
+                                        const executionMode = clientData?.aiopts?.threadExecutionMode || "manual";
+                                        const isExecuted = !!cmdExecLineId;
+                                        
+                                        if (executionMode === "manual" && !isExecuted) {
+                                            return "Command suggested:";
+                                        } else if (isExecuted) {
+                                            return "Command executed:";
+                                        } else {
+                                            return "Command pending:";
+                                        }
+                                    })()}
+                                </div>
                                 <div 
-                                    className="mt-2 p-3 bg-black/50 rounded font-mono text-sm border border-white/10 cursor-pointer hover:bg-black/70 transition-colors"
-                                    onClick={handleCommandClick}
-                                    title="Click to view command execution in sidebar"
+                                    className="mt-2 p-3 bg-black/50 rounded font-mono text-sm border border-white/10"
                                 >
-                                    <div className="flex items-center justify-between">
-                                        <div className="text-green-400">{parsed.command}</div>
-                                        <div className="text-white/30 text-xs">
-                                            <i className="fa-sharp fa-regular fa-arrow-right-to-bracket" /> View in sidebar
+                                    <div className="flex items-start">
+                                        {/* Command div - takes 70% width */}
+                                        <div className="w-[70%] pr-3 overflow-hidden">
+                                            <div className="text-green-400 break-words whitespace-pre-wrap">{parsed.command}</div>
+                                        </div>
+                                        
+                                        {/* Buttons div - takes 30% width */}
+                                        <div className="w-[30%] flex justify-end items-center flex-shrink-0">
+                                            {(() => {
+                                                const clientData = GlobalModel.clientData.get();
+                                                const executionMode = clientData?.aiopts?.threadExecutionMode || "manual";
+                                                const isExecuted = !!cmdExecLineId;
+                                                
+                                                const hasCommand = !!parsed?.command;
+                                                
+                                                if (cmdExecutionStatus === "waiting") {
+                                                    // Accept/Reject buttons
+                                                    return (
+                                                        <div className="flex gap-2">
+                                                            <button
+                                                                className="px-4 py-1.5 bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700 text-white rounded transition-all transform hover:scale-105"
+                                                                title="Execute command"
+                                                                onClick={async (e) => {
+                                                                    e.stopPropagation();
+                                                                    await GlobalModel.submitCommand(
+                                                                        "thread", 
+                                                                        "instruction", 
+                                                                        ["cmd_accept", line.lineid], 
+                                                                        { nohist: "1" }, 
+                                                                        false
+                                                                    );
+                                                                }}
+                                                            >
+                                                                <i className="fa-sharp fa-solid fa-check text-sm" />
+                                                            </button>
+                                                            <button
+                                                                className="px-4 py-1.5 bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white rounded transition-all transform hover:scale-105"
+                                                                title="Reject command"
+                                                                onClick={async (e) => {
+                                                                    e.stopPropagation();
+                                                                    await GlobalModel.submitCommand(
+                                                                        "thread", 
+                                                                        "instruction", 
+                                                                        ["cmd_reject", line.lineid], 
+                                                                        { nohist: "1" }, 
+                                                                        false
+                                                                    );
+                                                                }}
+                                                            >
+                                                                <i className="fa-sharp fa-solid fa-xmark text-sm" />
+                                                            </button>
+                                                        </div>
+                                                    );
+                                                } else if (cmdExecutionStatus === "accepted" || (cmdExecutionStatus === undefined && hasCommand)) {
+                                                    // View in sidebar button (show when accepted or when status is undefined but has command)
+                                                    return (
+                                                        <div 
+                                                            className="text-white/30 text-xs cursor-pointer hover:text-white/50"
+                                                            onClick={handleCommandClick}
+                                                        >
+                                                            <i className="fa-sharp fa-regular fa-arrow-right-to-bracket" /> View in sidebar
+                                                        </div>
+                                                    );
+                                                } else if (cmdExecutionStatus === "rejected") {
+                                                    // Show cross mark for rejected commands
+                                                    return (
+                                                        <div className="text-red-500/50 text-sm">
+                                                            <i className="fa-sharp fa-solid fa-xmark" />
+                                                        </div>
+                                                    );
+                                                }
+                                                return null;
+                                            })()}
                                         </div>
                                     </div>
                                 </div>
@@ -461,10 +629,42 @@ const LineActions: React.FC<{ screen: LineContainerType; line: LineType; cmd: Cm
     ({ screen, line, cmd }) => {
         const isThreadMode = GlobalModel.isThreadMode.get();
         const isImageRenderer = line.renderer === "image";
+        const activeThreadId = GlobalModel.activeThreadId.get();
+        const lineThreadIds = line.linestate?.threadids as string[] | undefined;
+        const isInCurrentThread = !!(activeThreadId && lineThreadIds && lineThreadIds.includes(activeThreadId));
         
-        const clickAddToThread = (e: React.MouseEvent) => {
+        const clickToggleThread = async (e: React.MouseEvent) => {
             e.stopPropagation();
-            setThreadedLine(line.lineid, !threadedLinesObs.has(line.lineid));
+            // Get active thread ID
+            let activeThreadId = GlobalModel.activeThreadId.get();
+            console.log("[clickToggleThread] activeThreadId:", activeThreadId, "lineId:", line.lineid, "isInCurrentThread:", isInCurrentThread);
+            
+            if (!activeThreadId) {
+                // Create a new thread if none is selected
+                console.log("[clickToggleThread] No active thread, creating new thread");
+                const rtn = await GlobalCommandRunner.createNewThread(line.screenid);
+                if (rtn.error) {
+                    console.error("[clickToggleThread] Error creating thread:", rtn.error);
+                    return;
+                }
+                // Wait a bit for the activeThreadId to be set via update
+                await new Promise(resolve => setTimeout(resolve, 100));
+                activeThreadId = GlobalModel.activeThreadId.get();
+                if (!activeThreadId) {
+                    console.error("[clickToggleThread] Thread creation succeeded but no active thread ID");
+                    return;
+                }
+            }
+            
+            if (isInCurrentThread) {
+                // Remove line from thread
+                console.log("[clickToggleThread] Removing line from thread");
+                GlobalCommandRunner.removeLineFromThread(line.lineid, activeThreadId);
+            } else {
+                // Add line to thread
+                console.log("[clickToggleThread] Adding line to thread");
+                GlobalCommandRunner.addLineToThread(line.lineid, activeThreadId);
+            }
         };
         const clickStar = () => GlobalCommandRunner.lineStar(line.lineid, (line.star ?? 0) === 0 ? 1 : 0);
         const clickPin = () => GlobalCommandRunner.linePin(line.lineid, !line.pinned);
@@ -590,14 +790,17 @@ const LineActions: React.FC<{ screen: LineContainerType; line: LineType; cmd: Cm
             >
                 <Choose>
                     <When condition={containerType === appconst.LineContainer_Main}>
-                        <If condition={isThreadMode}>
+                        <If condition={isThreadMode || line.linetype === "thread_mode"}>
                             <div
                                 key="thread"
-                                title={threadedLinesObs.has(line.lineid) ? "Added to thread" : "Add to thread"}
-                                className="px-1 cursor-pointer hover:text-[var(--line-actions-active-color)]"
-                                onClick={clickAddToThread}
+                                title={line.linetype === "thread_mode" ? "Thread line" : (isInCurrentThread ? "Added to thread" : "Add to thread")}
+                                className={clsx(
+                                    "px-1",
+                                    line.linetype === "thread_mode" ? "text-[var(--line-actions-active-color)] cursor-default" : "cursor-pointer hover:text-[var(--line-actions-active-color)]"
+                                )}
+                                onClick={line.linetype === "thread_mode" ? undefined : clickToggleThread}
                             >
-                                {threadedLinesObs.has(line.lineid) ? (
+                                {line.linetype === "thread_mode" || isInCurrentThread ? (
                                     <i className="fa-sharp fa-solid fa-check fa-fw" />
                                 ) : (
                                     <i className="fa-sharp fa-regular fa-comment fa-fw" />
@@ -792,45 +995,81 @@ const LineText: React.FC<{
             name: "computed-isSelected",
         })
         .get();
+    
+    const isThreadMode = GlobalModel.isThreadMode.get();
+    const isThreaded = threadedLinesObs.has(line.lineid);
+    const activeThreadId = GlobalModel.activeThreadId.get();
+    const lineThreadIds = line.linestate?.threadids as string[] | undefined;
+    const shouldShowShineBorder = isThreadMode && lineThreadIds && lineThreadIds.includes(activeThreadId);
+    
+    console.log("[LineText] Debug - line:", line.lineid, 
+        "linetype:", line.linetype,
+        "isThreadMode:", isThreadMode, 
+        "activeThreadId:", activeThreadId, 
+        "linestate:", line.linestate,
+        "lineThreadIds:", lineThreadIds, 
+        "shouldShowShineBorder:", shouldShowShineBorder);
 
     return (
-        <div
-            className={clsx(
-                "m-0 px-[calc(var(--termpad)*3)] py-[calc(var(--termpad)*2)] pb-[calc(var(--termpad)*2+1px)]",
-                "flex flex-col overflow-x-hidden overflow-y-visible flex-shrink-0 relative whitespace-pre",
-                "leading-[11px] font-normal font-[var(--termfontfamily)] scroll-mb-5",
-                "focus-parent group",
-                { selected: isSelected }
-            )}
-            data-lineid={line.lineid}
-            data-linenum={line.linenum}
-            data-screenid={line.screenid}
-            onClick={clickHandler}
-        >
-            {/* subtle highlight for selected text-only line */}
-            <If condition={isSelected}>
-                <div className="absolute inset-0 pointer-events-none opacity-100 transition-opacity duration-150 bg-gradient-to-r from-white/[0.13] to-transparent" />
-            </If>
-            <If condition={isSelected}>
-                <div
-                    key="mask"
-                    className="absolute top-0 left-0 w-full h-full bg-transparent z-10 pointer-events-none border-2 border-l-4 border-[var(--line-active-border-color)]"
-                ></div>
-            </If>
+        <>
+            <style>
+                {`
+                .shine-border-text::before {
+                    content: "";
+                    position: absolute;
+                    inset: -2px;
+                    padding: 2px;
+                    border-radius: 0.375rem;
+                    background: linear-gradient(45deg, transparent, rgba(59, 130, 246, 0.8), rgba(147, 197, 253, 0.9), rgba(167, 139, 250, 0.8), transparent);
+                    background-size: 400% 400%;
+                    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+                    -webkit-mask-composite: xor;
+                    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+                    mask-composite: exclude;
+                    animation: shine-pulse 6s infinite linear;
+                    z-index: -1;
+                }
+                `}
+            </style>
             <div
-                key="header"
-                className="flex flex-col w-full font-normal font-[var(--termfontfamily)] text-[var(--termfontsize)] leading-[var(--termlineheight)]"
+                className={clsx(
+                    "m-0 px-[calc(var(--termpad)*3)] py-[calc(var(--termpad)*2)] pb-[calc(var(--termpad)*2+1px)]",
+                    "flex flex-col overflow-x-hidden overflow-y-visible flex-shrink-0 relative whitespace-pre",
+                    "leading-[11px] font-normal font-[var(--termfontfamily)] scroll-mb-5",
+                    "focus-parent group",
+                    { selected: isSelected },
+                    { "shine-border-text": shouldShowShineBorder }
+                )}
+                data-lineid={line.lineid}
+                data-linenum={line.linenum}
+                data-screenid={line.screenid}
+                onClick={clickHandler}
             >
-                <div className="flex flex-row text-[var(--termfontsize-sm)] leading-[var(--termlineheight-sm)] text-[var(--term-gray)] items-center">
-                    <SmallLineAvatar line={line} cmd={null} onRightClick={onAvatarRightClick} />
-                    <div className="mx-[var(--termpad)]">|</div>
-                    <div className="flex">{formattedTime}</div>
+                {/* subtle highlight for selected text-only line */}
+                <If condition={isSelected}>
+                    <div className="absolute inset-0 pointer-events-none opacity-100 transition-opacity duration-150 bg-gradient-to-r from-white/[0.13] to-transparent" />
+                </If>
+                <If condition={isSelected}>
+                    <div
+                        key="mask"
+                        className="absolute top-0 left-0 w-full h-full bg-transparent z-10 pointer-events-none border-2 border-l-4 border-[var(--line-active-border-color)]"
+                    ></div>
+                </If>
+                <div
+                    key="header"
+                    className="flex flex-col w-full font-normal font-[var(--termfontfamily)] text-[var(--termfontsize)] leading-[var(--termlineheight)]"
+                >
+                    <div className="flex flex-row text-[var(--termfontsize-sm)] leading-[var(--termlineheight-sm)] text-[var(--term-gray)] items-center">
+                        <SmallLineAvatar line={line} cmd={null} onRightClick={onAvatarRightClick} />
+                        <div className="mx-[var(--termpad)]">|</div>
+                        <div className="flex">{formattedTime}</div>
+                    </div>
+                </div>
+                <div key="text" className="text-[var(--term-text-white)] mt-[calc(var(--termpad)+2px)]">
+                    {line.text}
                 </div>
             </div>
-            <div key="text" className="text-[var(--term-text-white)] mt-[calc(var(--termpad)+2px)]">
-                {line.text}
-            </div>
-        </div>
+        </>
     );
 });
 
@@ -954,6 +1193,20 @@ const LineCmd: React.FC<{
         const isSelected = screen.getSelectedLines().includes(line.linenum);
         const cmdError = cmdShouldMarkError(cmd);
         const isThreaded = threadedLinesObs.has(line.lineid);
+        const isThreadMode = GlobalModel.isThreadMode.get();
+        const isThreadModeLine = line.linetype === "thread_mode";
+        const activeThreadId = GlobalModel.activeThreadId.get();
+        const lineThreadIds = line.linestate?.threadids as string[] | undefined;
+        const shouldShowShineBorder = isThreadMode && lineThreadIds && activeThreadId && lineThreadIds.includes(activeThreadId);
+        
+        console.log("[LineCmd] Debug - line:", line.lineid, 
+            "linetype:", line.linetype,
+            "isThreadModeLine:", isThreadModeLine,
+            "isThreadMode:", isThreadMode, 
+            "activeThreadId:", activeThreadId, 
+            "linestate:", line.linestate,
+            "lineThreadIds:", lineThreadIds, 
+            "shouldShowShineBorder:", shouldShowShineBorder);
 
         const mainDivCn = clsx(
             "line",
@@ -973,10 +1226,27 @@ const LineCmd: React.FC<{
                     .line-cmd.cmd-done .xterm-cursor {
                         display: none;
                     }
+                    .line-cmd.shine-border {
+                        position: relative !important;
+                        border: 2px solid transparent !important;
+                        background: linear-gradient(black, black) padding-box,
+                                    linear-gradient(45deg, 
+                                        #3b82f6 0%, 
+                                        #93c5fd 25%, 
+                                        #a78bfa 50%, 
+                                        #93c5fd 75%, 
+                                        #3b82f6 100%
+                                    ) border-box !important;
+                        background-size: 100% 100%, 300% 300% !important;
+                        animation: shine-pulse 6s linear infinite !important;
+                        border-radius: 0.375rem !important;
+                    }
                 `}
                 </style>
                 <div
-                    className={clsx(mainDivCn, "flex-shrink-0 group relative")}
+                    className={clsx(mainDivCn, "flex-shrink-0 group relative", {
+                        "shine-border": shouldShowShineBorder
+                    })}
                     ref={lineRef}
                     onClick={handleClick}
                     data-lineid={line.lineid}

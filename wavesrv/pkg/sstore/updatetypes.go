@@ -5,6 +5,7 @@ package sstore
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/abhishek944/waveterm/waveshell/pkg/packet"
 	"github.com/abhishek944/waveterm/waveshell/pkg/utilfn"
@@ -36,6 +37,10 @@ func AddLineUpdate(update *scbus.ModelUpdatePacketType, newLine *LineType, newCm
 	}
 	if newCmd != nil {
 		newLineUpdate.Cmd = *newCmd
+	}
+	// Log line updates to debug threadids
+	if newLine.LineType == LineTypeThreadMode || newLine.LineType == LineTypeThreadModeCmd {
+		log.Printf("[AddLineUpdate] Sending line update for %s, linestate: %+v", newLine.LineId, newLine.LineState)
 	}
 	update.AddUpdate(newLineUpdate)
 }

@@ -89,4 +89,17 @@
         -ms-overflow-style: none; /* IE and Edge */
         scrollbar-width: none; /* Firefox */
     }
+    
+    /* Shine border animation */
+    @keyframes shine-pulse {
+        0% {
+            background-position: 0% 0%;
+        }
+        50% {
+            background-position: 100% 100%;
+        }
+        to {
+            background-position: 0% 0%;
+        }
+    }
 }

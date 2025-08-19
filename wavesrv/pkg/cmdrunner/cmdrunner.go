@@ -262,6 +262,10 @@ func init() {
 
 	registerCmdFn("agent", AgentCommand)
 	registerCmdFn("thread", ThreadCommand)
+	registerCmdFn("thread:instruction", ThreadInstructionCommand)
+	registerCmdFn("thread:addline", ThreadAddLineCommand)
+	registerCmdFn("thread:removeline", ThreadRemoveLineCommand)
+	registerCmdFn("thread:create", ThreadCreateCommand)
 
 	registerCmdFn("_killserver", KillServerCommand)
 	registerCmdFn("_dumpstate", DumpStateCommand)

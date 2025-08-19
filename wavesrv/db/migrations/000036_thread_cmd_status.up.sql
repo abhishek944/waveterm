@@ -1,0 +1,1 @@
+ALTER TABLE thread_line ADD COLUMN cmd_execution_status varchar(20);

@@ -304,6 +304,18 @@ class CommandRunner {
         GlobalModel.submitCommand("line", "pin", [lineId, val ? "1" : "0"], { nohist: "1" }, true);
     }
 
+    addLineToThread(lineId: string, threadId: string) {
+        GlobalModel.submitCommand("thread", "addline", [lineId, threadId], { nohist: "1" }, true);
+    }
+
+    removeLineFromThread(lineId: string, threadId: string) {
+        GlobalModel.submitCommand("thread", "removeline", [lineId, threadId], { nohist: "1" }, true);
+    }
+
+    createNewThread(screenId: string): Promise<CommandRtnType> {
+        return GlobalModel.submitCommand("thread", "create", [screenId], { nohist: "1" }, false);
+    }
+
     bookmarksView() {
         GlobalModel.submitCommand("bookmarks", "show", null, { nohist: "1" }, true);
     }
@@ -627,6 +639,10 @@ class CommandRunner {
         // default provider
         if (opts.default != null) {
             kwargs["defaultprovider"] = opts.default;
+        }
+        // thread execution mode
+        if (opts.threadExecutionMode != null) {
+            kwargs["threadexecutionmode"] = opts.threadExecutionMode;
         }
         if (opts.gemini?.model != null) {
             kwargs["geminimodel"] = opts.gemini.model;
