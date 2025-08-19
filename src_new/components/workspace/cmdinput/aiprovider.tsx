@@ -11,8 +11,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Bot, Cloud, Sparkles } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Bot, Cloud, Sparkle } from "lucide-react";
 
 interface AIProviderOption {
     value: string;
@@ -23,26 +22,9 @@ interface AIProviderOption {
 const AI_PROVIDERS: AIProviderOption[] = [
     { value: "openai", label: "OpenAI", icon: <Bot className="h-4 w-4" /> },
     { value: "azure", label: "Azure OpenAI", icon: <Cloud className="h-4 w-4" /> },
-    { value: "gemini", label: "Google Gemini", icon: <Sparkles className="h-4 w-4" /> },
+    { value: "gemini", label: "Gemini", icon: <Sparkle className="h-4 w-4" /> },
 ];
 
-// Custom SelectItem that hides the checkmark and adjusts padding
-const CustomSelectItem = React.forwardRef<
-    React.ElementRef<typeof SelectItem>,
-    React.ComponentPropsWithoutRef<typeof SelectItem> & { children: React.ReactNode }
->(({ className, children, ...props }, ref) => (
-    <SelectItem
-        ref={ref}
-        className={cn(
-            "pl-3 [&>span:first-child]:hidden", // Hide the checkmark span and adjust padding
-            className
-        )}
-        {...props}
-    >
-        {children}
-    </SelectItem>
-));
-CustomSelectItem.displayName = "CustomSelectItem";
 
 export const AIProviderDropdown: React.FC = observer(() => {
     const aiProviderFromObservable = GlobalModel.aiProvider.get();
@@ -62,9 +44,8 @@ export const AIProviderDropdown: React.FC = observer(() => {
     const currentProviderObj = AI_PROVIDERS.find((p) => p.value === currentProvider);
 
     return (
-        <div className="inline-flex ml-2.5 align-middle">
-            <Select value={currentProvider} onValueChange={handleProviderChange}>
-                <SelectTrigger className="h-6 px-2 text-xs bg-black border border-gray-600 text-white rounded min-w-[140px]">
+        <Select value={currentProvider} onValueChange={handleProviderChange}>
+                <SelectTrigger className="h-7 px-3 text-xs bg-gradient-to-r from-gray-800 to-gray-900 border border-gray-700 text-white rounded-lg w-[140px] hover:from-gray-700 hover:to-gray-800 transition-all duration-200">
                     <SelectValue placeholder="Choose provider">
                         {currentProviderObj && (
                             <div className="flex items-center gap-1.5">
@@ -76,34 +57,17 @@ export const AIProviderDropdown: React.FC = observer(() => {
                         )}
                     </SelectValue>
                 </SelectTrigger>
-                <SelectContent className="bg-black/100 border border-gray-600 text-white text-xs min-w-[140px] rounded-md shadow-lg z-50">
+                <SelectContent className="bg-gradient-to-b from-gray-900 to-black border border-gray-700 text-white text-xs rounded-lg shadow-xl">
                     {AI_PROVIDERS.map((provider) => (
-                        <CustomSelectItem
+                        <SelectItem
                             key={provider.value}
                             value={provider.value}
-                            className="text-xs py-1.5 cursor-pointer"
+                            className="hover:bg-gradient-to-r hover:from-purple-600/20 hover:to-pink-600/20"
                         >
-                            <div className="flex items-center gap-2 w-full">
-                                {React.cloneElement(provider.icon as React.ReactElement, {
-                                    className: `w-3.5 h-3.5 flex-shrink-0 ${
-                                        currentProvider === provider.value ? "opacity-100" : "opacity-70"
-                                    }`,
-                                })}
-                                <span
-                                    className={`flex-1 ${
-                                        currentProvider === provider.value ? "font-medium" : "font-normal"
-                                    }`}
-                                >
-                                    {provider.label}
-                                </span>
-                                {currentProvider === provider.value && (
-                                    <span className="w-1 h-1 rounded-full bg-green-400 ml-auto" />
-                                )}
-                            </div>
-                        </CustomSelectItem>
+                            {provider.label}
+                        </SelectItem>
                     ))}
                 </SelectContent>
             </Select>
-        </div>
     );
 });

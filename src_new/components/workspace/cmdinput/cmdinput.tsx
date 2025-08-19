@@ -257,69 +257,14 @@ export const CmdInput: React.FC = observer(() => {
                         key="prompt"
                         className="cmd-input-context text-white whitespace-nowrap flex justify-between items-center font-mono text-sm leading-6 pt-2 px-4 ml-0.5"
                     >
-                        <div className="flex items-center flex-nowrap gap-0">
+                        <div className="flex items-center flex-nowrap gap-2">
                             <span ref={promptRef}>
                                 <Prompt rptr={rptr} festate={feState} color={true} shellInitMsg={shellInitMsg} />
-                                {(isThreadMode || isAgentMode) && (
-                                    <span className="text-red-500 font-bold whitespace-nowrap">
-                                        {" "}
-                                        | Mode: {isAgentMode ? "Agent" : "Thread"}
-                                    </span>
-                                )}
                             </span>
-                            {(isThreadMode || isAgentMode) && <AIProviderDropdown />}
-                            {isThreadMode && (
-                                <>
-                                    <Select value={activeThreadId || "new-thread"} onValueChange={async (value) => {
-                                        if (value === "new-thread") {
-                                            // Create a new thread immediately
-                                            const rtn = await GlobalCommandRunner.createNewThread(screen.screenId);
-                                            commandRtnHandler(rtn, false);
-                                            // The new thread ID will be set via the update
-                                        } else {
-                                            GlobalModel.setActiveThreadId(value);
-                                        }
-                                    }}>
-                                        <SelectTrigger 
-                                            className="ml-2 h-6 px-2 text-xs bg-black border border-gray-600 rounded min-w-[120px]"
-                                            onMouseDown={(e) => e.stopPropagation()}
-                                        >
-                                            <SelectValue placeholder="New Thread…" />
-                                        </SelectTrigger>
-                                        <SelectContent className="bg-black/100 border border-gray-600 text-white text-xs z-50">
-                                            <SelectItem value="new-thread">New Thread…</SelectItem>
-                                            {threads.map((t) => (
-                                                <SelectItem key={t.threadid} value={t.threadid}>
-                                                    {t.name}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <Select 
-                                        value={(() => {
-                                            const clientData = GlobalModel.clientData.get();
-                                            return clientData?.aiopts?.threadExecutionMode || "manual";
-                                        })()}
-                                        onValueChange={(value: ThreadExecutionMode) => {
-                                            const prtn = GlobalCommandRunner.setAIOpts({
-                                                ...GlobalModel.clientData.get()?.aiopts,
-                                                threadExecutionMode: value
-                                            });
-                                            commandRtnHandler(prtn, null);
-                                        }}
-                                    >
-                                        <SelectTrigger 
-                                            className="ml-2 h-6 px-2 text-xs bg-black border border-gray-600 rounded min-w-[80px]"
-                                            onMouseDown={(e) => e.stopPropagation()}
-                                        >
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent className="bg-black/100 border border-gray-600 text-white text-xs z-50">
-                                            <SelectItem value="manual">Manual</SelectItem>
-                                            <SelectItem value="full-auto">Full Auto</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </>
+                            {(isThreadMode || isAgentMode) && (
+                                <div className="inline-flex items-center px-3 py-1 rounded-lg text-xs font-medium bg-gray-800/60 backdrop-blur-sm border border-gray-700/50 text-white shadow-sm">
+                                    {isAgentMode ? "agent" : "thread"}
+                                </div>
                             )}
                         </div>
                     </div>
@@ -338,6 +283,75 @@ export const CmdInput: React.FC = observer(() => {
                     </If>
                     <TextAreaInput key={textAreaInputKey} screen={screen} onHeightChange={updateCmdInputHeight} />
                 </div>
+                {(isThreadMode || isAgentMode) && (
+                    <div className="flex items-center gap-2 px-4 pb-2">
+                        {/* AI Provider Dropdown */}
+                        <AIProviderDropdown />
+                        
+                        {/* Thread Mode Specific Controls */}
+                        {isThreadMode && (
+                            <>
+                                {/* Thread Selector */}
+                                <Select value={activeThreadId || "new-thread"} onValueChange={async (value) => {
+                                    if (value === "new-thread") {
+                                        // Create a new thread immediately
+                                        const rtn = await GlobalCommandRunner.createNewThread(screen.screenId);
+                                        commandRtnHandler(rtn, false);
+                                        // The new thread ID will be set via the update
+                                    } else {
+                                        GlobalModel.setActiveThreadId(value);
+                                    }
+                                }}>
+                                    <SelectTrigger 
+                                        className="h-7 px-3 text-xs bg-gradient-to-r from-gray-800 to-gray-900 border border-gray-700 rounded-lg w-[140px] hover:from-gray-700 hover:to-gray-800 transition-all duration-200"
+                                        onMouseDown={(e) => e.stopPropagation()}
+                                    >
+                                        <SelectValue placeholder="New Thread…" />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-gradient-to-b from-gray-900 to-black border border-gray-700 text-white text-xs rounded-lg shadow-xl">
+                                        <SelectItem value="new-thread" className="hover:bg-gradient-to-r hover:from-purple-600/20 hover:to-pink-600/20">New Thread…</SelectItem>
+                                        {threads.map((t) => (
+                                            <SelectItem 
+                                                key={t.threadid} 
+                                                value={t.threadid}
+                                                className="hover:bg-gradient-to-r hover:from-purple-600/20 hover:to-pink-600/20"
+                                            >
+                                                {t.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                
+                                {/* Execution Mode Selector */}
+                                <Select 
+                                    value={(() => {
+                                        const clientData = GlobalModel.clientData.get();
+                                        return clientData?.aiopts?.threadExecutionMode || "manual";
+                                    })()}
+                                    onValueChange={(value: ThreadExecutionMode) => {
+                                        const prtn = GlobalCommandRunner.setAIOpts({
+                                            ...GlobalModel.clientData.get()?.aiopts,
+                                            threadExecutionMode: value
+                                        });
+                                        commandRtnHandler(prtn, null);
+                                    }}
+                                >
+                                    <SelectTrigger 
+                                        className="h-7 px-3 text-xs bg-gradient-to-r from-gray-800 to-gray-900 border border-gray-700 rounded-lg w-[140px] hover:from-gray-700 hover:to-gray-800 transition-all duration-200"
+                                        onMouseDown={(e) => e.stopPropagation()}
+                                    >
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-gradient-to-b from-gray-900 to-black border border-gray-700 text-white text-xs rounded-lg shadow-xl">
+                                        <SelectItem value="manual" className="hover:bg-gradient-to-r hover:from-purple-600/20 hover:to-pink-600/20">Manual</SelectItem>
+                                        <SelectItem value="semi-auto" className="hover:bg-gradient-to-r hover:from-purple-600/20 hover:to-pink-600/20">Semi-Auto</SelectItem>
+                                        <SelectItem value="full-auto" className="hover:bg-gradient-to-r hover:from-purple-600/20 hover:to-pink-600/20">Full Auto</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </>
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     );
