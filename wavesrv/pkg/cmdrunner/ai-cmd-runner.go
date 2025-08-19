@@ -150,7 +150,7 @@ func runOpenAICompletion(ctx context.Context, opts *sstore.OpenAIOptsType, reque
 	fmt.Printf("DEBUG runOpenAICompletion: Streaming=%v, prompt length=%d\n", request.Streaming, len(request.Prompt))
 	
 	if request.Streaming {
-		fmt.Printf("DEBUG runOpenAICompletion: Calling RunCompletionStreamWithFormat\n")
+		fmt.Printf("DEBUG runOpenAICompletion: Calling RunCompletionStreamWithFormat, prompt = %+v\n", request.Prompt)
 		ch, err := openai.RunCompletionStreamWithFormat(ctx, opts, request.Prompt, responseFormat)
 		if err != nil {
 			fmt.Printf("DEBUG runOpenAICompletion ERROR: Stream failed: %v\n", err)

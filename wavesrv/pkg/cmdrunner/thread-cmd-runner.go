@@ -456,6 +456,38 @@ func ThreadCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus
 	// Build conversation from thread lines
 	conversation := []packet.OpenAIPromptMessageType{}
 	for _, tline := range threadLines {
+		// Check if this is a command line that was added to the thread
+		if tline.CmdLineId != "" && tline.UserQuery == "" && tline.AssistantResponse == "" {
+			// Fetch the command text from the cmd line
+			_, cmdInfo, err := sstore.GetLineCmdByLineId(ctx, ids.ScreenId, tline.CmdLineId)
+			if err == nil && cmdInfo != nil && cmdInfo.CmdStr != "" {
+				// Add the command as context
+				conversation = append(conversation, packet.OpenAIPromptMessageType{
+					Role:    "user",
+					Content: fmt.Sprintf("Command executed: %s", cmdInfo.CmdStr),
+				})
+				
+				// Add the command output if available
+				if cmdInfo.Status == sstore.CmdStatusDone || cmdInfo.Status == sstore.CmdStatusError {
+					outputPath, err := scbase.PtyOutFile(ids.ScreenId, tline.CmdLineId)
+					if err == nil {
+						outputBytes, err := os.ReadFile(outputPath)
+						if err == nil && len(outputBytes) > 0 {
+							// Limit output to prevent token overflow
+							outputStr := string(outputBytes)
+							if len(outputStr) > 2000 {
+								outputStr = outputStr[:2000] + "\n... (output truncated)"
+							}
+							conversation = append(conversation, packet.OpenAIPromptMessageType{
+								Role:    "assistant",
+								Content: fmt.Sprintf("Command output:\n%s", outputStr),
+							})
+						}
+					}
+				}
+			}
+		}
+		
 		// Add user messages
 		if tline.UserQuery != "" {
 			conversation = append(conversation, packet.OpenAIPromptMessageType{

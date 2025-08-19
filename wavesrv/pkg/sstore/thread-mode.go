@@ -272,8 +272,14 @@ func AddExistingLineToThread(ctx context.Context, threadId string, screenId stri
 		}
 		
 		// Add to thread_line table
-		query = `INSERT INTO thread_line (threadid, screenid, lineid, linenum, created_ts) VALUES (?, ?, ?, ?, ?)`
-		tx.Exec(query, threadId, screenId, lineId, line.LineNum, time.Now().UnixMilli())
+		// For command lines, we need to set cmdlineid to the same as lineid
+		var cmdLineId *string
+		if line.LineType == LineTypeCmd {
+			cmdLineId = &lineId
+		}
+		
+		query = `INSERT INTO thread_line (threadid, screenid, lineid, linenum, cmdlineid, created_ts) VALUES (?, ?, ?, ?, ?, ?)`
+		tx.Exec(query, threadId, screenId, lineId, line.LineNum, cmdLineId, time.Now().UnixMilli())
 		
 		// Update thread's updatedts
 		tx.Exec(`UPDATE thread SET updatedts = ? WHERE threadid = ?`, time.Now().UnixMilli(), threadId)

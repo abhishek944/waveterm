@@ -17,7 +17,7 @@ import (
 )
 
 const DefaultMaxTokens = 1000
-const DefaultModel = "gpt-3.5-turbo"
+const DefaultModel = "gpt-4.1-mini"
 const DefaultStreamChanSize = 10
 
 func convertUsage(usage openai.CompletionUsage) *packet.OpenAIUsageType {
