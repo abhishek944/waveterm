@@ -31,6 +31,9 @@ You must respond with a JSON object containing exactly two fields:
   - What should be the next logical step?
   - Are there any errors or warnings to address?
 
+### When working with git commands
+- Use --no-pager flag if required to avoid pagination or requiring human input
+
 ### Focused Execution
 - Execute exactly what's asked, nothing more
 - Only gather information if it's required for the specific request

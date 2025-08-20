@@ -323,6 +323,17 @@ class AiProviders extends React.Component<{}, {}> {
                             />
                         </div>
                         <div className="flex items-center">
+                            <div className="w-48">API Version</div>
+                            <InlineSettingsTextEdit
+                                placeholder="API Version (e.g., 2024-12-01-preview)"
+                                text={azureOpts.apiversion || "(default: 2024-12-01-preview)"}
+                                value={azureOpts.apiversion || ""}
+                                onChange={(val) => this.handleProviderChange("azure", "apiversion", val)}
+                                maxLength={64}
+                                showIcon={true}
+                            />
+                        </div>
+                        <div className="flex items-center">
                             <div className="w-48"></div>
                             <div className="flex items-center gap-2">
                                 <Button
@@ -334,6 +345,23 @@ class AiProviders extends React.Component<{}, {}> {
                                     Verify
                                 </Button>
                                 {getConnectionStatus("azure")}
+                            </div>
+                        </div>
+                        <div className="mt-3 p-3 bg-gray-800/50 rounded border border-gray-600">
+                            <div className="text-sm text-gray-300 mb-2">Example:</div>
+                            <div className="text-xs text-gray-400 space-y-1">
+                                <div>
+                                    <strong>Base URL:</strong> https://xyz.cognitiveservices.azure.com/
+                                </div>
+                                <div>
+                                    <strong>Deployment Name:</strong> gpt-4.1
+                                </div>
+                                <div>
+                                    <strong>API Key:</strong> *****abcd
+                                </div>
+                                <div>
+                                    <strong>API Version:</strong> 2024-12-01-preview
+                                </div>
                             </div>
                         </div>
                     </div>

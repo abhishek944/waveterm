@@ -416,6 +416,14 @@ func ClientSetCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (sc
 		aiOptsUpdated = true
 		varsUpdated = append(varsUpdated, "azureenabled")
 	}
+	if azureAPIVersion, found := pk.Kwargs["azureapiversion"]; found {
+		if aiOpts.Azure == nil {
+			aiOpts.Azure = &sstore.AzureOpenAIOptsType{}
+		}
+		aiOpts.Azure.APIVersion = azureAPIVersion
+		aiOptsUpdated = true
+		varsUpdated = append(varsUpdated, "azureapiversion")
+	}
 	// Handle thread execution mode
 	if threadExecutionMode, found := pk.Kwargs["threadexecutionmode"]; found {
 		if threadExecutionMode != "" && threadExecutionMode != "manual" && threadExecutionMode != "semi-auto" && threadExecutionMode != "full-auto" {

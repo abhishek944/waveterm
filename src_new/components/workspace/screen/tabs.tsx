@@ -5,7 +5,7 @@ import * as React from "react";
 import { observer } from "mobx-react";
 import { reaction } from "mobx";
 import { GlobalModel, GlobalCommandRunner, Session, Screen } from "@/models";
-import { Plus, Sparkles } from "lucide-react";
+import { Plus, Sparkles, PanelLeft } from "lucide-react";
 import { Reorder } from "framer-motion";
 import { ScreenTab } from "@/components/workspace";
 import { clsx } from "clsx";
@@ -91,7 +91,9 @@ export const ScreenTabs = observer(({ session }: { session: Session }) => {
                     )}
                     onClick={() => GlobalModel.mainSidebarModel.setCollapsed(false)}
                 >
-                    <img className="h-6 w-6" src="public/logos/wave-logo.png" alt="logo" />
+                    <div className="p-1.5 rounded-md bg-gradient-to-br from-gray-800 via-gray-700 to-gray-900 border border-gray-600/30 shadow-sm">
+                        <PanelLeft size={18} className="text-gray-300" />
+                    </div>
                 </div>
             )}
             <div className="overflow-x-scroll overflow-y-hidden no-scrollbar flex-1">

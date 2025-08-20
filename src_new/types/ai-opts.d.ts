@@ -21,6 +21,7 @@ type AzureOpenAIOptsType = {
     baseurl?: string;
     deploymentname?: string;
     apitoken?: string;
+    apiversion?: string;
     connectionstatus?: string;
     enabled?: boolean;
 };

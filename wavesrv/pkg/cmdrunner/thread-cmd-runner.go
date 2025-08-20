@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -20,30 +21,58 @@ import (
 	"github.com/abhishek944/waveterm/wavesrv/pkg/sstore"
 )
 
+// isCommandAllowed checks if a command matches any of the allowed regex patterns
+func isCommandAllowed(command string, allowCommands []string) bool {
+	if len(allowCommands) == 0 {
+		return false // No patterns defined, nothing is allowed
+	}
+
+	for _, pattern := range allowCommands {
+		if pattern == "" {
+			continue
+		}
+
+		// Compile and match the regex pattern
+		regex, err := regexp.Compile(pattern)
+		if err != nil {
+			log.Printf("[isCommandAllowed] Invalid regex pattern '%s': %v", pattern, err)
+			continue
+		}
+
+		if regex.MatchString(command) {
+			log.Printf("[isCommandAllowed] Command '%s' matches pattern '%s'", command, pattern)
+			return true
+		}
+	}
+
+	log.Printf("[isCommandAllowed] Command '%s' does not match any allowed patterns", command)
+	return false
+}
+
 func ThreadInstructionCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {
 	// Get instruction type and line ID from args
 	if len(pk.Args) < 2 {
 		return nil, fmt.Errorf("thread:instruction requires instruction_type and lineid arguments")
 	}
-	
+
 	instructionType := pk.Args[0]
 	lineId := pk.Args[1]
-	
+
 	ids, err := resolveUiIds(ctx, pk, R_Session|R_Screen)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Get the line to verify it's a thread line
 	line, err := sstore.GetLineById(ctx, ids.ScreenId, lineId)
 	if err != nil {
 		return nil, fmt.Errorf("line not found: %v", err)
 	}
-	
+
 	if line.LineType != sstore.LineTypeThreadMode {
 		return nil, fmt.Errorf("not a thread mode line")
 	}
-	
+
 	// Get thread ID from thread_line table
 	var threadId string
 	err = sstore.WithTx(ctx, func(tx *sstore.TxWrap) error {
@@ -58,7 +87,7 @@ func ThreadInstructionCommand(ctx context.Context, pk *scpacket.FeCommandPacketT
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Handle different instruction types
 	switch instructionType {
 	case "cmd_accept":
@@ -67,34 +96,33 @@ func ThreadInstructionCommand(ctx context.Context, pk *scpacket.FeCommandPacketT
 		if err != nil || threadLine == nil {
 			return nil, fmt.Errorf("thread line not found or error getting thread line: %v", err)
 		}
-		
+
 		if threadLine.Command == "" {
 			return nil, fmt.Errorf("no command found in thread line")
 		}
-		
+
 		// Update status to accepted
 		err = sstore.UpdateThreadLineCmdExecutionStatus(ctx, threadId, ids.ScreenId, lineId, "accepted")
 		if err != nil {
 			log.Printf("error updating cmd execution status: %v\n", err)
 		}
-		
+
 		// Execute the command
 		cmdExecLineId, err := ExecuteCommandInThread(
 			ctx, ids.SessionId, threadId, ids.ScreenId,
 			lineId, threadLine.Command, &ids.Remote.RemotePtr,
 		)
-		
+
 		if err != nil {
 			return nil, fmt.Errorf("failed to execute command: %v", err)
 		}
-		
+
 		// Update thread line with command execution ID
 		err = sstore.UpdateThreadLineCmdLineId(ctx, threadId, ids.ScreenId, lineId, cmdExecLineId)
 		if err != nil {
 			log.Printf("error updating thread line with cmdlineid: %v\n", err)
 		}
-		
-		
+
 		// Send update with cmd_execution_status and cmdexeclineid
 		updatedLine, _ := sstore.GetLineById(ctx, ids.ScreenId, lineId)
 		if updatedLine != nil {
@@ -103,7 +131,7 @@ func ThreadInstructionCommand(ctx context.Context, pk *scpacket.FeCommandPacketT
 				updatedLine.LineState = make(map[string]interface{})
 			}
 			updatedLine.LineState["cmdexecutionstatus"] = "accepted"
-			
+
 			// Get thread line data to include cmdlineid in linestate
 			threadLineData, _ := sstore.GetThreadLineByLineId(ctx, lineId)
 			if threadLineData != nil && threadLineData.CmdLineId != "" {
@@ -112,7 +140,7 @@ func ThreadInstructionCommand(ctx context.Context, pk *scpacket.FeCommandPacketT
 		}
 		update := scbus.MakeUpdatePacket()
 		sstore.AddLineUpdate(update, updatedLine, nil)
-		
+
 		// Continue multi-turn execution after user approval
 		// Get client data for AI calls
 		clientData, err := sstore.EnsureClientData(ctx)
@@ -122,36 +150,36 @@ func ThreadInstructionCommand(ctx context.Context, pk *scpacket.FeCommandPacketT
 			if clientData.AIOpts != nil && clientData.AIOpts.Default != "" {
 				provider = clientData.AIOpts.Default
 			}
-			
+
 			// Get execution mode from client AI options
 			executionMode := "manual"
 			if clientData.AIOpts != nil && clientData.AIOpts.ThreadExecutionMode != "" {
 				executionMode = clientData.AIOpts.ThreadExecutionMode
 			}
-			
+
 			// Create a minimal packet with necessary info for multi-turn execution
 			multiTurnPk := &scpacket.FeCommandPacketType{
 				Kwargs: make(map[string]string),
 			}
 			multiTurnPk.Kwargs["provider"] = provider
 			multiTurnPk.Kwargs["threadexecutionmode"] = executionMode
-			
+
 			// Start multi-turn execution in background
 			go func() {
 				bgCtx := context.Background()
 				startMultiTurnExecution(bgCtx, multiTurnPk, clientData, &ids, threadId, cmdExecLineId, threadLine.Command)
 			}()
 		}
-		
+
 		return update, nil
-		
+
 	case "cmd_reject":
 		// Update status to rejected
 		err = sstore.UpdateThreadLineCmdExecutionStatus(ctx, threadId, ids.ScreenId, lineId, "rejected")
 		if err != nil {
 			log.Printf("error updating cmd execution status: %v\n", err)
 		}
-		
+
 		// Send update with cmd_execution_status
 		updatedLine, _ := sstore.GetLineById(ctx, ids.ScreenId, lineId)
 		if updatedLine != nil {
@@ -163,14 +191,14 @@ func ThreadInstructionCommand(ctx context.Context, pk *scpacket.FeCommandPacketT
 		}
 		update := scbus.MakeUpdatePacket()
 		sstore.AddLineUpdate(update, updatedLine, nil)
-		
+
 		return update, nil
-		
+
 	case "force_stop":
 		// TODO: Implement force stop logic
 		// This should stop any ongoing multi-turn execution
 		return nil, fmt.Errorf("force_stop not implemented yet")
-		
+
 	default:
 		return nil, fmt.Errorf("unknown instruction type: %s", instructionType)
 	}
@@ -181,23 +209,23 @@ func ThreadCreateCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) 
 	if len(pk.Args) < 1 {
 		return nil, fmt.Errorf("/thread:create requires 1 argument (screenId)")
 	}
-	
+
 	screenId := pk.Args[0]
-	
+
 	// Resolve UI IDs
 	ids, err := resolveUiIds(ctx, pk, R_Session)
 	if err != nil {
 		return nil, fmt.Errorf("/thread:create error: %w", err)
 	}
-	
+
 	// Create a new thread
 	thread, err := sstore.CreateThread(ctx, ids.SessionId, screenId, "Thread")
 	if err != nil {
 		return nil, fmt.Errorf("/thread:create error: cannot create thread: %w", err)
 	}
-	
+
 	log.Printf("[ThreadCreateCommand] Created new thread: %s", thread.ThreadId)
-	
+
 	// Push updated thread list
 	if threads, lerr := sstore.ListThreads(ctx, screenId); lerr == nil {
 		items := make([]map[string]string, 0, len(threads))
@@ -206,117 +234,117 @@ func ThreadCreateCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) 
 		}
 		update := scbus.MakeUpdatePacket()
 		update.AddUpdate(sstore.ThreadsUpdateType{ScreenId: screenId, Items: items})
-		
+
 		// Also set this as the active thread
 		update.AddUpdate(sstore.ActiveThreadIdUpdateType{
 			ScreenId: screenId,
 			ThreadId: thread.ThreadId,
 		})
-		
+
 		return update, nil
 	}
-	
+
 	return nil, nil
 }
 
 func ThreadAddLineCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {
 	log.Printf("[ThreadAddLineCommand] Called with args: %v", pk.Args)
-	
+
 	// Need lineId and threadId
 	if len(pk.Args) < 2 {
 		return nil, fmt.Errorf("/thread:addline requires 2 arguments (lineId and threadId)")
 	}
-	
+
 	lineId := pk.Args[0]
 	threadId := pk.Args[1]
-	
+
 	log.Printf("[ThreadAddLineCommand] lineId: %s, threadId: %s", lineId, threadId)
-	
+
 	// Resolve UI IDs
 	ids, err := resolveUiIds(ctx, pk, R_Session|R_Screen)
 	if err != nil {
 		return nil, fmt.Errorf("/thread:addline error: %w", err)
 	}
-	
+
 	// Get the line to verify it exists
 	line, err := sstore.GetLineById(ctx, ids.ScreenId, lineId)
 	if err != nil {
 		return nil, fmt.Errorf("/thread:addline error: line not found: %v", err)
 	}
-	
+
 	log.Printf("[ThreadAddLineCommand] Found line type: %s, existing linestate: %+v", line.LineType, line.LineState)
-	
+
 	// Call the AddExistingLineToThread function from sstore
 	err = sstore.AddExistingLineToThread(ctx, threadId, ids.ScreenId, lineId)
 	if err != nil {
 		return nil, fmt.Errorf("/thread:addline error: %v", err)
 	}
-	
+
 	// Get the updated line to send back
 	line, err = sstore.GetLineById(ctx, ids.ScreenId, lineId)
 	if err != nil {
 		return nil, fmt.Errorf("/thread:addline error getting updated line: %v", err)
 	}
-	
+
 	log.Printf("[ThreadAddLineCommand] Updated line linestate: %+v", line.LineState)
-	
+
 	// Send line update to frontend
 	update := scbus.MakeUpdatePacket()
 	sstore.AddLineUpdate(update, line, nil)
-	
+
 	return update, nil
 }
 
 func ThreadRemoveLineCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {
 	log.Printf("[ThreadRemoveLineCommand] Called with args: %v", pk.Args)
-	
+
 	// Need lineId and threadId
 	if len(pk.Args) < 2 {
 		return nil, fmt.Errorf("/thread:removeline requires 2 arguments (lineId and threadId)")
 	}
-	
+
 	lineId := pk.Args[0]
 	threadId := pk.Args[1]
-	
+
 	log.Printf("[ThreadRemoveLineCommand] lineId: %s, threadId: %s", lineId, threadId)
-	
+
 	// Resolve UI IDs
 	ids, err := resolveUiIds(ctx, pk, R_Session|R_Screen)
 	if err != nil {
 		return nil, fmt.Errorf("/thread:removeline error: %w", err)
 	}
-	
+
 	// Get the line to verify it exists
 	line, err := sstore.GetLineById(ctx, ids.ScreenId, lineId)
 	if err != nil {
 		return nil, fmt.Errorf("/thread:removeline error: line not found: %v", err)
 	}
-	
+
 	log.Printf("[ThreadRemoveLineCommand] Found line type: %s, existing linestate: %+v", line.LineType, line.LineState)
-	
+
 	// Don't allow removing thread mode lines from their thread
 	if line.LineType == sstore.LineTypeThreadMode {
 		return nil, fmt.Errorf("/thread:removeline error: cannot remove thread mode lines from threads")
 	}
-	
+
 	// Call the RemoveLineFromThread function from sstore
 	err = sstore.RemoveLineFromThread(ctx, threadId, ids.ScreenId, lineId)
 	if err != nil {
 		return nil, fmt.Errorf("/thread:removeline error: %v", err)
 	}
-	
+
 	// Get the updated line to send back
 	line, err = sstore.GetLineById(ctx, ids.ScreenId, lineId)
 	if err != nil {
 		return nil, fmt.Errorf("/thread:removeline error getting updated line: %v", err)
 	}
-	
+
 	log.Printf("[ThreadRemoveLineCommand] Updated line linestate: %+v", line.LineState)
-	
+
 	// Send line update to frontend
 	update := scbus.MakeUpdatePacket()
 	sstore.AddLineUpdate(update, line, nil)
-	
+
 	return update, nil
 }
 
@@ -393,7 +421,7 @@ func ThreadCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus
 			return nil, fmt.Errorf("/thread error: cannot create thread: %w", terr)
 		}
 		threadId = thr.ThreadId
-		
+
 		// Push updated thread list immediately after creating new thread
 		// This ensures the frontend knows about the new thread before we send the line update
 		if threads, lerr := sstore.ListThreads(ctx, ids.ScreenId); lerr == nil {
@@ -404,7 +432,7 @@ func ThreadCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus
 			update := scbus.MakeUpdatePacket()
 			update.AddUpdate(sstore.ThreadsUpdateType{ScreenId: ids.ScreenId, Items: items})
 			scbus.MainUpdateBus.DoUpdate(update)
-			
+
 		}
 	}
 
@@ -412,7 +440,7 @@ func ThreadCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus
 	if err := sstore.AddThreadLine(ctx, threadId, ids.ScreenId, line); err != nil {
 		return nil, fmt.Errorf("/thread error: cannot add thread line: %w", err)
 	}
-	
+
 	// Add threadid to line state so frontend knows which thread this line belongs to
 	// AddThreadLine will also update this in the database, but we need it here for the immediate update
 	if line.LineState == nil {
@@ -426,7 +454,7 @@ func ThreadCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus
 	if err != nil {
 		return nil, fmt.Errorf("/thread error: cannot get thread lines: %w", err)
 	}
-	
+
 	// Check if the last thread line has a pending command (status "waiting")
 	// If so, mark it as rejected before proceeding with new request
 	if len(threadLines) > 0 {
@@ -436,7 +464,7 @@ func ThreadCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus
 			if err != nil {
 				log.Printf("thread error: failed to reject pending command: %v\n", err)
 			}
-			
+
 			// Send update to frontend
 			updatedLine, _ := sstore.GetLineById(ctx, ids.ScreenId, lastLine.LineId)
 			if updatedLine != nil {
@@ -445,7 +473,7 @@ func ThreadCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus
 					updatedLine.LineState = make(map[string]interface{})
 				}
 				updatedLine.LineState["cmdexecutionstatus"] = "rejected"
-				
+
 				update := scbus.MakeUpdatePacket()
 				sstore.AddLineUpdate(update, updatedLine, nil)
 				scbus.MainUpdateBus.DoUpdate(update)
@@ -466,7 +494,7 @@ func ThreadCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus
 					Role:    "user",
 					Content: fmt.Sprintf("Command executed: %s", cmdInfo.CmdStr),
 				})
-				
+
 				// Add the command output if available
 				if cmdInfo.Status == sstore.CmdStatusDone || cmdInfo.Status == sstore.CmdStatusError {
 					outputPath, err := scbase.PtyOutFile(ids.ScreenId, tline.CmdLineId)
@@ -487,7 +515,7 @@ func ThreadCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus
 				}
 			}
 		}
-		
+
 		// Add user messages
 		if tline.UserQuery != "" {
 			conversation = append(conversation, packet.OpenAIPromptMessageType{
@@ -520,8 +548,8 @@ func ThreadCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus
 	go func() {
 		// Create a new context that won't be canceled when the parent function returns
 		bgCtx := context.Background()
-		originalPk := pk  // Save original command packet for later use
-		originalIds := ids  // Save original ids for later use
+		originalPk := pk   // Save original command packet for later use
+		originalIds := ids // Save original ids for later use
 		response, err := RunThreadMode(bgCtx, pk, clientData, conversation, provider)
 		if err != nil {
 			writeErrorToPty(cmd, fmt.Sprintf("thread error: %v", err), 0)
@@ -566,7 +594,7 @@ func ThreadCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus
 							if err != nil {
 								log.Printf("thread error updating assistant response: %v\n", err)
 							}
-							
+
 							// For thread mode, write the JSON to PTY for the frontend to parse
 							// The ThreadModeRenderer expects this format
 							err = writeTextToPty(bgCtx, cmd, responseText, &outputPos)
@@ -580,37 +608,30 @@ func ThreadCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus
 								if err != nil {
 									log.Printf("thread error updating command: %v\n", err)
 								}
-								
+
 								// Get execution mode from client AI options
 								executionMode := "manual" // default to manual
 								if clientData.AIOpts != nil && clientData.AIOpts.ThreadExecutionMode != "" {
 									executionMode = clientData.AIOpts.ThreadExecutionMode
 								}
 								log.Printf("Thread execution mode: %s\n", executionMode)
-								
-								if executionMode == "manual" {
-									// Don't execute immediately - mark as waiting
-									err = sstore.UpdateThreadLineCmdExecutionStatus(bgCtx, threadId, ids.ScreenId, line.LineId, "waiting")
-									if err != nil {
-										log.Printf("thread error updating cmd execution status: %v\n", err)
+
+								// Determine if command should be executed automatically
+								shouldExecuteAuto := false
+								if executionMode == "full-auto" {
+									shouldExecuteAuto = true
+								} else if executionMode == "semi-auto" {
+									// Check if command matches allowed patterns
+									allowCommands := []string{}
+									if clientData.AIOpts != nil && clientData.AIOpts.AllowCommands != nil {
+										allowCommands = clientData.AIOpts.AllowCommands
 									}
-									
-									// Send line update to frontend with cmd_execution_status
-									updatedLine, err := sstore.GetLineById(bgCtx, ids.ScreenId, line.LineId)
-									if err == nil && updatedLine != nil {
-										// Add cmd_execution_status to line state for frontend
-										if updatedLine.LineState == nil {
-											updatedLine.LineState = make(map[string]interface{})
-										}
-										updatedLine.LineState["cmdexecutionstatus"] = "waiting"
-										
-										update := scbus.MakeUpdatePacket()
-										sstore.AddLineUpdate(update, updatedLine, nil)
-										scbus.MainUpdateBus.DoUpdate(update)
-										log.Printf("thread sent line update with waiting status\n")
-									}
-								} else if executionMode == "full-auto" {
-									// Execute command immediately (current behavior)
+									shouldExecuteAuto = isCommandAllowed(threadResp.Command, allowCommands)
+									log.Printf("Semi-auto mode: command '%s' auto-execute: %v", threadResp.Command, shouldExecuteAuto)
+								}
+
+								if shouldExecuteAuto {
+									// Execute command immediately (full-auto or semi-auto with allowed command)
 									cmdExecLineId, err := ExecuteCommandInThread(bgCtx, ids.SessionId, threadId, ids.ScreenId, line.LineId, threadResp.Command, &ids.Remote.RemotePtr)
 									if err != nil {
 										log.Printf("thread error executing command: %v\n", err)
@@ -622,7 +643,7 @@ func ThreadCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus
 										if err != nil {
 											log.Printf("thread error updating thread line with cmdlineid: %v\n", err)
 										}
-										
+
 										// Send line update to frontend so it knows about the cmdexeclineid
 										updatedLine, err := sstore.GetLineById(bgCtx, ids.ScreenId, line.LineId)
 										if err == nil && updatedLine != nil {
@@ -634,15 +655,36 @@ func ThreadCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus
 												}
 												updatedLine.LineState["cmdexeclineid"] = threadLineData.CmdLineId
 											}
-											
+
 											update := scbus.MakeUpdatePacket()
 											sstore.AddLineUpdate(update, updatedLine, nil)
 											scbus.MainUpdateBus.DoUpdate(update)
 											log.Printf("thread sent line update with cmdexeclineid: %s\n", cmdExecLineId)
 										}
-										
+
 										// Start multi-turn execution loop
 										go startMultiTurnExecution(bgCtx, originalPk, clientData, &originalIds, threadId, cmdExecLineId, threadResp.Command)
+									}
+								} else {
+									// Manual mode or semi-auto with disallowed command - mark as waiting
+									err = sstore.UpdateThreadLineCmdExecutionStatus(bgCtx, threadId, ids.ScreenId, line.LineId, "waiting")
+									if err != nil {
+										log.Printf("thread error updating cmd execution status: %v\n", err)
+									}
+
+									// Send line update to frontend with cmd_execution_status
+									updatedLine, err := sstore.GetLineById(bgCtx, ids.ScreenId, line.LineId)
+									if err == nil && updatedLine != nil {
+										// Add cmd_execution_status to line state for frontend
+										if updatedLine.LineState == nil {
+											updatedLine.LineState = make(map[string]interface{})
+										}
+										updatedLine.LineState["cmdexecutionstatus"] = "waiting"
+
+										update := scbus.MakeUpdatePacket()
+										sstore.AddLineUpdate(update, updatedLine, nil)
+										scbus.MainUpdateBus.DoUpdate(update)
+										log.Printf("thread sent line update with waiting status\n")
 									}
 								}
 							}
@@ -683,35 +725,35 @@ func ThreadCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus
 	}
 	// Store as a list since a line can belong to multiple threads
 	line.LineState["threadids"] = []string{threadId}
-	
+
 	log.Printf("[ThreadCommand] Sending line update with threadids: %v for line %s, activeThreadId should be: %s", line.LineState["threadids"], line.LineId, threadId)
-	
+
 	update := scbus.MakeUpdatePacket()
 	sstore.AddLineUpdate(update, line, cmd)
 	update.AddUpdate(*screen)
-	
+
 	// Also send the current thread ID so frontend can update activeThreadId if needed
 	update.AddUpdate(sstore.ActiveThreadIdUpdateType{
 		ScreenId: ids.ScreenId,
 		ThreadId: threadId,
 	})
-	
+
 	return update, nil
 }
 
 // startMultiTurnExecution handles the continuous execution loop for thread mode
 // It waits for command output, sends it to AI, and executes the next command
-func startMultiTurnExecution(ctx context.Context, pk *scpacket.FeCommandPacketType, 
-	clientData *sstore.ClientData, ids *resolvedIds, threadId string, 
+func startMultiTurnExecution(ctx context.Context, pk *scpacket.FeCommandPacketType,
+	clientData *sstore.ClientData, ids *resolvedIds, threadId string,
 	prevCmdLineId string, prevCommand string) {
-	
+
 	maxIterations := 10
 	iteration := 0
 	provider := ""
 	if providerArg, ok := pk.Kwargs["provider"]; ok {
 		provider = providerArg
 	}
-	
+
 	for iteration < maxIterations {
 		// Step 1: Wait for previous command to complete and get output
 		output, exitCode := waitForCommandOutput(ctx, ids.ScreenId, prevCmdLineId)
@@ -719,19 +761,19 @@ func startMultiTurnExecution(ctx context.Context, pk *scpacket.FeCommandPacketTy
 			log.Printf("Failed to get command output for %s\n", prevCmdLineId)
 			break
 		}
-		
+
 		// Step 2: Format command output as user input
-		commandOutput := fmt.Sprintf("Command: %s\nExit Code: %d\nOutput:\n%s", 
+		commandOutput := fmt.Sprintf("Command: %s\nExit Code: %d\nOutput:\n%s",
 			prevCommand, exitCode, output)
-		
+
 		// Truncate if too long
 		if len(commandOutput) > 10000 {
 			commandOutput = commandOutput[:10000] + "\n... (output truncated)"
 		}
-		
+
 		// Step 3: Create NEW thread line
 		newLineId := scbase.GenWaveUUID()
-		
+
 		// Create term options
 		termOpts := sstore.TermOpts{
 			Rows:       shellutil.DefaultTermRows,
@@ -739,7 +781,7 @@ func startMultiTurnExecution(ctx context.Context, pk *scpacket.FeCommandPacketTy
 			FlexRows:   true,
 			MaxPtySize: remote.DefaultMaxPtySize,
 		}
-		
+
 		// Create a minimal cmd for AI analysis display
 		newCmd := &sstore.CmdType{
 			ScreenId:  ids.ScreenId,
@@ -750,33 +792,33 @@ func startMultiTurnExecution(ctx context.Context, pk *scpacket.FeCommandPacketTy
 			TermOpts:  termOpts,
 			Status:    sstore.CmdStatusDone,
 		}
-		
+
 		// Copy FeState from remote if available
 		if ids.Remote != nil && ids.Remote.FeState != nil {
 			newCmd.FeState = ids.Remote.FeState
 		}
-		
+
 		// Step 4: Add thread mode line to database
 		newLine, err := sstore.AddThreadModeLine(ctx, ids.ScreenId, DefaultUserId, newCmd)
 		if err != nil {
 			log.Printf("Error creating thread line: %v\n", err)
 			break
 		}
-		
+
 		// Step 5: Create PTY file for new line
 		err = sstore.CreateCmdPtyFile(ctx, ids.ScreenId, newLineId, termOpts.MaxPtySize)
 		if err != nil {
 			log.Printf("Error creating PTY file: %v\n", err)
 			break
 		}
-		
+
 		// Step 6: Associate with thread
 		err = sstore.AddThreadLine(ctx, threadId, ids.ScreenId, newLine)
 		if err != nil {
 			log.Printf("Error adding to thread: %v\n", err)
 			break
 		}
-		
+
 		// Add thread ID to line state
 		// AddThreadLine will also update this in the database, but we need it here for the immediate update
 		if newLine.LineState == nil {
@@ -784,25 +826,25 @@ func startMultiTurnExecution(ctx context.Context, pk *scpacket.FeCommandPacketTy
 		}
 		// Store as a list since a line can belong to multiple threads
 		newLine.LineState["threadids"] = []string{threadId}
-		
+
 		// Step 7: Send line update to frontend immediately
 		update := scbus.MakeUpdatePacket()
 		sstore.AddLineUpdate(update, newLine, newCmd)
 		scbus.MainUpdateBus.DoUpdate(update)
-		
+
 		// Step 8: Save command output as user query
 		err = sstore.UpdateThreadLineUserQuery(ctx, threadId, ids.ScreenId, newLineId, commandOutput)
 		if err != nil {
 			log.Printf("Error updating user query: %v\n", err)
 		}
-		
+
 		// Step 9: Build conversation including all thread history
 		threadLines, err := sstore.GetThreadLinesByThread(ctx, threadId)
 		if err != nil {
 			log.Printf("Error getting thread lines: %v\n", err)
 			break
 		}
-		
+
 		// Build conversation from thread lines
 		conversation := []packet.OpenAIPromptMessageType{}
 		for _, tline := range threadLines {
@@ -819,27 +861,27 @@ func startMultiTurnExecution(ctx context.Context, pk *scpacket.FeCommandPacketTy
 				})
 			}
 		}
-		
+
 		// Add current command output as user message
 		conversation = append(conversation, packet.OpenAIPromptMessageType{
 			Role:    "user",
 			Content: commandOutput,
 		})
-		
+
 		// Step 10: Get AI response for this new line
 		response, err := RunThreadMode(ctx, pk, clientData, conversation, provider)
 		if err != nil {
 			writeErrorToPty(newCmd, fmt.Sprintf("AI error: %v", err), 0)
 			break
 		}
-		
+
 		// Step 11: Handle streaming response
 		var outputPos int64 = 0
 		var fullResponse strings.Builder
 		var nextCommand string
 		packetTimeout := OpenAIPacketTimeout
-		
-		streamLoop:
+
+	streamLoop:
 		for {
 			select {
 			case <-time.After(packetTimeout):
@@ -850,7 +892,7 @@ func startMultiTurnExecution(ctx context.Context, pk *scpacket.FeCommandPacketTy
 					// Stream closed, parse response
 					responseText := fullResponse.String()
 					log.Printf("[startMultiTurnExecution] AI response: %s", responseText)
-					
+
 					// Try to parse as JSON for structured output
 					threadResp, err := ParseThreadModeResponse(responseText)
 					if err != nil {
@@ -871,13 +913,13 @@ func startMultiTurnExecution(ctx context.Context, pk *scpacket.FeCommandPacketTy
 						if err != nil {
 							log.Printf("Error updating assistant response: %v\n", err)
 						}
-						
+
 						// Write JSON to PTY for frontend
 						err = writeTextToPty(ctx, newCmd, responseText, &outputPos)
 						if err != nil {
 							log.Printf("Error writing response to PTY: %v", err)
 						}
-						
+
 						// Check if there's a command
 						if threadResp.Command != "" {
 							nextCommand = threadResp.Command
@@ -885,29 +927,42 @@ func startMultiTurnExecution(ctx context.Context, pk *scpacket.FeCommandPacketTy
 							if err != nil {
 								log.Printf("Error updating command: %v\n", err)
 							}
-							
+
 							// Get execution mode from client AI options
 							executionMode := "manual" // default to manual
 							if clientData.AIOpts != nil && clientData.AIOpts.ThreadExecutionMode != "" {
 								executionMode = clientData.AIOpts.ThreadExecutionMode
 							}
-							
-							// For multi-turn, we only continue if in full-auto mode
+
+							// Determine if command should be executed automatically in multi-turn
+							shouldExecuteMultiTurnAuto := false
 							if executionMode == "full-auto" {
+								shouldExecuteMultiTurnAuto = true
+							} else if executionMode == "semi-auto" {
+								// Check if command matches allowed patterns
+								allowCommands := []string{}
+								if clientData.AIOpts != nil && clientData.AIOpts.AllowCommands != nil {
+									allowCommands = clientData.AIOpts.AllowCommands
+								}
+								shouldExecuteMultiTurnAuto = isCommandAllowed(nextCommand, allowCommands)
+								log.Printf("Multi-turn semi-auto: command '%s' auto-execute: %v", nextCommand, shouldExecuteMultiTurnAuto)
+							}
+
+							if shouldExecuteMultiTurnAuto {
 								// Step 12: Execute command for this new line
-								cmdExecLineId, err := ExecuteCommandInThread(ctx, ids.SessionId, threadId, 
+								cmdExecLineId, err := ExecuteCommandInThread(ctx, ids.SessionId, threadId,
 									ids.ScreenId, newLineId, nextCommand, &ids.Remote.RemotePtr)
 								if err != nil {
 									log.Printf("Error executing command: %v\n", err)
 									break streamLoop
 								}
-								
+
 								// Update thread line with cmdExecLineId
 								err = sstore.UpdateThreadLineCmdLineId(ctx, threadId, ids.ScreenId, newLineId, cmdExecLineId)
 								if err != nil {
 									log.Printf("Error updating thread line with cmdlineid: %v\n", err)
 								}
-								
+
 								// Send line update with cmdexeclineid
 								updatedLine, err := sstore.GetLineById(ctx, ids.ScreenId, newLineId)
 								if err == nil && updatedLine != nil {
@@ -919,23 +974,23 @@ func startMultiTurnExecution(ctx context.Context, pk *scpacket.FeCommandPacketTy
 										}
 										updatedLine.LineState["cmdexeclineid"] = threadLineData.CmdLineId
 									}
-									
+
 									update := scbus.MakeUpdatePacket()
 									sstore.AddLineUpdate(update, updatedLine, nil)
 									scbus.MainUpdateBus.DoUpdate(update)
 									log.Printf("Sent line update with cmdexeclineid: %s\n", cmdExecLineId)
 								}
-								
+
 								// Update for next iteration
 								prevCmdLineId = cmdExecLineId
 								prevCommand = nextCommand
 							} else {
-								// Manual mode - mark as waiting and stop
+								// Manual mode or semi-auto with disallowed command - mark as waiting and stop
 								err = sstore.UpdateThreadLineCmdExecutionStatus(ctx, threadId, ids.ScreenId, newLineId, "waiting")
 								if err != nil {
 									log.Printf("Error updating cmd execution status: %v\n", err)
 								}
-								
+
 								// Send line update to frontend with cmd_execution_status
 								updatedLine, err := sstore.GetLineById(ctx, ids.ScreenId, newLineId)
 								if err == nil && updatedLine != nil {
@@ -944,20 +999,20 @@ func startMultiTurnExecution(ctx context.Context, pk *scpacket.FeCommandPacketTy
 										updatedLine.LineState = make(map[string]interface{})
 									}
 									updatedLine.LineState["cmdexecutionstatus"] = "waiting"
-									
+
 									update := scbus.MakeUpdatePacket()
 									sstore.AddLineUpdate(update, updatedLine, nil)
 									scbus.MainUpdateBus.DoUpdate(update)
-									log.Printf("Multi-turn: sent line update with waiting status\n")
+									log.Printf("Multi-turn: sent line update with waiting status (manual mode or semi-auto disallowed command)\n")
 								}
-								// Stop multi-turn execution in manual mode
+								// Stop multi-turn execution - user approval needed
 								nextCommand = ""
 							}
 						}
 					}
 					break streamLoop
 				}
-				
+
 				// Extract and accumulate text content
 				if streamPk.Error != "" {
 					log.Printf("[startMultiTurnExecution] Received error packet: %s", streamPk.Error)
@@ -969,17 +1024,17 @@ func startMultiTurnExecution(ctx context.Context, pk *scpacket.FeCommandPacketTy
 				}
 			}
 		}
-		
+
 		// Step 13: Check if we should continue
 		if nextCommand == "" {
 			log.Printf("Thread execution complete - no more commands")
 			break
 		}
-		
+
 		iteration++
 		log.Printf("Thread execution iteration %d complete, moving to next command", iteration)
 	}
-	
+
 	if iteration >= maxIterations {
 		log.Printf("Thread execution stopped - max iterations reached")
 	}
@@ -989,7 +1044,7 @@ func startMultiTurnExecution(ctx context.Context, pk *scpacket.FeCommandPacketTy
 func waitForCommandOutput(ctx context.Context, screenId string, cmdLineId string) (string, int) {
 	maxWaitTime := 5 * time.Minute
 	startTime := time.Now()
-	
+
 	for {
 		// Check if context is cancelled
 		select {
@@ -997,20 +1052,20 @@ func waitForCommandOutput(ctx context.Context, screenId string, cmdLineId string
 			return "", -1
 		default:
 		}
-		
+
 		// Check timeout
 		if time.Since(startTime) > maxWaitTime {
 			log.Printf("Timeout waiting for command %s to complete", cmdLineId)
 			return "Command execution timeout", -1
 		}
-		
+
 		// Get command status
 		cmd, err := sstore.GetCmdByScreenId(ctx, screenId, cmdLineId)
 		if err != nil {
 			log.Printf("Error getting command: %v", err)
 			return "", -1
 		}
-		
+
 		if cmd.Status == sstore.CmdStatusDone || cmd.Status == sstore.CmdStatusError {
 			// Read PTY output
 			ptyPath, err := scbase.PtyOutFile(screenId, cmdLineId)
@@ -1023,10 +1078,10 @@ func waitForCommandOutput(ctx context.Context, screenId string, cmdLineId string
 				log.Printf("Error reading PTY output: %v", err)
 				return "Error reading command output", cmd.ExitCode
 			}
-			
+
 			return string(outputBytes), cmd.ExitCode
 		}
-		
+
 		// Wait a bit before checking again
 		time.Sleep(100 * time.Millisecond)
 	}

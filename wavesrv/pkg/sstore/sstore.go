@@ -774,6 +774,7 @@ type AzureOpenAIOptsType struct {
 	BaseURL          string `json:"baseurl,omitempty"`
 	DeploymentName   string `json:"deploymentname,omitempty"`
 	APIToken         string `json:"apitoken"`
+	APIVersion       string `json:"apiversion,omitempty"`
 	ConnectionStatus string `json:"connectionstatus,omitempty"`
 	Enabled          bool   `json:"enabled,omitempty"`
 }

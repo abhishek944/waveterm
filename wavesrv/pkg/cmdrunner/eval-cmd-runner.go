@@ -82,9 +82,6 @@ func EvalCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.U
 	ctxWithHistory := context.WithValue(ctx, historyContextKey, &historyContext)
 	var update scbus.UpdatePacket
 	newPk, rtnErr := EvalMetaCommand(ctxWithHistory, pk)
-	if rtnErr == nil {
-		log.Printf("[DEBUG] EvalCommand: After EvalMetaCommand - MetaCmd=%s, MetaSubCmd=%s, Args=%v\n", newPk.MetaCmd, newPk.MetaSubCmd, newPk.Args)
-	}
 
 	if rtnErr == nil {
 		update, rtnErr = HandleCommand(ctxWithHistory, newPk)

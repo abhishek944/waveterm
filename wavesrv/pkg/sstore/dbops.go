@@ -1232,11 +1232,6 @@ func GetRemoteInstance(ctx context.Context, sessionId string, screenId string, r
 	txErr := WithTx(ctx, func(tx *TxWrap) error {
 		query := `SELECT * FROM remote_instance WHERE sessionid = ? AND screenid = ? AND remoteownerid = ? AND remoteid = ? AND name = ?`
 		ri = dbutil.GetMapGen[*RemoteInstance](tx, query, sessionId, screenId, remotePtr.OwnerId, remotePtr.RemoteId, remotePtr.Name)
-		if ri != nil {
-			log.Printf("[DEBUG] GetRemoteInstance: Found remote instance with StateBaseHash=%s, sessionId=%s, screenId=%s, remoteName=%s\n", ri.StateBaseHash, sessionId, screenId, remotePtr.Name)
-		} else {
-			log.Printf("[DEBUG] GetRemoteInstance: No remote instance found for sessionId=%s, screenId=%s, remotePtr=%+v\n", sessionId, screenId, remotePtr)
-		}
 		return nil
 	})
 	if txErr != nil {

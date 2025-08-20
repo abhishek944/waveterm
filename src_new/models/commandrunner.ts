@@ -678,6 +678,9 @@ class CommandRunner {
         if (opts.azure?.enabled != null) {
             kwargs["azureenabled"] = String(opts.azure.enabled);
         }
+        if (opts.azure?.apiversion != null) {
+            kwargs["azureapiversion"] = opts.azure.apiversion;
+        }
         console.log("[CommandRunner.setAIOpts] Sending kwargs:", kwargs);
         return GlobalModel.submitCommand("client", "set", null, kwargs, false);
     }
