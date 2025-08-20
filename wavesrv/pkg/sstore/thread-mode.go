@@ -32,7 +32,6 @@ func AddThreadModeLine(ctx context.Context, screenId string, userId string, cmd 
 	return rtnLine, nil
 }
 
-
 // makeNewLineThreadMode creates a new thread mode line
 func makeNewLineThreadMode(screenId string, userId string, lineId string) *LineType {
 	rtn := &LineType{}
@@ -51,25 +50,32 @@ func makeNewLineThreadMode(screenId string, userId string, lineId string) *LineT
 // GetThreadLinesByThread retrieves all thread lines for a given thread
 func GetThreadLinesByThread(ctx context.Context, threadId string) ([]*ThreadLineType, error) {
 	return WithTxRtn(ctx, func(tx *TxWrap) ([]*ThreadLineType, error) {
-		query := `SELECT tl.screenid, tl.lineid, tl.linenum, tl.userquery, tl.assistantresponse, tl.command,
+		query := `SELECT tl.threadid, tl.screenid, tl.lineid, tl.linenum, tl.userquery, tl.assistantresponse, tl.command,
                          tl.cmdlineid, tl.cmd_execution_status, tl.created_ts
                   FROM thread_line tl WHERE tl.threadid = ? ORDER BY tl.linenum`
+		log.Printf("[GetThreadLinesByThread] DEBUG: Executing query for threadId %s: %s", threadId, query)
 		rtn := dbutil.SelectMappable[*ThreadLineType](tx, query, threadId)
+		log.Printf("[GetThreadLinesByThread] DEBUG: Query returned %d records for threadId %s", len(rtn), threadId)
+		for i, tl := range rtn {
+			log.Printf("[GetThreadLinesByThread] DEBUG: Record %d - threadid=%s, lineid=%s, cmdexecutionstatus=%s, cmdlineid=%s",
+				i, tl.ThreadId, tl.LineId, tl.CmdExecutionStatus, tl.CmdLineId)
+		}
 		return rtn, nil
 	})
 }
 
 // ThreadLineType represents a thread mode conversation line
 type ThreadLineType struct {
-	ScreenId          string `json:"screenid"`
-	LineId            string `json:"lineid"`
-	LineNum           int64  `json:"linenum"`
-	UserQuery         string `json:"userquery"`
-	AssistantResponse string `json:"assistantresponse"`
-	Command           string `json:"command,omitempty"`
-	CmdLineId         string `json:"cmdlineid,omitempty"`
+	ThreadId           string `json:"threadid"`
+	ScreenId           string `json:"screenid"`
+	LineId             string `json:"lineid"`
+	LineNum            int64  `json:"linenum"`
+	UserQuery          string `json:"userquery"`
+	AssistantResponse  string `json:"assistantresponse"`
+	Command            string `json:"command,omitempty"`
+	CmdLineId          string `json:"cmdlineid,omitempty"`
 	CmdExecutionStatus string `json:"cmdexecutionstatus,omitempty"` // waiting, accepted, rejected
-	CreatedTs         int64  `json:"createdts"`
+	CreatedTs          int64  `json:"createdts"`
 }
 
 func (ThreadLineType) UseDBMap() {}
@@ -128,9 +134,27 @@ func UpdateThreadLineCmdLineId(ctx context.Context, threadId string, screenId st
 
 // UpdateThreadLineCmdExecutionStatus updates the cmd_execution_status for a thread line
 func UpdateThreadLineCmdExecutionStatus(ctx context.Context, threadId string, screenId string, lineId string, status string) error {
+	log.Printf("[UpdateThreadLineCmdExecutionStatus] DEBUG: Called with threadId=%s, screenId=%s, lineId=%s, status='%s'",
+		threadId, screenId, lineId, status)
 	return WithTx(ctx, func(tx *TxWrap) error {
 		query := `UPDATE thread_line SET cmd_execution_status = ? WHERE threadid = ? AND screenid = ? AND lineid = ?`
-		tx.Exec(query, status, threadId, screenId, lineId)
+		log.Printf("[UpdateThreadLineCmdExecutionStatus] DEBUG: Executing query: %s with values [%s, %s, %s, %s]",
+			query, status, threadId, screenId, lineId)
+
+		result := tx.Exec(query, status, threadId, screenId, lineId)
+		rowsAffected, err := result.RowsAffected()
+		if err != nil {
+			log.Printf("[UpdateThreadLineCmdExecutionStatus] ERROR: Failed to get rows affected: %v", err)
+		} else {
+			log.Printf("[UpdateThreadLineCmdExecutionStatus] DEBUG: Query affected %d rows", rowsAffected)
+		}
+
+		// Verify the update worked by querying the record
+		verifyQuery := `SELECT cmd_execution_status FROM thread_line WHERE threadid = ? AND screenid = ? AND lineid = ?`
+		var savedStatus string
+		tx.Get(&savedStatus, verifyQuery, threadId, screenId, lineId)
+		log.Printf("[UpdateThreadLineCmdExecutionStatus] DEBUG: Verification query returned cmd_execution_status='%s'", savedStatus)
+
 		return nil
 	})
 }
@@ -209,25 +233,25 @@ func AddThreadLine(ctx context.Context, threadId string, screenId string, line *
 		query := `INSERT INTO thread_line (threadid, screenid, lineid, linenum, created_ts) VALUES (?, ?, ?, ?, ?)`
 		tx.Exec(query, threadId, screenId, line.LineId, line.LineNum, time.Now().UnixMilli())
 		tx.Exec(`UPDATE thread SET updatedts = ? WHERE threadid = ?`, time.Now().UnixMilli(), threadId)
-		
+
 		// Get all thread IDs for this line (in case it belongs to multiple threads)
 		query = `SELECT DISTINCT threadid FROM thread_line WHERE lineid = ?`
 		threadIds := tx.SelectStrings(query, line.LineId)
-		
+
 		// Update line state with all thread IDs
 		if line.LineState == nil {
 			line.LineState = make(map[string]interface{})
 		}
 		line.LineState["threadids"] = threadIds
-		
+
 		log.Printf("[AddThreadLine] Setting threadids for line %s: %v, full linestate: %+v", line.LineId, threadIds, line.LineState)
-		
+
 		// Update the line in database
 		err := UpdateLineState(tx.Context(), screenId, line.LineId, line.LineState)
 		if err != nil {
 			return fmt.Errorf("failed to update line state: %v", err)
 		}
-		
+
 		return nil
 	})
 }
@@ -244,10 +268,17 @@ func GetThreadById(ctx context.Context, threadId string) (*ThreadType, error) {
 // GetThreadLineByLineId fetches thread line data by line ID
 func GetThreadLineByLineId(ctx context.Context, lineId string) (*ThreadLineType, error) {
 	return WithTxRtn(ctx, func(tx *TxWrap) (*ThreadLineType, error) {
-		query := `SELECT tl.screenid, tl.lineid, tl.linenum, tl.userquery, tl.assistantresponse, tl.command,
+		query := `SELECT tl.threadid, tl.screenid, tl.lineid, tl.linenum, tl.userquery, tl.assistantresponse, tl.command,
                          tl.cmdlineid, tl.cmd_execution_status, tl.created_ts
                   FROM thread_line tl WHERE tl.lineid = ?`
+		log.Printf("[GetThreadLineByLineId] DEBUG: Executing query for lineId %s: %s", lineId, query)
 		threadLine := dbutil.GetMappable[*ThreadLineType](tx, query, lineId)
+		if threadLine != nil {
+			log.Printf("[GetThreadLineByLineId] DEBUG: Found thread line - threadid=%s, lineid=%s, cmdexecutionstatus=%s, cmdlineid=%s",
+				threadLine.ThreadId, threadLine.LineId, threadLine.CmdExecutionStatus, threadLine.CmdLineId)
+		} else {
+			log.Printf("[GetThreadLineByLineId] DEBUG: No thread line found for lineId %s", lineId)
+		}
 		return threadLine, nil
 	})
 }
@@ -260,7 +291,7 @@ func AddExistingLineToThread(ctx context.Context, threadId string, screenId stri
 		if err != nil || line == nil {
 			return fmt.Errorf("line not found: %v", err)
 		}
-		
+
 		// Check if this line is already in the thread
 		query := `SELECT COUNT(*) FROM thread_line WHERE threadid = ? AND lineid = ?`
 		var count int
@@ -270,36 +301,36 @@ func AddExistingLineToThread(ctx context.Context, threadId string, screenId stri
 			log.Printf("[AddExistingLineToThread] Line %s already in thread %s, skipping", lineId, threadId)
 			return nil
 		}
-		
+
 		// Add to thread_line table
 		// For command lines, we need to set cmdlineid to the same as lineid
 		var cmdLineId *string
 		if line.LineType == LineTypeCmd {
 			cmdLineId = &lineId
 		}
-		
+
 		query = `INSERT INTO thread_line (threadid, screenid, lineid, linenum, cmdlineid, created_ts) VALUES (?, ?, ?, ?, ?, ?)`
 		tx.Exec(query, threadId, screenId, lineId, line.LineNum, cmdLineId, time.Now().UnixMilli())
-		
+
 		// Update thread's updatedts
 		tx.Exec(`UPDATE thread SET updatedts = ? WHERE threadid = ?`, time.Now().UnixMilli(), threadId)
-		
+
 		// Get all thread IDs for this line
 		query = `SELECT DISTINCT threadid FROM thread_line WHERE lineid = ?`
 		threadIds := tx.SelectStrings(query, lineId)
-		
+
 		// Update line state with all thread IDs
 		if line.LineState == nil {
 			line.LineState = make(map[string]interface{})
 		}
 		line.LineState["threadids"] = threadIds
-		
+
 		// Update the line in database
 		err = UpdateLineState(tx.Context(), screenId, lineId, line.LineState)
 		if err != nil {
 			return fmt.Errorf("failed to update line state: %v", err)
 		}
-		
+
 		return nil
 	})
 }
@@ -311,43 +342,43 @@ func RemoveLineFromThread(ctx context.Context, threadId string, screenId string,
 		if err != nil || line == nil {
 			return fmt.Errorf("line not found: %v", err)
 		}
-		
+
 		// Don't allow removing thread mode lines
 		if line.LineType == LineTypeThreadMode {
 			return fmt.Errorf("cannot remove thread mode lines from threads")
 		}
-		
+
 		// Remove from thread_line table
 		query := `DELETE FROM thread_line WHERE threadid = ? AND lineid = ?`
 		tx.Exec(query, threadId, lineId)
-		
+
 		// Update thread's updatedts
 		tx.Exec(`UPDATE thread SET updatedts = ? WHERE threadid = ?`, time.Now().UnixMilli(), threadId)
-		
+
 		// Get all remaining thread IDs for this line
 		query = `SELECT DISTINCT threadid FROM thread_line WHERE lineid = ?`
 		threadIds := tx.SelectStrings(query, lineId)
-		
+
 		// Update line state with remaining thread IDs
 		if line.LineState == nil {
 			line.LineState = make(map[string]interface{})
 		}
-		
+
 		if len(threadIds) > 0 {
 			line.LineState["threadids"] = threadIds
 		} else {
 			// Remove threadids from linestate if line is not in any threads
 			delete(line.LineState, "threadids")
 		}
-		
+
 		// Update the line in database
 		err = UpdateLineState(tx.Context(), screenId, lineId, line.LineState)
 		if err != nil {
 			return fmt.Errorf("failed to update line state: %v", err)
 		}
-		
+
 		log.Printf("[RemoveLineFromThread] Removed line %s from thread %s, remaining threads: %v", lineId, threadId, threadIds)
-		
+
 		return nil
 	})
 }

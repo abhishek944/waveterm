@@ -123,10 +123,10 @@ func ThreadInstructionCommand(ctx context.Context, pk *scpacket.FeCommandPacketT
 			log.Printf("error updating thread line with cmdlineid: %v\n", err)
 		}
 
-		// Send update with cmd_execution_status and cmdexeclineid
+		// Update line state in database
 		updatedLine, _ := sstore.GetLineById(ctx, ids.ScreenId, lineId)
 		if updatedLine != nil {
-			// Add cmd_execution_status to line state for frontend
+			// Prepare line state updates
 			if updatedLine.LineState == nil {
 				updatedLine.LineState = make(map[string]interface{})
 			}
@@ -137,6 +137,17 @@ func ThreadInstructionCommand(ctx context.Context, pk *scpacket.FeCommandPacketT
 			if threadLineData != nil && threadLineData.CmdLineId != "" {
 				updatedLine.LineState["cmdexeclineid"] = threadLineData.CmdLineId
 			}
+
+			// Persist the line state to database
+			err = sstore.UpdateLineState(ctx, ids.ScreenId, lineId, updatedLine.LineState)
+			if err != nil {
+				log.Printf("[ThreadInstructionCommand] ERROR: Failed to update line state: %v\n", err)
+			} else {
+				log.Printf("[ThreadInstructionCommand] DEBUG: Successfully updated line state with cmdexecutionstatus=accepted")
+			}
+
+			// Get fresh line from database after update
+			updatedLine, _ = sstore.GetLineById(ctx, ids.ScreenId, lineId)
 		}
 		update := scbus.MakeUpdatePacket()
 		sstore.AddLineUpdate(update, updatedLine, nil)
@@ -174,20 +185,34 @@ func ThreadInstructionCommand(ctx context.Context, pk *scpacket.FeCommandPacketT
 		return update, nil
 
 	case "cmd_reject":
+		log.Printf("[ThreadInstructionCommand] DEBUG: Handling cmd_reject for threadId=%s, lineId=%s", threadId, lineId)
 		// Update status to rejected
 		err = sstore.UpdateThreadLineCmdExecutionStatus(ctx, threadId, ids.ScreenId, lineId, "rejected")
 		if err != nil {
-			log.Printf("error updating cmd execution status: %v\n", err)
+			log.Printf("[ThreadInstructionCommand] ERROR: Failed to update cmd execution status to rejected: %v\n", err)
+		} else {
+			log.Printf("[ThreadInstructionCommand] DEBUG: Successfully called UpdateThreadLineCmdExecutionStatus with 'rejected'")
 		}
 
-		// Send update with cmd_execution_status
+		// Update line state in database
 		updatedLine, _ := sstore.GetLineById(ctx, ids.ScreenId, lineId)
 		if updatedLine != nil {
-			// Add cmd_execution_status to line state for frontend
+			// Prepare line state updates
 			if updatedLine.LineState == nil {
 				updatedLine.LineState = make(map[string]interface{})
 			}
 			updatedLine.LineState["cmdexecutionstatus"] = "rejected"
+
+			// Persist the line state to database
+			err = sstore.UpdateLineState(ctx, ids.ScreenId, lineId, updatedLine.LineState)
+			if err != nil {
+				log.Printf("[ThreadInstructionCommand] ERROR: Failed to update line state: %v\n", err)
+			} else {
+				log.Printf("[ThreadInstructionCommand] DEBUG: Successfully updated line state with cmdexecutionstatus=rejected")
+			}
+
+			// Get fresh line from database after update
+			updatedLine, _ = sstore.GetLineById(ctx, ids.ScreenId, lineId)
 		}
 		update := scbus.MakeUpdatePacket()
 		sstore.AddLineUpdate(update, updatedLine, nil)
@@ -459,20 +484,35 @@ func ThreadCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus
 	// If so, mark it as rejected before proceeding with new request
 	if len(threadLines) > 0 {
 		lastLine := threadLines[len(threadLines)-1]
+		log.Printf("[ThreadCommand] DEBUG: Last thread line has cmdexecutionstatus='%s'", lastLine.CmdExecutionStatus)
 		if lastLine.CmdExecutionStatus == "waiting" {
+			log.Printf("[ThreadCommand] DEBUG: Auto-rejecting pending command for threadId=%s, lineId=%s", threadId, lastLine.LineId)
 			err = sstore.UpdateThreadLineCmdExecutionStatus(ctx, threadId, ids.ScreenId, lastLine.LineId, "rejected")
 			if err != nil {
-				log.Printf("thread error: failed to reject pending command: %v\n", err)
+				log.Printf("[ThreadCommand] ERROR: Failed to auto-reject pending command: %v\n", err)
+			} else {
+				log.Printf("[ThreadCommand] DEBUG: Successfully auto-rejected pending command")
 			}
 
-			// Send update to frontend
+			// Update line state in database and send update to frontend
 			updatedLine, _ := sstore.GetLineById(ctx, ids.ScreenId, lastLine.LineId)
 			if updatedLine != nil {
-				// Add cmd_execution_status to line state for frontend
+				// Prepare line state updates
 				if updatedLine.LineState == nil {
 					updatedLine.LineState = make(map[string]interface{})
 				}
 				updatedLine.LineState["cmdexecutionstatus"] = "rejected"
+
+				// Persist the line state to database
+				err = sstore.UpdateLineState(ctx, ids.ScreenId, lastLine.LineId, updatedLine.LineState)
+				if err != nil {
+					log.Printf("[ThreadCommand] ERROR: Failed to update line state for auto-rejection: %v\n", err)
+				} else {
+					log.Printf("[ThreadCommand] DEBUG: Successfully updated line state with auto-rejected cmdexecutionstatus")
+				}
+
+				// Get fresh line from database after update
+				updatedLine, _ = sstore.GetLineById(ctx, ids.ScreenId, lastLine.LineId)
 
 				update := scbus.MakeUpdatePacket()
 				sstore.AddLineUpdate(update, updatedLine, nil)
@@ -672,14 +712,25 @@ func ThreadCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus
 										log.Printf("thread error updating cmd execution status: %v\n", err)
 									}
 
-									// Send line update to frontend with cmd_execution_status
+									// Update line state in database and send line update to frontend
 									updatedLine, err := sstore.GetLineById(bgCtx, ids.ScreenId, line.LineId)
 									if err == nil && updatedLine != nil {
-										// Add cmd_execution_status to line state for frontend
+										// Prepare line state updates
 										if updatedLine.LineState == nil {
 											updatedLine.LineState = make(map[string]interface{})
 										}
 										updatedLine.LineState["cmdexecutionstatus"] = "waiting"
+
+										// Persist the line state to database
+										err = sstore.UpdateLineState(bgCtx, ids.ScreenId, line.LineId, updatedLine.LineState)
+										if err != nil {
+											log.Printf("thread ERROR: Failed to update line state for waiting status: %v\n", err)
+										} else {
+											log.Printf("thread DEBUG: Successfully updated line state with waiting cmdexecutionstatus\n")
+										}
+
+										// Get fresh line from database after update
+										updatedLine, _ = sstore.GetLineById(bgCtx, ids.ScreenId, line.LineId)
 
 										update := scbus.MakeUpdatePacket()
 										sstore.AddLineUpdate(update, updatedLine, nil)
@@ -991,14 +1042,25 @@ func startMultiTurnExecution(ctx context.Context, pk *scpacket.FeCommandPacketTy
 									log.Printf("Error updating cmd execution status: %v\n", err)
 								}
 
-								// Send line update to frontend with cmd_execution_status
+								// Update line state in database and send line update to frontend
 								updatedLine, err := sstore.GetLineById(ctx, ids.ScreenId, newLineId)
 								if err == nil && updatedLine != nil {
-									// Add cmd_execution_status to line state for frontend
+									// Prepare line state updates
 									if updatedLine.LineState == nil {
 										updatedLine.LineState = make(map[string]interface{})
 									}
 									updatedLine.LineState["cmdexecutionstatus"] = "waiting"
+
+									// Persist the line state to database
+									err = sstore.UpdateLineState(ctx, ids.ScreenId, newLineId, updatedLine.LineState)
+									if err != nil {
+										log.Printf("Multi-turn ERROR: Failed to update line state for waiting status: %v\n", err)
+									} else {
+										log.Printf("Multi-turn DEBUG: Successfully updated line state with waiting cmdexecutionstatus\n")
+									}
+
+									// Get fresh line from database after update
+									updatedLine, _ = sstore.GetLineById(ctx, ids.ScreenId, newLineId)
 
 									update := scbus.MakeUpdatePacket()
 									sstore.AddLineUpdate(update, updatedLine, nil)

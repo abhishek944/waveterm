@@ -14,8 +14,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jmoiron/sqlx"
-	"github.com/sawka/txwrap"
 	"github.com/abhishek944/waveterm/waveshell/pkg/base"
 	"github.com/abhishek944/waveterm/waveshell/pkg/packet"
 	"github.com/abhishek944/waveterm/waveshell/pkg/shellapi"
@@ -23,6 +21,8 @@ import (
 	"github.com/abhishek944/waveterm/wavesrv/pkg/dbutil"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/scbase"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/scbus"
+	"github.com/jmoiron/sqlx"
+	"github.com/sawka/txwrap"
 )
 
 var updateWriterCVar = sync.NewCond(&sync.Mutex{})
@@ -353,22 +353,12 @@ func GetScreenLinesById(ctx context.Context, screenId string) (*ScreenLinesType,
 		if screen == nil {
 			return nil, nil
 		}
+
 		query = `SELECT * FROM line WHERE screenid = ? ORDER BY linenum`
 		screen.Lines = dbutil.SelectMappable[*LineType](tx, query, screen.ScreenId)
 		query = `SELECT * FROM cmd WHERE screenid = ?`
 		screen.Cmds = dbutil.SelectMapsGen[*CmdType](tx, query, screen.ScreenId)
-		
-		// Debug logging for thread lines
-		for _, line := range screen.Lines {
-			if line.LineType == LineTypeThreadMode || line.LineType == LineTypeThreadModeCmd {
-				log.Printf("[DEBUG] GetScreenLinesById: Found thread line - lineId=%s, lineType=%s, text=%s, linestate=%+v\n", line.LineId, line.LineType, line.Text, line.LineState)
-			}
-		}
-		for _, cmd := range screen.Cmds {
-			if strings.HasPrefix(cmd.CmdStr, "/thread") {
-				log.Printf("[DEBUG] GetScreenLinesById: Found thread cmd - lineId=%s, cmdStr=%s, status=%s, rawCmdStr=%s\n", cmd.LineId, cmd.CmdStr, cmd.Status, cmd.RawCmdStr)
-			}
-		}
+
 		return screen, nil
 	})
 }
@@ -1195,10 +1185,8 @@ func GetRemoteStatePtr(ctx context.Context, sessionId string, screenId string, r
 			return err
 		}
 		if ri == nil {
-			log.Printf("[DEBUG] GetRemoteStatePtr: RemoteInstance is nil for sessionId=%s, screenId=%s, remotePtr=%+v\n", sessionId, screenId, remotePtr)
 			return nil
 		}
-		log.Printf("[DEBUG] GetRemoteStatePtr: RemoteInstance found - StateBaseHash=%s, StateDiffHashArr=%v, remotePtr=%+v\n", ri.StateBaseHash, ri.StateDiffHashArr, remotePtr)
 		ssptr = &packet.ShellStatePtr{ri.StateBaseHash, ri.StateDiffHashArr}
 		return nil
 	})
@@ -1683,12 +1671,12 @@ func GetSessionStats(ctx context.Context, sessionId string) (*SessionStatsType, 
 }
 
 const (
-	RemoteField_Alias       = "alias"       // string
-	RemoteField_ConnectMode = "connectmode" // string
-	RemoteField_SSHKey      = "sshkey"      // string
-	RemoteField_SSHPassword = "sshpassword" // string
-	RemoteField_Color       = "color"       // string
-	RemoteField_ShellPref   = "shellpref"   // string
+	RemoteField_Alias           = "alias"           // string
+	RemoteField_ConnectMode     = "connectmode"     // string
+	RemoteField_SSHKey          = "sshkey"          // string
+	RemoteField_SSHPassword     = "sshpassword"     // string
+	RemoteField_Color           = "color"           // string
+	RemoteField_ShellPref       = "shellpref"       // string
 	RemoteField_SSHProxyCommand = "sshproxycommand" // string
 )
 

@@ -52,12 +52,12 @@ const ThreadModeRenderer: React.FC<{
     const decoderRef = React.useRef(new TextDecoder());
     const rawContentRef = React.useRef("");
     const isSidebar = screen.getContainerType() === appconst.LineContainer_Sidebar;
-    
+
     // Track linestate changes to ensure reactivity
     const lineState = line.linestate || {};
     const cmdExecLineId = lineState.cmdexeclineid as string | undefined;
     const cmdExecutionStatus = lineState.cmdexecutionstatus as string | undefined;
-    
+
     // Helper function to attempt JSON parsing
     const tryParseResponse = (text: string) => {
         try {
@@ -73,15 +73,12 @@ const ThreadModeRenderer: React.FC<{
     };
 
     React.useEffect(() => {
-        
         // No special handling for sidebar view anymore - thread lines show normally in sidebar
         // The command execution is now a separate line that gets added to sidebar
         // Register a lightweight renderer to receive PTY streaming (main view only)
         const model: RendererModel = {
-            initialize: (_params) => {
-            },
-            dispose: () => {
-            },
+            initialize: (_params) => {},
+            dispose: () => {},
             reload: (_delayMs: number) => {},
             giveFocus: () => {},
             updateOpts: (_opts) => {},
@@ -90,7 +87,7 @@ const ThreadModeRenderer: React.FC<{
                 const chunk = decoderRef.current.decode(data);
                 rawContentRef.current += chunk;
                 setContent((prev) => prev + chunk);
-                
+
                 // Try to parse as JSON for structured response
                 tryParseResponse(rawContentRef.current);
             },
@@ -113,7 +110,7 @@ const ThreadModeRenderer: React.FC<{
                     const initial = decoderRef.current.decode(ptyDataResult.data);
                     rawContentRef.current = initial;
                     setContent(initial);
-                    
+
                     // Try to parse as JSON
                     tryParseResponse(initial);
                 }
@@ -141,7 +138,7 @@ const ThreadModeRenderer: React.FC<{
             }
         }
     }, [loading, content, parsedResponse, line.lineid, line.linenum, onHeightChange]);
-    
+
     // Watch for cmdexeclineid changes and update sidebar if it's showing this thread line
     React.useEffect(() => {
         if (cmdExecLineId && !isSidebar) {
@@ -149,7 +146,7 @@ const ThreadModeRenderer: React.FC<{
             if (activeScreen) {
                 const curViewOpts = activeScreen.viewOpts.get();
                 const sidebarLineId = curViewOpts?.sidebar?.sidebarlineid;
-                
+
                 // If sidebar is showing this thread line, update it to show the command execution
                 if (sidebarLineId === line.lineid) {
                     const newViewOpts = {
@@ -172,18 +169,23 @@ const ThreadModeRenderer: React.FC<{
 
     const fontSize = GlobalModel.getTermFontSize();
     const fontFamily = GlobalModel.getTermFontFamily();
-    
+
     const handleCommandClick = async (e: React.MouseEvent) => {
         e.stopPropagation();
-        
+
         if (!parsedResponse?.command || isSidebar) {
             return; // Don't open sidebar if we're already in the sidebar
         }
-        
+
         // Re-read the cmdExecLineId from line state to get the latest value
         const latestCmdExecLineId = line.linestate?.cmdexeclineid as string | undefined;
-        console.log("[ThreadModeRenderer] handleCommandClick - cmdExecLineId:", cmdExecLineId, "latest:", latestCmdExecLineId);
-        
+        console.log(
+            "[ThreadModeRenderer] handleCommandClick - cmdExecLineId:",
+            cmdExecLineId,
+            "latest:",
+            latestCmdExecLineId
+        );
+
         // Open sidebar immediately
         console.log("[ThreadModeRenderer] Opening sidebar...");
         try {
@@ -193,7 +195,7 @@ const ThreadModeRenderer: React.FC<{
             console.error("[ThreadModeRenderer] Error opening sidebar:", err);
             return; // Don't continue if sidebar open failed
         }
-        
+
         if (latestCmdExecLineId) {
             // We have cmdExecLineId, show command execution
             console.log("[ThreadModeRenderer] Have cmdExecLineId, will open sidebar with it");
@@ -218,7 +220,13 @@ const ThreadModeRenderer: React.FC<{
                     if (latestCmdExecLineId) {
                         console.log("[ThreadModeRenderer] Calling sidebar add with line:", latestCmdExecLineId);
                         try {
-                            await GlobalModel.submitCommand("sidebar", "add", null, { nohist: "1", line: latestCmdExecLineId }, false);
+                            await GlobalModel.submitCommand(
+                                "sidebar",
+                                "add",
+                                null,
+                                { nohist: "1", line: latestCmdExecLineId },
+                                false
+                            );
                             console.log("[ThreadModeRenderer] Sidebar add command completed");
                         } catch (err) {
                             console.error("[ThreadModeRenderer] Error calling sidebar add:", err);
@@ -251,7 +259,13 @@ const ThreadModeRenderer: React.FC<{
                         activeScreen.viewOpts.set(newViewOpts);
                     })();
                     try {
-                        await GlobalModel.submitCommand("sidebar", "add", null, { nohist: "1", line: line.lineid }, false);
+                        await GlobalModel.submitCommand(
+                            "sidebar",
+                            "add",
+                            null,
+                            { nohist: "1", line: line.lineid },
+                            false
+                        );
                         console.log("[ThreadModeRenderer] (else branch) Sidebar add completed");
                     } catch (err) {
                         console.error("[ThreadModeRenderer] (else branch) Error:", err);
@@ -263,24 +277,62 @@ const ThreadModeRenderer: React.FC<{
 
     const renderContent = () => {
         if (loading) {
-            return <div className="text-white/50 italic">Loading...</div>;
+            return (
+                <div className="flex items-center justify-center py-8">
+                    <div className="text-center">
+                        <div className="inline-flex items-center space-x-2 mb-3">
+                            <div className="w-2 h-2 bg-gradient-to-r from-slate-300 to-slate-500 rounded-full animate-pulse"></div>
+                            <div
+                                className="w-2 h-2 bg-gradient-to-r from-slate-300 to-slate-500 rounded-full animate-pulse"
+                                style={{ animationDelay: "0.2s" }}
+                            ></div>
+                            <div
+                                className="w-2 h-2 bg-gradient-to-r from-slate-300 to-slate-500 rounded-full animate-pulse"
+                                style={{ animationDelay: "0.4s" }}
+                            ></div>
+                        </div>
+                        <div className="text-transparent bg-gradient-to-r from-slate-200 via-slate-300 to-slate-400 bg-clip-text text-lg font-medium animate-pulse">
+                            Loading...
+                        </div>
+                    </div>
+                </div>
+            );
         }
-        
+
         if (content === "") {
-            return <div className="text-white/50 italic">No content available</div>;
+            return (
+                <div className="flex items-center justify-center py-8">
+                    <div className="text-center">
+                        <div className="inline-flex items-center space-x-2 mb-3">
+                            <div className="w-2 h-2 bg-gradient-to-r from-slate-300 to-slate-500 rounded-full animate-pulse"></div>
+                            <div
+                                className="w-2 h-2 bg-gradient-to-r from-slate-300 to-slate-500 rounded-full animate-pulse"
+                                style={{ animationDelay: "0.2s" }}
+                            ></div>
+                            <div
+                                className="w-2 h-2 bg-gradient-to-r from-slate-300 to-slate-500 rounded-full animate-pulse"
+                                style={{ animationDelay: "0.4s" }}
+                            ></div>
+                        </div>
+                        <div className="text-transparent bg-gradient-to-r from-slate-200 via-slate-300 to-slate-400 bg-clip-text text-lg font-medium animate-pulse">
+                            AI thinking...
+                        </div>
+                    </div>
+                </div>
+            );
         }
-        
+
         // Thread lines now render the same way in both main view and sidebar
-        
+
         // If we have parsed structured response, render it nicely
         if (parsedResponse) {
             return (
                 <>
                     {parsedResponse.explanation && (
                         <div className="mb-3">
-                            <Markdown 
-                                text={parsedResponse.explanation} 
-                                onClickExecute={(cmd) => GlobalModel.submitRawCommand(cmd, false, true)} 
+                            <Markdown
+                                text={parsedResponse.explanation}
+                                onClickExecute={(cmd) => GlobalModel.submitRawCommand(cmd, false, true)}
                             />
                         </div>
                     )}
@@ -291,7 +343,7 @@ const ThreadModeRenderer: React.FC<{
                                     const clientData = GlobalModel.clientData.get();
                                     const executionMode = clientData?.aiopts?.threadExecutionMode || "manual";
                                     const isExecuted = !!cmdExecLineId;
-                                    
+
                                     if (cmdExecutionStatus === "waiting") {
                                         return "Command suggested:";
                                     } else if (cmdExecutionStatus === "rejected") {
@@ -305,15 +357,15 @@ const ThreadModeRenderer: React.FC<{
                                     }
                                 })()}
                             </div>
-                            <div 
-                                className="mt-2 p-3 bg-black/50 rounded font-mono text-sm border border-white/10"
-                            >
+                            <div className="mt-2 p-3 bg-black/50 rounded font-mono text-sm border border-white/10">
                                 <div className="flex items-start">
                                     {/* Command div - takes 70% width */}
                                     <div className="w-[70%] pr-3 overflow-hidden">
-                                        <div className="text-green-400 break-words whitespace-pre-wrap">{parsedResponse.command}</div>
+                                        <div className="text-green-400 break-words whitespace-pre-wrap">
+                                            {parsedResponse.command}
+                                        </div>
                                     </div>
-                                    
+
                                     {/* Buttons div - takes 30% width */}
                                     <div className="w-[30%] flex justify-end items-center flex-shrink-0">
                                         {(() => {
@@ -321,7 +373,7 @@ const ThreadModeRenderer: React.FC<{
                                             const executionMode = clientData?.aiopts?.threadExecutionMode || "manual";
                                             const isExecuted = !!cmdExecLineId;
                                             const hasCommand = !!parsedResponse?.command;
-                                                                                        
+
                                             if (cmdExecutionStatus === "waiting") {
                                                 // Accept/Reject buttons
                                                 return (
@@ -332,10 +384,10 @@ const ThreadModeRenderer: React.FC<{
                                                             onClick={async (e) => {
                                                                 e.stopPropagation();
                                                                 await GlobalModel.submitCommand(
-                                                                    "thread", 
-                                                                    "instruction", 
-                                                                    ["cmd_accept", line.lineid], 
-                                                                    { nohist: "1" }, 
+                                                                    "thread",
+                                                                    "instruction",
+                                                                    ["cmd_accept", line.lineid],
+                                                                    { nohist: "1" },
                                                                     false
                                                                 );
                                                             }}
@@ -348,10 +400,10 @@ const ThreadModeRenderer: React.FC<{
                                                             onClick={async (e) => {
                                                                 e.stopPropagation();
                                                                 await GlobalModel.submitCommand(
-                                                                    "thread", 
-                                                                    "instruction", 
-                                                                    ["cmd_reject", line.lineid], 
-                                                                    { nohist: "1" }, 
+                                                                    "thread",
+                                                                    "instruction",
+                                                                    ["cmd_reject", line.lineid],
+                                                                    { nohist: "1" },
                                                                     false
                                                                 );
                                                             }}
@@ -360,14 +412,18 @@ const ThreadModeRenderer: React.FC<{
                                                         </button>
                                                     </div>
                                                 );
-                                            } else if (cmdExecutionStatus === "accepted" || (cmdExecutionStatus === undefined && hasCommand)) {
+                                            } else if (
+                                                cmdExecutionStatus === "accepted" ||
+                                                (cmdExecutionStatus === undefined && hasCommand)
+                                            ) {
                                                 // View in sidebar button (show when accepted or when status is undefined but has command)
                                                 return (
-                                                    <div 
+                                                    <div
                                                         className="text-white/30 text-xs cursor-pointer hover:text-white/50"
                                                         onClick={handleCommandClick}
                                                     >
-                                                        <i className="fa-sharp fa-regular fa-arrow-right-to-bracket" /> View in sidebar
+                                                        <i className="fa-sharp fa-regular fa-arrow-right-to-bracket" />{" "}
+                                                        View in sidebar
                                                     </div>
                                                 );
                                             } else if (cmdExecutionStatus === "rejected") {
@@ -388,7 +444,7 @@ const ThreadModeRenderer: React.FC<{
                 </>
             );
         }
-        
+
         // Otherwise render as plain text/markdown
         // Try to parse as JSON one more time in case it's a structured response
         try {
@@ -398,9 +454,9 @@ const ThreadModeRenderer: React.FC<{
                     <>
                         {parsed.explanation && (
                             <div className="mb-3">
-                                <Markdown 
-                                    text={parsed.explanation} 
-                                    onClickExecute={(cmd) => GlobalModel.submitRawCommand(cmd, false, true)} 
+                                <Markdown
+                                    text={parsed.explanation}
+                                    onClickExecute={(cmd) => GlobalModel.submitRawCommand(cmd, false, true)}
                                 />
                             </div>
                         )}
@@ -411,7 +467,7 @@ const ThreadModeRenderer: React.FC<{
                                         const clientData = GlobalModel.clientData.get();
                                         const executionMode = clientData?.aiopts?.threadExecutionMode || "manual";
                                         const isExecuted = !!cmdExecLineId;
-                                        
+
                                         if (executionMode === "manual" && !isExecuted) {
                                             return "Command suggested:";
                                         } else if (isExecuted) {
@@ -421,24 +477,25 @@ const ThreadModeRenderer: React.FC<{
                                         }
                                     })()}
                                 </div>
-                                <div 
-                                    className="mt-2 p-3 bg-black/50 rounded font-mono text-sm border border-white/10"
-                                >
+                                <div className="mt-2 p-3 bg-black/50 rounded font-mono text-sm border border-white/10">
                                     <div className="flex items-start">
                                         {/* Command div - takes 70% width */}
                                         <div className="w-[70%] pr-3 overflow-hidden">
-                                            <div className="text-green-400 break-words whitespace-pre-wrap">{parsed.command}</div>
+                                            <div className="text-green-400 break-words whitespace-pre-wrap">
+                                                {parsed.command}
+                                            </div>
                                         </div>
-                                        
+
                                         {/* Buttons div - takes 30% width */}
                                         <div className="w-[30%] flex justify-end items-center flex-shrink-0">
                                             {(() => {
                                                 const clientData = GlobalModel.clientData.get();
-                                                const executionMode = clientData?.aiopts?.threadExecutionMode || "manual";
+                                                const executionMode =
+                                                    clientData?.aiopts?.threadExecutionMode || "manual";
                                                 const isExecuted = !!cmdExecLineId;
-                                                
+
                                                 const hasCommand = !!parsed?.command;
-                                                
+
                                                 if (cmdExecutionStatus === "waiting") {
                                                     // Accept/Reject buttons
                                                     return (
@@ -449,10 +506,10 @@ const ThreadModeRenderer: React.FC<{
                                                                 onClick={async (e) => {
                                                                     e.stopPropagation();
                                                                     await GlobalModel.submitCommand(
-                                                                        "thread", 
-                                                                        "instruction", 
-                                                                        ["cmd_accept", line.lineid], 
-                                                                        { nohist: "1" }, 
+                                                                        "thread",
+                                                                        "instruction",
+                                                                        ["cmd_accept", line.lineid],
+                                                                        { nohist: "1" },
                                                                         false
                                                                     );
                                                                 }}
@@ -465,10 +522,10 @@ const ThreadModeRenderer: React.FC<{
                                                                 onClick={async (e) => {
                                                                     e.stopPropagation();
                                                                     await GlobalModel.submitCommand(
-                                                                        "thread", 
-                                                                        "instruction", 
-                                                                        ["cmd_reject", line.lineid], 
-                                                                        { nohist: "1" }, 
+                                                                        "thread",
+                                                                        "instruction",
+                                                                        ["cmd_reject", line.lineid],
+                                                                        { nohist: "1" },
                                                                         false
                                                                     );
                                                                 }}
@@ -477,14 +534,18 @@ const ThreadModeRenderer: React.FC<{
                                                             </button>
                                                         </div>
                                                     );
-                                                } else if (cmdExecutionStatus === "accepted" || (cmdExecutionStatus === undefined && hasCommand)) {
+                                                } else if (
+                                                    cmdExecutionStatus === "accepted" ||
+                                                    (cmdExecutionStatus === undefined && hasCommand)
+                                                ) {
                                                     // View in sidebar button (show when accepted or when status is undefined but has command)
                                                     return (
-                                                        <div 
+                                                        <div
                                                             className="text-white/30 text-xs cursor-pointer hover:text-white/50"
                                                             onClick={handleCommandClick}
                                                         >
-                                                            <i className="fa-sharp fa-regular fa-arrow-right-to-bracket" /> View in sidebar
+                                                            <i className="fa-sharp fa-regular fa-arrow-right-to-bracket" />{" "}
+                                                            View in sidebar
                                                         </div>
                                                     );
                                                 } else if (cmdExecutionStatus === "rejected") {
@@ -508,16 +569,17 @@ const ThreadModeRenderer: React.FC<{
         } catch (e) {
             // Not JSON, render as markdown
         }
-        
-        return (
-            <Markdown text={content} onClickExecute={(cmd) => GlobalModel.submitRawCommand(cmd, false, true)} />
-        );
+
+        return <Markdown text={content} onClickExecute={(cmd) => GlobalModel.submitRawCommand(cmd, false, true)} />;
     };
 
     return (
-        <div className="bg-white/2 rounded-md my-1 overflow-hidden" style={{ fontSize: fontSize, fontFamily: fontFamily }}>
+        <div
+            className="bg-white/2 rounded-md my-1 overflow-hidden"
+            style={{ fontSize: fontSize, fontFamily: fontFamily }}
+        >
             <div className="p-2.5">
-                <div className="w-full" style={{ overflowWrap: 'break-word', wordBreak: 'break-word' }}>
+                <div className="w-full" style={{ overflowWrap: "break-word", wordBreak: "break-word" }}>
                     {renderContent()}
                 </div>
             </div>
@@ -595,13 +657,57 @@ const AgentModeRenderer: React.FC<{
     const fontFamily = GlobalModel.getTermFontFamily();
 
     return (
-        <div className="bg-white/2 rounded-md my-1 overflow-hidden" style={{ fontSize: fontSize, fontFamily: fontFamily }}>
+        <div
+            className="bg-white/2 rounded-md my-1 overflow-hidden"
+            style={{ fontSize: fontSize, fontFamily: fontFamily }}
+        >
             <div className="p-2.5 agent-mode-content">
-                <div className="w-full" style={{ overflowWrap: 'break-word', wordBreak: 'break-word' }}>
-                    {loading && <div className="text-white/50 italic">Loading...</div>}
-                    {!loading && content === "" && <div className="text-white/50 italic">No content available</div>}
+                <div className="w-full" style={{ overflowWrap: "break-word", wordBreak: "break-word" }}>
+                    {loading && (
+                        <div className="flex items-center justify-center py-8">
+                            <div className="text-center">
+                                <div className="inline-flex items-center space-x-2 mb-3">
+                                    <div className="w-2 h-2 bg-gradient-to-r from-slate-300 to-slate-500 rounded-full animate-pulse"></div>
+                                    <div
+                                        className="w-2 h-2 bg-gradient-to-r from-slate-300 to-slate-500 rounded-full animate-pulse"
+                                        style={{ animationDelay: "0.2s" }}
+                                    ></div>
+                                    <div
+                                        className="w-2 h-2 bg-gradient-to-r from-slate-300 to-slate-500 rounded-full animate-pulse"
+                                        style={{ animationDelay: "0.4s" }}
+                                    ></div>
+                                </div>
+                                <div className="text-transparent bg-gradient-to-r from-slate-200 via-slate-300 to-slate-400 bg-clip-text text-lg font-medium animate-pulse">
+                                    Loading...
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    {!loading && content === "" && (
+                        <div className="flex items-center justify-center py-8">
+                            <div className="text-center">
+                                <div className="inline-flex items-center space-x-2 mb-3">
+                                    <div className="w-2 h-2 bg-gradient-to-r from-slate-300 to-slate-500 rounded-full animate-pulse"></div>
+                                    <div
+                                        className="w-2 h-2 bg-gradient-to-r from-slate-300 to-slate-500 rounded-full animate-pulse"
+                                        style={{ animationDelay: "0.2s" }}
+                                    ></div>
+                                    <div
+                                        className="w-2 h-2 bg-gradient-to-r from-slate-300 to-slate-500 rounded-full animate-pulse"
+                                        style={{ animationDelay: "0.4s" }}
+                                    ></div>
+                                </div>
+                                <div className="text-transparent bg-gradient-to-r from-slate-200 via-slate-300 to-slate-400 bg-clip-text text-lg font-medium animate-pulse">
+                                    AI thinking...
+                                </div>
+                            </div>
+                        </div>
+                    )}
                     {!loading && content !== "" && (
-                        <Markdown text={content} onClickExecute={(cmd) => GlobalModel.submitRawCommand(cmd, false, true)} />
+                        <Markdown
+                            text={content}
+                            onClickExecute={(cmd) => GlobalModel.submitRawCommand(cmd, false, true)}
+                        />
                     )}
                 </div>
             </div>
@@ -630,13 +736,20 @@ const LineActions: React.FC<{ screen: LineContainerType; line: LineType; cmd: Cm
         const activeThreadId = GlobalModel.activeThreadId.get();
         const lineThreadIds = line.linestate?.threadids as string[] | undefined;
         const isInCurrentThread = !!(activeThreadId && lineThreadIds && lineThreadIds.includes(activeThreadId));
-        
+
         const clickToggleThread = async (e: React.MouseEvent) => {
             e.stopPropagation();
             // Get active thread ID
             let activeThreadId = GlobalModel.activeThreadId.get();
-            console.log("[clickToggleThread] activeThreadId:", activeThreadId, "lineId:", line.lineid, "isInCurrentThread:", isInCurrentThread);
-            
+            console.log(
+                "[clickToggleThread] activeThreadId:",
+                activeThreadId,
+                "lineId:",
+                line.lineid,
+                "isInCurrentThread:",
+                isInCurrentThread
+            );
+
             if (!activeThreadId) {
                 // Create a new thread if none is selected
                 console.log("[clickToggleThread] No active thread, creating new thread");
@@ -646,14 +759,14 @@ const LineActions: React.FC<{ screen: LineContainerType; line: LineType; cmd: Cm
                     return;
                 }
                 // Wait a bit for the activeThreadId to be set via update
-                await new Promise(resolve => setTimeout(resolve, 100));
+                await new Promise((resolve) => setTimeout(resolve, 100));
                 activeThreadId = GlobalModel.activeThreadId.get();
                 if (!activeThreadId) {
                     console.error("[clickToggleThread] Thread creation succeeded but no active thread ID");
                     return;
                 }
             }
-            
+
             if (isInCurrentThread) {
                 // Remove line from thread
                 console.log("[clickToggleThread] Removing line from thread");
@@ -671,23 +784,23 @@ const LineActions: React.FC<{ screen: LineContainerType; line: LineType; cmd: Cm
         const clickRestart = () => GlobalCommandRunner.lineRestart(line.lineid, true);
         const clickChat = async (e: React.MouseEvent) => {
             e.stopPropagation();
-            
+
             // Open the right sidebar first
             GlobalModel.rightSidebarModel.setCollapsed(false);
-            
+
             // Handle different line types
             if (line.linetype === "agent_mode") {
                 console.log("[clickChat] Agent mode - line:", line);
-                
+
                 // Agent mode uses PTY data, not termWrap - fetch it directly
                 const cmd = screen.getCmd(line);
                 if (!cmd) {
                     console.log("[clickChat] Agent mode - No cmd found");
                     return;
                 }
-                
+
                 const termContext = { screenId: cmd.screenId, lineId: line.lineid, lineNum: line.linenum };
-                
+
                 try {
                     const ptyDataResult = await getTermPtyData(termContext);
                     console.log("[clickChat] Agent mode - PTY data result:", ptyDataResult);
@@ -699,14 +812,14 @@ const LineActions: React.FC<{ screen: LineContainerType; line: LineType; cmd: Cm
                         let userInput = cmd.getCmdStr() || line.text || "";
                         console.log("[clickChat] Agent mode - User input from cmd.getCmdStr():", userInput);
                         console.log("[clickChat] Agent mode - User input from line.text:", line.text);
-                        
+
                         // Remove /agent prefix if present
                         if (userInput.startsWith("/agent ")) {
                             userInput = userInput.substring(7).trim();
                         }
                         const formattedContent = `**User Input:**\n\`\`\`\n${userInput}\n\`\`\`\n\n**AI Output:**\n\`\`\`\n${aiOutput}\n\`\`\`\n\n`;
                         console.log("[clickChat] Agent mode - Formatted content:", formattedContent);
-                        
+
                         GlobalModel.sidebarchatModel.setCmdAndOutput(
                             formattedContent,
                             "", // No separate output for agent mode
@@ -747,8 +860,11 @@ const LineActions: React.FC<{ screen: LineContainerType; line: LineType; cmd: Cm
         const clickMinimize = () => {
             const currentMinimized = line.linestate?.["wave:min"] ?? false;
             const newMinimizedState = !currentMinimized;
-            console.log(`[clickMinimize] Line ${line.lineid} - current: ${currentMinimized}, new: ${newMinimizedState}, linestate:`, line.linestate);
-            
+            console.log(
+                `[clickMinimize] Line ${line.lineid} - current: ${currentMinimized}, new: ${newMinimizedState}, linestate:`,
+                line.linestate
+            );
+
             // Use setLineState to update the wave:min property
             const newLineState = { ...(line.linestate || {}), "wave:min": newMinimizedState };
             GlobalCommandRunner.setLineState(line.screenid, line.lineid, newLineState, true)
@@ -764,7 +880,7 @@ const LineActions: React.FC<{ screen: LineContainerType; line: LineType; cmd: Cm
         };
         const clickMoveToSidebar = () => GlobalCommandRunner.screenSidebarAddLine(line.lineid);
         const clickRemoveFromSidebar = () => GlobalCommandRunner.screenSidebarRemove();
-        
+
         // Check if this line is currently in the sidebar
         const isLineInSidebar = screen.isLineIdInSidebar && screen.isLineIdInSidebar(line.lineid);
         const handleLineSettings = (e: React.MouseEvent) => {
@@ -791,10 +907,18 @@ const LineActions: React.FC<{ screen: LineContainerType; line: LineType; cmd: Cm
                         <If condition={isThreadMode || line.linetype === "thread_mode"}>
                             <div
                                 key="thread"
-                                title={line.linetype === "thread_mode" ? "Thread line" : (isInCurrentThread ? "Added to thread" : "Add to thread")}
+                                title={
+                                    line.linetype === "thread_mode"
+                                        ? "Thread line"
+                                        : isInCurrentThread
+                                        ? "Added to thread"
+                                        : "Add to thread"
+                                }
                                 className={clsx(
                                     "px-1",
-                                    line.linetype === "thread_mode" ? "text-[var(--line-actions-active-color)] cursor-default" : "cursor-pointer hover:text-[var(--line-actions-active-color)]"
+                                    line.linetype === "thread_mode"
+                                        ? "text-[var(--line-actions-active-color)] cursor-default"
+                                        : "cursor-pointer hover:text-[var(--line-actions-active-color)]"
                                 )}
                                 onClick={line.linetype === "thread_mode" ? undefined : clickToggleThread}
                             >
@@ -815,7 +939,11 @@ const LineActions: React.FC<{ screen: LineContainerType; line: LineType; cmd: Cm
                                 <i className="fa-sharp fa-regular fa-sparkles fa-fw" />
                             </div>
                         </If>
-                        <If condition={line.linetype !== "thread_mode" && line.linetype !== "agent_mode" && !isImageRenderer}>
+                        <If
+                            condition={
+                                line.linetype !== "thread_mode" && line.linetype !== "agent_mode" && !isImageRenderer
+                            }
+                        >
                             <div
                                 key="restart"
                                 title="Restart Command"
@@ -958,18 +1086,21 @@ const LineText: React.FC<{
     renderMode: RenderModeType;
     noSelect?: boolean;
 }> = observer(({ screen, line, noSelect }) => {
-    const clickHandler = React.useCallback((e: React.MouseEvent) => {
-        if (noSelect) {
-            return;
-        }
-        // Check if there's a text selection - if so, don't select the line
-        const sel = window.getSelection();
-        const selText = sel ? sel.toString() : "";
-        if (sel && sel.anchorNode && e.currentTarget.contains(sel.anchorNode) && selText.length > 0) {
-            return;
-        }
-        GlobalCommandRunner.screenSelectLine(String(line.linenum));
-    }, [line, noSelect]);
+    const clickHandler = React.useCallback(
+        (e: React.MouseEvent) => {
+            if (noSelect) {
+                return;
+            }
+            // Check if there's a text selection - if so, don't select the line
+            const sel = window.getSelection();
+            const selText = sel ? sel.toString() : "";
+            if (sel && sel.anchorNode && e.currentTarget.contains(sel.anchorNode) && selText.length > 0) {
+                return;
+            }
+            GlobalCommandRunner.screenSelectLine(String(line.linenum));
+        },
+        [line, noSelect]
+    );
 
     const onAvatarRightClick = React.useCallback(
         (e: React.MouseEvent) => {
@@ -993,20 +1124,12 @@ const LineText: React.FC<{
             name: "computed-isSelected",
         })
         .get();
-    
+
     const isThreadMode = GlobalModel.isThreadMode.get();
     const isThreaded = threadedLinesObs.has(line.lineid);
     const activeThreadId = GlobalModel.activeThreadId.get();
     const lineThreadIds = line.linestate?.threadids as string[] | undefined;
     const shouldShowShineBorder = isThreadMode && lineThreadIds && lineThreadIds.includes(activeThreadId);
-    
-    console.log("[LineText] Debug - line:", line.lineid, 
-        "linetype:", line.linetype,
-        "isThreadMode:", isThreadMode, 
-        "activeThreadId:", activeThreadId, 
-        "linestate:", line.linestate,
-        "lineThreadIds:", lineThreadIds, 
-        "shouldShowShineBorder:", shouldShowShineBorder);
 
     return (
         <>
@@ -1093,7 +1216,12 @@ const Line: React.FC<{
         return <LineText {...props} />;
     }
 
-    if (line.linetype == "cmd" || line.linetype == "agent_mode" || line.linetype == "thread_mode" || line.linetype == "thread_mode_cmd") {
+    if (
+        line.linetype == "cmd" ||
+        line.linetype == "agent_mode" ||
+        line.linetype == "thread_mode" ||
+        line.linetype == "thread_mode_cmd"
+    ) {
         return <LineCmd {...props} />;
     }
 
@@ -1195,8 +1323,8 @@ const LineCmd: React.FC<{
         const isThreadModeLine = line.linetype === "thread_mode";
         const activeThreadId = GlobalModel.activeThreadId.get();
         const lineThreadIds = line.linestate?.threadids as string[] | undefined;
-        const shouldShowShineBorder = isThreadMode && lineThreadIds && activeThreadId && lineThreadIds.includes(activeThreadId);
-        
+        const shouldShowShineBorder =
+            isThreadMode && lineThreadIds && activeThreadId && lineThreadIds.includes(activeThreadId);
 
         const mainDivCn = clsx(
             "line",
@@ -1235,7 +1363,7 @@ const LineCmd: React.FC<{
                 </style>
                 <div
                     className={clsx(mainDivCn, "flex-shrink-0 group relative", {
-                        "shine-border": shouldShowShineBorder
+                        "shine-border": shouldShowShineBorder,
                     })}
                     ref={lineRef}
                     onClick={handleClick}
@@ -1418,7 +1546,7 @@ const LineContent: React.FC<{
         !isBlank(line.renderer) && line.renderer !== "terminal" && line.renderer !== "none"
             ? PluginModel.getRendererPluginByName(line.renderer)
             : null;
-    
+
     // Access linestate through a computed to ensure reactivity
     const lineState = line.linestate || {};
     const waveMin = lineState["wave:min"];
@@ -1452,17 +1580,17 @@ const LineContent: React.FC<{
             const screenHeight = window.innerHeight;
             idealSize = {
                 ...idealSize,
-                height: Math.floor(screenHeight * 0.7)
+                height: Math.floor(screenHeight * 0.7),
             };
         } else if (line.renderer === "code") {
             // For code renderer, use 70% of screen height (same as image)
             const screenHeight = window.innerHeight;
             idealSize = {
                 ...idealSize,
-                height: Math.floor(screenHeight * 0.7)
+                height: Math.floor(screenHeight * 0.7),
             };
         }
-        
+
         return {
             context: context,
             isDone: !cmd.isRunning(),
