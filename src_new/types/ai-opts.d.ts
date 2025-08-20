@@ -3,6 +3,7 @@ type ThreadExecutionMode = "full-auto" | "semi-auto" | "manual";
 type AIOptsType = {
     default: "openai" | "azure" | "gemini";
     threadExecutionMode?: ThreadExecutionMode;
+    allowCommands?: string[];
     gemini?: GeminiOptsType;
     openai?: OpenAIOptsType;
     azure?: AzureOpenAIOptsType;

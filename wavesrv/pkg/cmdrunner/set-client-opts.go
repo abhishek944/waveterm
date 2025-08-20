@@ -6,7 +6,9 @@ package cmdrunner
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"regexp"
 	"strconv"
 
 	"github.com/abhishek944/waveterm/waveshell/pkg/utilfn"
@@ -424,6 +426,29 @@ func ClientSetCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (sc
 			aiOptsUpdated = true
 			varsUpdated = append(varsUpdated, "threadexecutionmode")
 		}
+	}
+	// Handle allow commands
+	if allowCommandsStr, found := pk.Kwargs["allowcommands"]; found {
+		var allowCommands []string
+		if allowCommandsStr != "" {
+			err := json.Unmarshal([]byte(allowCommandsStr), &allowCommands)
+			if err != nil {
+				return nil, fmt.Errorf("invalid allow commands format, must be valid JSON array: %v", err)
+			}
+			// Validate each regex pattern
+			for i, pattern := range allowCommands {
+				if pattern == "" {
+					return nil, fmt.Errorf("allow commands pattern %d cannot be empty", i+1)
+				}
+				_, err := regexp.Compile(pattern)
+				if err != nil {
+					return nil, fmt.Errorf("invalid regex pattern '%s' at position %d: %v", pattern, i+1, err)
+				}
+			}
+		}
+		aiOpts.AllowCommands = allowCommands
+		aiOptsUpdated = true
+		varsUpdated = append(varsUpdated, "allowcommands")
 	}
 	// Update AIOpts if any changes were made
 	if aiOptsUpdated {

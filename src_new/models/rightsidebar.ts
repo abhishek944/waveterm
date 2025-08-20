@@ -77,11 +77,11 @@ class RightSidebarModel implements SidebarModel {
                 return false;
             }
             if (this.tempCollapsed.get() == null) {
-                return collapsed;
+                return collapsed ?? false;
             }
             return this.tempCollapsed.get();
         }
-        return collapsed;
+        return collapsed ?? false;
     }
 
     setCollapsed(collapsed: boolean): void {

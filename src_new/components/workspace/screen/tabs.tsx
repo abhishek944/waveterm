@@ -82,10 +82,15 @@ export const ScreenTabs = observer(({ session }: { session: Session }) => {
     return (
         <div className="flex relative overflow-hidden h-[38px] z-20">
             {mainSidebarCollapsed && (
-                <div className={clsx("flex-shrink-0 h-full px-2 cursor-pointer hover:bg-gray-700 flex items-center justify-center", {
-                    "ml-16": GlobalModel.getPlatform() === "darwin",
-                })}
-                     onClick={() => GlobalModel.mainSidebarModel.setCollapsed(false)}>
+                <div
+                    className={clsx(
+                        "flex-shrink-0 h-full px-2 cursor-pointer hover:bg-gray-700 flex items-center justify-center",
+                        {
+                            "ml-16": GlobalModel.getPlatform() === "darwin",
+                        }
+                    )}
+                    onClick={() => GlobalModel.mainSidebarModel.setCollapsed(false)}
+                >
                     <img className="h-6 w-6" src="public/logos/wave-logo.png" alt="logo" />
                 </div>
             )}
@@ -109,25 +114,27 @@ export const ScreenTabs = observer(({ session }: { session: Session }) => {
                     ))}
                 </Reorder.Group>
             </div>
-            <div 
+            <div
                 className={clsx("flex-shrink-0 flex items-center h-full px-2", {
                     "cursor-pointer hover:bg-gray-700": showingScreens.length < 9,
-                    "cursor-not-allowed opacity-50": showingScreens.length >= 9
-                })} 
+                    "cursor-not-allowed opacity-50": showingScreens.length >= 9,
+                })}
                 onClick={showingScreens.length < 9 ? handleNewScreen : undefined}
                 title={showingScreens.length >= 9 ? "Maximum number of tabs (9) reached" : "New Tab"}
             >
-                <Plus className={clsx("w-5 h-5", {
-                    "text-gray-400 hover:text-white": showingScreens.length < 9,
-                    "text-gray-600": showingScreens.length >= 9
-                })} />
+                <Plus
+                    className={clsx("w-5 h-5", {
+                        "text-gray-400 hover:text-white": showingScreens.length < 9,
+                        "text-gray-600": showingScreens.length >= 9,
+                    })}
+                />
             </div>
             {rightSidebarCollapsed && GlobalModel.activeMainView.get() === "session" && (
                 <div className="flex-shrink-0 px-1.5 flex items-center h-full" title="Open Wave AI (Cmd-Shift-Space)">
-                    <Button 
-                        variant="ghost" 
+                    <Button
+                        variant="ghost"
                         size="sm"
-                        className="h-8 px-2 bg-secondary text-secondary-foreground hover:bg-secondary/80" 
+                        className="h-8 px-2 bg-secondary text-secondary-foreground hover:bg-secondary/80"
                         onClick={() => GlobalModel.rightSidebarModel.setCollapsed(false)}
                     >
                         <Sparkles className="w-4 h-4" />
@@ -135,10 +142,12 @@ export const ScreenTabs = observer(({ session }: { session: Session }) => {
                 </div>
             )}
             {rightSidebarCollapsed && (
-                <div className={clsx("flex-shrink-0 h-full app-region-drag", {
-                    "w-12": platform !== "darwin",
-                    "w-16": platform === "darwin",
-                })} />
+                <div
+                    className={clsx("flex-shrink-0 h-full app-region-drag", {
+                        "w-12": platform !== "darwin",
+                        "w-16": platform === "darwin",
+                    })}
+                />
             )}
         </div>
     );

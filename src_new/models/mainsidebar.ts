@@ -70,16 +70,17 @@ class MainSidebarModel {
     getCollapsed(): boolean {
         const clientData = this.globalModel.clientData.get();
         const collapsed = clientData?.clientopts?.mainsidebar?.collapsed;
+
         if (this.isDragging.get()) {
             if (this.tempCollapsed.get() == null && collapsed == null) {
                 return false;
             }
             if (this.tempCollapsed.get() == null) {
-                return collapsed;
+                return collapsed ?? false;
             }
             return this.tempCollapsed.get();
         }
-        return collapsed;
+        return collapsed ?? false;
     }
 
     setCollapsed(collapsed: boolean): void {

@@ -542,10 +542,10 @@ class CommandRunner {
                 activeScreen.viewOpts.set(newViewOpts);
             })();
         }
-        
+
         // Submit the backend command
         GlobalModel.submitCommand("sidebar", "add", null, { nohist: "1", line: lineId }, false);
-        
+
         // Use setLineState to minimize the line
         const line = activeScreen?.getLineById(lineId);
         if (line && !line.linestate?.["wave:min"]) {
@@ -557,7 +557,7 @@ class CommandRunner {
     screenSidebarRemove() {
         const activeScreen = GlobalModel.getActiveScreen();
         const lineId = activeScreen?.viewOpts.get()?.sidebar?.sidebarlineid;
-        
+
         // Update the sidebar view options to close it
         if (activeScreen) {
             const curViewOpts: any = activeScreen.viewOpts.get() || {};
@@ -573,10 +573,10 @@ class CommandRunner {
                 activeScreen.viewOpts.set(newViewOpts);
             })();
         }
-        
+
         // Submit the backend command
         GlobalModel.submitCommand("sidebar", "remove", null, { nohist: "1" }, false);
-        
+
         // Use setLineState to un-minimize the line
         if (lineId) {
             const line = activeScreen?.getLineById(lineId);
@@ -590,7 +590,7 @@ class CommandRunner {
     screenSidebarClose(): void {
         const activeScreen = GlobalModel.getActiveScreen();
         const lineId = activeScreen?.viewOpts.get()?.sidebar?.sidebarlineid;
-        
+
         // Update the sidebar view options to close it (but keep the line id)
         if (activeScreen) {
             const curViewOpts: any = activeScreen.viewOpts.get() || {};
@@ -606,10 +606,10 @@ class CommandRunner {
                 activeScreen.viewOpts.set(newViewOpts);
             })();
         }
-        
+
         // Submit the backend command
         GlobalModel.submitCommand("sidebar", "close", null, { nohist: "1" }, false);
-        
+
         // Use setLineState to un-minimize the line
         if (lineId) {
             const line = activeScreen?.getLineById(lineId);
@@ -643,6 +643,10 @@ class CommandRunner {
         // thread execution mode
         if (opts.threadExecutionMode != null) {
             kwargs["threadexecutionmode"] = opts.threadExecutionMode;
+        }
+        // allow commands
+        if (opts.allowCommands != null) {
+            kwargs["allowcommands"] = JSON.stringify(opts.allowCommands);
         }
         if (opts.gemini?.model != null) {
             kwargs["geminimodel"] = opts.gemini.model;
@@ -706,10 +710,10 @@ class CommandRunner {
     }
 
     aiChatSend(chatId: string, message: string, provider?: string): Promise<CommandRtnType> {
-        let kwargs: Record<string, string> = { 
+        let kwargs: Record<string, string> = {
             nohist: "1",
             chatid: chatId,
-            message: message
+            message: message,
         };
         if (provider) {
             kwargs.provider = provider;
@@ -718,9 +722,9 @@ class CommandRunner {
     }
 
     aiChatDelete(chatId: string): Promise<CommandRtnType> {
-        let kwargs: Record<string, string> = { 
+        let kwargs: Record<string, string> = {
             nohist: "1",
-            chatid: chatId
+            chatid: chatId,
         };
         return GlobalModel.submitCommand("aichat", "delete", null, kwargs, false);
     }

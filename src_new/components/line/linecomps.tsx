@@ -321,9 +321,7 @@ const ThreadModeRenderer: React.FC<{
                                             const executionMode = clientData?.aiopts?.threadExecutionMode || "manual";
                                             const isExecuted = !!cmdExecLineId;
                                             const hasCommand = !!parsedResponse?.command;
-                                            
-                                            console.log("[ThreadModeRenderer] Button logic - executionMode:", executionMode, "cmdExecutionStatus:", cmdExecutionStatus, "isExecuted:", isExecuted, "hasCommand:", hasCommand, "cmdExecLineId:", cmdExecLineId);
-                                            
+                                                                                        
                                             if (cmdExecutionStatus === "waiting") {
                                                 // Accept/Reject buttons
                                                 return (
@@ -1199,14 +1197,6 @@ const LineCmd: React.FC<{
         const lineThreadIds = line.linestate?.threadids as string[] | undefined;
         const shouldShowShineBorder = isThreadMode && lineThreadIds && activeThreadId && lineThreadIds.includes(activeThreadId);
         
-        console.log("[LineCmd] Debug - line:", line.lineid, 
-            "linetype:", line.linetype,
-            "isThreadModeLine:", isThreadModeLine,
-            "isThreadMode:", isThreadMode, 
-            "activeThreadId:", activeThreadId, 
-            "linestate:", line.linestate,
-            "lineThreadIds:", lineThreadIds, 
-            "shouldShowShineBorder:", shouldShowShineBorder);
 
         const mainDivCn = clsx(
             "line",

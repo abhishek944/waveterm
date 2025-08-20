@@ -28,6 +28,13 @@ const ResizableSidebar = React.forwardRef<HTMLDivElement, ResizableSidebarProps>
         const [width, setWidth] = React.useState(initialWidth);
         const isResizing = React.useRef(false);
 
+        // Update internal width when initialWidth prop changes
+        React.useEffect(() => {
+            if (!isResizing.current) {
+                setWidth(initialWidth);
+            }
+        }, [initialWidth]);
+
         const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
             e.preventDefault();
             isResizing.current = true;

@@ -19,6 +19,8 @@ import (
 	"sync"
 	"time"
 
+	"encoding/json"
+
 	"github.com/abhishek944/waveterm/waveshell/pkg/base"
 	"github.com/abhishek944/waveterm/waveshell/pkg/packet"
 	"github.com/abhishek944/waveterm/waveshell/pkg/shellenv"
@@ -29,7 +31,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/sawka/txwrap"
-	"encoding/json"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -391,12 +392,12 @@ type ScreenWebShareOpts struct {
 }
 
 type ScreenCreateOpts struct {
-  BaseScreenId string
-  CopyRemote   bool
-  CopyCwd      bool
-  CopyEnv      bool
-  Cwd          string
-  RtnScreenId  *string
+	BaseScreenId string
+	CopyRemote   bool
+	CopyCwd      bool
+	CopyEnv      bool
+	Cwd          string
+	RtnScreenId  *string
 }
 
 func (sco ScreenCreateOpts) HasCopy() bool {
@@ -722,15 +723,15 @@ type ResolveItem struct {
 }
 
 type SSHOpts struct {
-	Local       bool   `json:"local,omitempty"`
-	IsSudo      bool   `json:"issudo,omitempty"`
-	SSHHost     string `json:"sshhost"`
-	SSHUser     string `json:"sshuser"`
-	SSHOptsStr  string `json:"sshopts,omitempty"`
-	SSHIdentity string `json:"sshidentity,omitempty"`
-	SSHPort     int    `json:"sshport,omitempty"`
-	SSHPassword string `json:"sshpassword,omitempty"`
-	SSHProxyCommand string `json:"sshproxycommand,omitempty"`  // Added ProxyCommand support
+	Local           bool   `json:"local,omitempty"`
+	IsSudo          bool   `json:"issudo,omitempty"`
+	SSHHost         string `json:"sshhost"`
+	SSHUser         string `json:"sshuser"`
+	SSHOptsStr      string `json:"sshopts,omitempty"`
+	SSHIdentity     string `json:"sshidentity,omitempty"`
+	SSHPort         int    `json:"sshport,omitempty"`
+	SSHPassword     string `json:"sshpassword,omitempty"`
+	SSHProxyCommand string `json:"sshproxycommand,omitempty"` // Added ProxyCommand support
 }
 
 func (opts SSHOpts) GetAuthType() string {
@@ -778,11 +779,12 @@ type AzureOpenAIOptsType struct {
 }
 
 type AIOptsType struct {
-	Default              string               `json:"default"`
-	ThreadExecutionMode  string               `json:"threadExecutionMode,omitempty"`
-	Gemini               *GeminiOptsType      `json:"gemini,omitempty"`
-	OpenAI               *OpenAIOptsType      `json:"openai,omitempty"`
-	Azure                *AzureOpenAIOptsType `json:"azure,omitempty"`
+	Default             string               `json:"default"`
+	ThreadExecutionMode string               `json:"threadExecutionMode,omitempty"`
+	AllowCommands       []string             `json:"allowCommands,omitempty"`
+	Gemini              *GeminiOptsType      `json:"gemini,omitempty"`
+	OpenAI              *OpenAIOptsType      `json:"openai,omitempty"`
+	Azure               *AzureOpenAIOptsType `json:"azure,omitempty"`
 }
 
 const (
@@ -1242,26 +1244,26 @@ func EnsureClientData(ctx context.Context) (*ClientData, error) {
 }
 
 func GetLastCmdCwd(ctx context.Context, screenId string) (string, error) {
-    return WithTxRtn(ctx, func(tx *TxWrap) (string, error) {
-        query := `SELECT festate FROM cmd WHERE screenid = ? AND status = 'done' ORDER BY donets DESC LIMIT 1`
-        festateJson := tx.GetString(query, screenId)
-        log.Printf("[DEBUG GetLastCmdCwd] screenId=%s, festateJson=%s", screenId, festateJson)
-        if festateJson == "" {
-            log.Printf("[DEBUG GetLastCmdCwd] No festate found, returning DefaultCwd=%s", DefaultCwd)
-            return DefaultCwd, nil
-        }
-        var stateMap FeStateType
-        if err := json.Unmarshal([]byte(festateJson), &stateMap); err != nil {
-            log.Printf("[DEBUG GetLastCmdCwd] Error unmarshaling festate: %v", err)
-            return DefaultCwd, nil
-        }
-        if cwd, ok := stateMap["cwd"]; ok && cwd != "" {
-            log.Printf("[DEBUG GetLastCmdCwd] Found cwd=%s", cwd)
-            return cwd, nil
-        }
-        log.Printf("[DEBUG GetLastCmdCwd] No cwd in festate, returning DefaultCwd=%s", DefaultCwd)
-        return DefaultCwd, nil
-    })
+	return WithTxRtn(ctx, func(tx *TxWrap) (string, error) {
+		query := `SELECT festate FROM cmd WHERE screenid = ? AND status = 'done' ORDER BY donets DESC LIMIT 1`
+		festateJson := tx.GetString(query, screenId)
+		log.Printf("[DEBUG GetLastCmdCwd] screenId=%s, festateJson=%s", screenId, festateJson)
+		if festateJson == "" {
+			log.Printf("[DEBUG GetLastCmdCwd] No festate found, returning DefaultCwd=%s", DefaultCwd)
+			return DefaultCwd, nil
+		}
+		var stateMap FeStateType
+		if err := json.Unmarshal([]byte(festateJson), &stateMap); err != nil {
+			log.Printf("[DEBUG GetLastCmdCwd] Error unmarshaling festate: %v", err)
+			return DefaultCwd, nil
+		}
+		if cwd, ok := stateMap["cwd"]; ok && cwd != "" {
+			log.Printf("[DEBUG GetLastCmdCwd] Found cwd=%s", cwd)
+			return cwd, nil
+		}
+		log.Printf("[DEBUG GetLastCmdCwd] No cwd in festate, returning DefaultCwd=%s", DefaultCwd)
+		return DefaultCwd, nil
+	})
 }
 
 func SetClientOpts(ctx context.Context, clientOpts ClientOptsType) error {
