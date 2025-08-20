@@ -1464,6 +1464,13 @@ const LineContent: React.FC<{
                 ...idealSize,
                 height: Math.floor(screenHeight * 0.7)
             };
+        } else if (line.renderer === "code") {
+            // For code renderer, use 70% of screen height (same as image)
+            const screenHeight = window.innerHeight;
+            idealSize = {
+                ...idealSize,
+                height: Math.floor(screenHeight * 0.7)
+            };
         }
         
         return {

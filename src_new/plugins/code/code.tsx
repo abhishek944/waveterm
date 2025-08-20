@@ -79,7 +79,8 @@ export const SourceCodeRenderer: React.FC<{
     const [selectedLanguage, setSelectedLanguage] = React.useState("");
     const [isSave, setIsSave] = React.useState(false);
     const [isClosed, setIsClosed] = React.useState(lineState["prompt:closed"]);
-    const [editorHeight, setEditorHeight] = React.useState(Math.max(savedHeight - (GlobalModel.lineHeightEnv.lineHeight + 11), 0));
+    const initialHeight = Math.max(opts.idealSize.height - (GlobalModel.lineHeightEnv.lineHeight + 11), 0);
+    const [editorHeight, setEditorHeight] = React.useState(initialHeight);
     const [message, setMessage] = React.useState<{ status: "success" | "error"; text: string } | null>(null);
     const [isPreviewerAvailable, setIsPreviewerAvailable] = React.useState(false);
     const [showPreview, setShowPreview] = React.useState(lineState["showPreview"]);
@@ -97,7 +98,7 @@ export const SourceCodeRenderer: React.FC<{
         const cachedCode = codeCache.get(cacheKey);
         if (cachedCode) {
             setCode(cachedCode);
-        } else {
+        } else if (data) {
             data.text().then((text) => {
                 originalCode.current = text;
                 setCode(text);
@@ -105,6 +106,10 @@ export const SourceCodeRenderer: React.FC<{
             });
         }
     }, [data, cacheKey]);
+
+    React.useEffect(() => {
+        updateEditorHeight();
+    }, [opts.idealSize.height]);
 
     const saveLineState = (kvp) => {
         GlobalCommandRunner.setLineState(context.screenId, context.lineId, { ...lineState, ...kvp }, false);
@@ -217,8 +222,18 @@ export const SourceCodeRenderer: React.FC<{
         }, 2000);
         editor.onKeyDown((e: MonacoTypes.IKeyboardEvent) => {
             const waveEvent = adaptFromReactOrNativeKeyEvent(e.browserEvent);
+            
+            // Check if this is a Wave Terminal keybind
             if (GlobalModel.keybindManager.checkKeysPressed(waveEvent, ["codeedit:save", "codeedit:close", "codeedit:togglePreview"])) {
+                // Process Wave Terminal keybinds
                 GlobalModel.keybindManager.processKeyEvent(e.browserEvent, waveEvent);
+                return;
+            }
+            
+            // Only stop propagation for Enter key to prevent creating new command lines
+            // Let Tab, Backspace, and other keys work normally
+            if (e.browserEvent && e.browserEvent.key === "Enter") {
+                e.browserEvent.stopPropagation();
             }
         });
         editor.onDidScrollChange((e) => {
@@ -285,7 +300,7 @@ export const SourceCodeRenderer: React.FC<{
     const getEditorHeightBuffer = () => GlobalModel.lineHeightEnv.lineHeight + 11;
 
     const updateEditorHeight = () => {
-        const maxEditorHeight = opts.maxSize.height - getEditorHeightBuffer();
+        const maxEditorHeight = opts.idealSize.height - getEditorHeightBuffer();
         let _editorHeight = maxEditorHeight;
         if (!getAllowEditing()) {
             if (code == null) return;
@@ -332,7 +347,11 @@ export const SourceCodeRenderer: React.FC<{
         return <div className="code-renderer"></div>;
     }
     if (code === null) {
-        return <div className="code-renderer" style={{ height: savedHeight }} />;
+        return <div className="code-renderer" style={{ height: savedHeight }}>
+            <div className="flex items-center justify-center h-full">
+                <i className="fa fa-spinner fa-spin" /> Loading...
+            </div>
+        </div>;
     }
     if (exitcode === 1) {
         return (
@@ -346,14 +365,14 @@ export const SourceCodeRenderer: React.FC<{
     const allowEditing = getAllowEditing();
 
     return (
-        <div className="code-renderer">
+        <div className="code-renderer flex flex-col h-full">
             <If condition={isSelected}>
                 <CodeKeybindings codeObject={{ registerKeybindings, unregisterKeybindings }} />
             </If>
             <Split
                 sizes={[editorFraction, 1 - editorFraction]}
                 onSetSizes={setSizes}
-                className="split-horizontal"
+                className="split-horizontal flex-1"
                 gutterClassName="gutter gutter-horizontal"
             >
                 <div className="editor-wrap relative" style={{ maxHeight: editorHeight }}>
@@ -383,28 +402,27 @@ export const SourceCodeRenderer: React.FC<{
                     </div>
                 )}
             </Split>
-            <div className="flex-spacer" />
-            <div className="code-statusbar">
+            <div className="code-statusbar flex items-center gap-2 px-4 py-2 bg-[var(--line-bg-color)] border-t border-[var(--app-border-color)]">
                 <If condition={message != null}>
                     <div
                         className={clsx(
-                            "overflow-hidden text-ellipsis whitespace-nowrap",
+                            "flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-sm",
                             message.status === "error" ? "text-red-500" : "text-green-500"
                         )}
                     >
                         {message.text}
                     </div>
                 </If>
-                <div className="flex-spacer" />
+                <div className="flex-1" />
                 <If condition={isPreviewerAvailable}>
-                    <Button variant="ghost" size="sm" onClick={togglePreview}>
-                        {`${showPreview ? "hide" : "show"} preview (`}
+                    <Button variant="ghost" size="sm" className="h-7 px-3 text-xs" onClick={togglePreview}>
+                        {`${showPreview ? "Hide" : "Show"} Preview (`}
                         {renderCmdText("P")}
                         {`)`}
                     </Button>
                 </If>
                 <select
-                    className="dropdown max-w-[200px]"
+                    className="h-7 px-2 text-xs bg-[var(--bg-color)] text-[var(--text-color)] border border-[var(--app-border-color)] rounded focus:outline-none focus:ring-1 focus:ring-[var(--focus-color)]"
                     value={selectedLanguage}
                     onChange={handleLanguageChange}
                 >
@@ -415,13 +433,13 @@ export const SourceCodeRenderer: React.FC<{
                     ))}
                 </select>
                 <If condition={allowEditing}>
-                    <Button variant="ghost" size="sm" onClick={() => doSave()}>
-                        {`save (`}
+                    <Button variant="ghost" size="sm" className="h-7 px-3 text-xs" onClick={() => doSave()}>
+                        {`Save (`}
                         {renderCmdText("S")}
                         {`)`}
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={doClose}>
-                        {`close (`}
+                    <Button variant="ghost" size="sm" className="h-7 px-3 text-xs" onClick={doClose}>
+                        {`Close (`}
                         {renderCmdText("D")}
                         {`)`}
                     </Button>

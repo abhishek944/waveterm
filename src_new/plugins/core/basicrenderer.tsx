@@ -28,6 +28,7 @@ export class SimpleBlobRendererModel {
     isClosed: boolean;
 
     initialize(params: RendererModelInitializeParams): void {
+        this.lineState = params.lineState;
         this.isClosed = !!params.lineState["prompt:closed"];
         this.loading = mobx.observable.box(!this.isClosed, { name: "renderer-loading" });
         this.isDone = mobx.observable.box(params.isDone, {
@@ -36,7 +37,6 @@ export class SimpleBlobRendererModel {
         this.context = params.context;
         this.opts = params.opts;
         this.api = params.api;
-        this.lineState = params.lineState;
         this.savedHeight = params.savedHeight;
         this.ptyDataSource = params.ptyDataSource;
         if (this.isClosed) {
@@ -79,6 +79,10 @@ export class SimpleBlobRendererModel {
     }
 
     reload(delayMs: number): void {
+        // If data is already loaded, don't reload
+        if (this.dataBlob != null) {
+            return;
+        }
         mobx.action(() => {
             this.loading.set(true);
         })();
@@ -167,12 +171,18 @@ export const SimpleBlobRenderer: React.FC<{
     shouldFocus: boolean;
 }> = observer((props) => {
     const { rendererContainer, lineId, plugin, onHeightChange, initParams, scrollToBringIntoViewport, isSelected, shouldFocus } = props;
-    const model = React.useMemo(() => {
+    
+    // Use a ref to store the model to prevent recreation
+    const modelRef = React.useRef<SimpleBlobRendererModel>(null);
+    
+    if (!modelRef.current) {
         const newModel = new SimpleBlobRendererModel();
         newModel.initialize(initParams);
         rendererContainer.registerRenderer(lineId, newModel);
-        return newModel;
-    }, [rendererContainer, lineId, initParams]);
+        modelRef.current = newModel;
+    }
+    
+    const model = modelRef.current;
 
     const wrapperDivRef = React.useRef<HTMLDivElement>(null);
 
@@ -235,8 +245,8 @@ export const SimpleBlobRenderer: React.FC<{
     }
 
     const { festate, cmdstr, exitcode } = initParams.rawCmd;
-    // Don't apply h-0 for image plugin as it needs to expand to show the image
-    const shouldApplyZeroHeight = model.savedHeight == 0 && plugin.name !== "image";
+    // Don't apply h-0 for image and code plugins as they need to expand
+    const shouldApplyZeroHeight = model.savedHeight == 0 && plugin.name !== "image" && plugin.name !== "code";
     return (
         <div ref={wrapperDivRef} className={clsx("sr-wrapper", { "h-0": shouldApplyZeroHeight })}>
             <Comp
