@@ -139,9 +139,9 @@ export const SourceCodeRenderer: React.FC<{
     };
 
     const doSave = (onSave = () => {}) => {
-        if (!isSave) return;
+        if (!isSave) return Promise.resolve();
         const encodedCode = new TextEncoder().encode(code);
-        GlobalModel.writeRemoteFile(context.screenId, context.lineId, filePath, encodedCode, { useTemp: true })
+        return GlobalModel.writeRemoteFile(context.screenId, context.lineId, filePath, encodedCode, { useTemp: true })
             .then(() => {
                 originalCode.current = code;
                 setIsSave(false);
@@ -161,12 +161,22 @@ export const SourceCodeRenderer: React.FC<{
                 message: "Do you want to Save your changes before closing?",
                 confirm: true,
             }).then((result) => {
-                if (result) return doSave(doClose);
-                setCode(originalCode.current);
-                setIsSave(false);
-                doClose();
+                if (result) {
+                    // User clicked OK - save then close
+                    return doSave(() => {
+                        // This callback is called after save completes and isSave is set to false
+                        performClose();
+                    });
+                } else {
+                    // User clicked Cancel - just return, don't close
+                    return;
+                }
             });
         }
+        performClose();
+    };
+
+    const performClose = () => {
         GlobalCommandRunner.setLineState(context.screenId, context.lineId, { ...lineState, "prompt:closed": true }, false)
             .then(() => {
                 setIsClosed(true);
