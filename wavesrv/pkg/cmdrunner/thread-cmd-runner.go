@@ -1104,7 +1104,7 @@ func startMultiTurnExecution(ctx context.Context, pk *scpacket.FeCommandPacketTy
 
 // waitForCommandOutput waits for a command to complete and returns its output
 func waitForCommandOutput(ctx context.Context, screenId string, cmdLineId string) (string, int) {
-	maxWaitTime := 5 * time.Minute
+	maxWaitTime := 30 * time.Minute
 	startTime := time.Now()
 
 	for {

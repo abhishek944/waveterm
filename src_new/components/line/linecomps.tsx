@@ -904,7 +904,11 @@ const LineActions: React.FC<{ screen: LineContainerType; line: LineType; cmd: Cm
             >
                 <Choose>
                     <When condition={containerType === appconst.LineContainer_Main}>
-                        <If condition={isThreadMode || line.linetype === "thread_mode"}>
+                        <If
+                            condition={
+                                (isThreadMode || line.linetype === "thread_mode") && line.linetype !== "agent_mode"
+                            }
+                        >
                             <div
                                 key="thread"
                                 title={
@@ -1436,9 +1440,12 @@ const LineHeader: React.FC<{ line: LineType; cmd: Cmd }> = observer(({ line, cmd
         return (
             <>
                 <div
-                    className={clsx("overflow-auto max-h-24 whitespace-pre text-gray-300 font-bold w-full mt-2", {
-                        "border-l-2 border-gray-600 ml-1 pl-2": isMultiLine,
-                    })}
+                    className={clsx(
+                        "overflow-auto max-h-24 break-words whitespace-pre-wrap text-gray-300 font-bold w-full mt-2",
+                        {
+                            "border-l-2 border-gray-600 ml-1 pl-2": isMultiLine,
+                        }
+                    )}
                 >
                     {lineutil.getFullCmdText(cmd.getCmdStr())}
                 </div>

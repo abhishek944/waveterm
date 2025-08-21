@@ -168,3 +168,94 @@ The solution uses Wave Terminal's state management system rather than executing 
 2. **State Validation**: Validate state integrity on load
 3. **Better Error Messages**: Provide more context when state errors occur
 4. **State Garbage Collection**: Clean up orphaned states
+
+## Simplified Architectural Overview
+
+This section provides a high-level, simplified explanation of WaveTerm's architecture, focusing on shell state, remote instances, and the end-to-end flow.
+
+### The Core Concepts Explained
+
+Think of a terminal session as a conversation. The concepts below are how WaveTerm remembers and manages that conversation for each tab you have open.
+
+#### 1. What is "Shell State"?
+
+In simple terms, the **Shell State is the shell's memory**. It's a complete snapshot of everything that defines your shell's current environment in a specific tab.
+
+This "memory" includes:
+*   **Current Working Directory (Cwd):** Where you are right now (e.g., `/home/user/projects`).
+*   **Environment Variables:** All the `EXPORT` variables that programs use (e.g., `PATH`, `HOME`).
+*   **Aliases and Functions:** Any custom shortcuts or functions you've defined in that session.
+*   **Shell Type:** Whether you're using `bash`, `zsh`, etc.
+
+Without saving the Shell State, every new command would run in a fresh, forgetful environment. By tracking it, WaveTerm ensures that when you run a command, it executes in the correct directory with the right variables, just like a normal terminal.
+
+#### 2. What is a "Remote Instance" and "Remote Status"?
+
+The term "remote" can be a bit confusing here. In WaveTerm, **a "remote" is any shell environment you are connected to**. This includes your local machine's shell.
+
+*   **Remote Instance:** This is a **tracker** for a single shell session. Every tab in WaveTerm has its own Remote Instance. This tracker doesn't hold the full Shell State itself; instead, it holds *pointers* to the state. Think of it like a bookmark that tells WaveTerm, "For Tab 1, here is the memory you need to use."
+
+*   **Remote Status:** This is the overall **live status** of a connection in a tab, which is determined by its Remote Instance and the Shell State it points to. It's the combination of "who this tab is" (the instance) and "what it remembers" (the state).
+
+#### How State is Stored: The Smart Way (like Git)
+
+WaveTerm is very clever about how it saves this "memory." Instead of saving the entire, massive Shell State every time you type a command, it uses a system similar to Git.
+
+1.  **Base State (The Full Snapshot):** When you first open a tab, WaveTerm takes a full snapshot of the shell's memory. This is the "Base State" and it's stored and identified by a unique hash (`BaseHash`).
+2.  **Diffs (The Small Changes):** When you run a command like `cd ../` or `export FOO=bar`, the memory changes slightly. Instead of creating a whole new snapshot, WaveTerm just records the *difference* (a "diff"). This diff also gets a unique hash.
+3.  **Putting it Together:** The **Remote Instance** (the tracker for your tab) keeps a record of the initial snapshot (`StateBaseHash`) and a list of all the small changes that have happened since (`StateDiffHashArr`).
+
+When you run a new command, WaveTerm retrieves the full state by:
+1.  Loading the base snapshot.
+2.  Applying each small change (diff) in order.
+3.  This reconstructs the exact, up-to-date memory for your shell, efficiently and without storing tons of duplicate data.
+
+---
+
+### End-to-End Code Formulation: How It All Works Together
+
+Here is a step-by-step flow of what happens when you use the terminal, from you typing a command to seeing the output.
+
+#### Step 1: The Frontend UI (`/src`) - The Face
+
+This is what you see and interact with. It's a desktop application built with **Electron**, and the user interface is built with **React**.
+*   When you type in a terminal tab, you are typing into an `xterm.js` component.
+*   When you hit Enter, the React application sends your command over a **WebSocket** connection to the backend.
+
+#### Step 2: The Backend Server (`/wavesrv`) - The Brain
+
+This is the central Go application that orchestrates everything.
+*   It receives the command from the frontend via the WebSocket.
+*   It looks up the **Remote Instance** associated with your current tab to figure out what the shell's current "memory" (Shell State) is.
+*   It doesn't run the shell command itself. For that, it delegates to a specialist.
+
+#### Step 3: The Shell Service (`/waveshell`) - The Hands
+
+This is a separate, specialized Go program whose only job is to manage and interact with actual shells (`bash`, `zsh`, etc.).
+*   The `wavesrv` (Brain) sends the command *and* the reconstructed Shell State (the memory) to `waveshell`.
+*   `waveshell` uses a pseudo-terminal (PTY) to run the command in the correct environment.
+*   It captures the output of the command and, crucially, it also captures the **new Shell State** after the command finishes (e.g., if the directory changed).
+*   It sends the command output and the new state information back to the `wavesrv` (Brain).
+
+#### Step 4: The Data Layer (SQLite) - The Long-Term Memory
+
+*   The `wavesrv` receives the result and the new state from `waveshell`.
+*   It saves the new state to the SQLite database, likely as a small "diff".
+*   It updates the **Remote Instance** for your tab to point to this new diff, so the next command will use the updated memory.
+*   It streams the command's output back to the Frontend UI via the WebSocket.
+
+#### Step 5: Back to the Frontend
+
+*   The React application receives the output and displays it in your terminal tab.
+*   Your prompt might update to show the new directory, and the whole cycle is ready to begin again.
+
+### Summary
+
+In essence, WaveTerm is a sophisticated system where:
+
+1.  A **React UI** captures your input.
+2.  A central **Go server (`wavesrv`)** manages sessions and state.
+3.  A specialized **Go service (`waveshell`)** executes commands in a real shell.
+4.  A **SQLite database** cleverly stores the "memory" of each tab using a snapshot-and-diffs system.
+
+This architecture allows WaveTerm to provide a rich, modern UI with AI features while ensuring that the core terminal functionality is robust, persistent, and efficient.
