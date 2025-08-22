@@ -41,7 +41,10 @@ const App: React.FC = mobxReact.observer(() => {
             }
         };
     }, []);
-    
+
+    // Always compute collapsed flags and log on every render to avoid hook order issues
+    const mainSidebarCollapsed = GlobalModel.mainSidebarModel.getCollapsed();
+    const rightSidebarCollapsed = GlobalModel.rightSidebarModel.getCollapsed();
 
     const handleContextMenu = React.useCallback((e: React.MouseEvent) => {
         let isInNonTermInput = false;
@@ -68,8 +71,6 @@ const App: React.FC = mobxReact.observer(() => {
         setDcWait(val);
     }, []);
 
-
-
     const handleTermThemesRendered = React.useCallback(() => {
         setTermThemesLoaded(true);
     }, []);
@@ -92,9 +93,14 @@ const App: React.FC = mobxReact.observer(() => {
             setTimeout(() => updateDcWait(true), 1500);
         }
         return (
-            <div id="main" className="flex flex-col h-screen" data-platform={platform} onContextMenu={handleContextMenu}>
+            <div
+                id="main"
+                className="flex flex-col h-screen"
+                data-platform={platform}
+                onContextMenu={handleContextMenu}
+            >
                 <div ref={mainContentRef} className="main-content flex flex-row flex-1 min-h-0">
-                    <MainSideBar parentRef={mainContentRef} />
+                    {!GlobalModel.mainSidebarModel.getCollapsed() && <MainSideBar parentRef={mainContentRef} />}
                     <div className="flex-1 flex flex-col h-full overflow-hidden" />
                 </div>
                 {dcWait && (
@@ -113,8 +119,6 @@ const App: React.FC = mobxReact.observer(() => {
 
     // used to force a full reload of the application
     const renderVersion = GlobalModel.renderVersion.get();
-    const mainSidebarCollapsed = GlobalModel.mainSidebarModel.getCollapsed();
-    const rightSidebarCollapsed = GlobalModel.rightSidebarModel.getCollapsed();
     const mainClassName = clsx(
         "flex flex-col h-screen"
         // Platform-specific styling can be handled with data attributes if needed
@@ -125,11 +129,20 @@ const App: React.FC = mobxReact.observer(() => {
     return (
         <>
             <TermStyleList onRendered={handleTermThemesRendered} />
-            <div key={`version-${renderVersion}`} id="main" className={mainClassName} data-platform={platform} data-theme={GlobalModel.isDarkTheme.get() ? "dark" : "light"} data-mainsidebar-collapsed={mainSidebarCollapsed} data-rightsidebar-collapsed={rightSidebarCollapsed} onContextMenu={handleContextMenu}>
+            <div
+                key={`version-${renderVersion}`}
+                id="main"
+                className={mainClassName}
+                data-platform={platform}
+                data-theme={GlobalModel.isDarkTheme.get() ? "dark" : "light"}
+                data-mainsidebar-collapsed={mainSidebarCollapsed}
+                data-rightsidebar-collapsed={rightSidebarCollapsed}
+                onContextMenu={handleContextMenu}
+            >
                 {termThemesLoaded && (
                     <>
                         <div ref={mainContentRef} className="main-content flex flex-row flex-1 min-h-0">
-                            <MainSideBar parentRef={mainContentRef} />
+                            {!mainSidebarCollapsed && <MainSideBar parentRef={mainContentRef} />}
                             <div className="flex-1 relative overflow-hidden">
                                 <ErrorBoundary>
                                     <PluginsView />

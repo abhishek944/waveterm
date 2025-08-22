@@ -69,21 +69,33 @@ const ResizableSidebar = React.forwardRef<HTMLDivElement, ResizableSidebarProps>
             document.removeEventListener("mouseup", handleMouseUp);
         };
 
+        // debug logging removed
+
+        const isEffectivelyCollapsed = collapsed || width <= 1;
+
         return (
             <div
                 ref={ref}
                 className={cn("flex h-full relative", className)}
-                style={{ width: collapsed ? 0 : width, transition: "width 0.2s ease" }}
+                style={{
+                    width: collapsed ? 0 : width,
+                    transition: "width 0.2s ease",
+                    // Ensure no stray border/handle/gradient when hidden or nearly zero width
+                    borderWidth: isEffectivelyCollapsed ? 0 : undefined,
+                    visibility: isEffectivelyCollapsed ? "hidden" : undefined,
+                }}
                 {...props}
             >
                 {children}
-                <div
-                    className={cn(
-                        "absolute top-0 h-full w-3 cursor-col-resize z-20 bg-transparent hover:bg-white/20",
-                        position === "left" ? "-right-0.5" : "-left-0.5"
-                    )}
-                    onMouseDown={handleMouseDown}
-                />
+                {!isEffectivelyCollapsed && (
+                    <div
+                        className={cn(
+                            "absolute top-0 h-full w-3 cursor-col-resize z-20 bg-transparent hover:bg-white/20",
+                            position === "left" ? "-right-0.5" : "-left-0.5"
+                        )}
+                        onMouseDown={handleMouseDown}
+                    />
+                )}
             </div>
         );
     }

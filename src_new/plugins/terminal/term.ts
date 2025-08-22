@@ -94,6 +94,7 @@ class TermWrap {
     winSize: WindowSize;
     numParseErrors: number = 0;
     termSize: TermWinSize;
+    maxRows: number;
     focusHandler: (focus: boolean) => void;
     isRunning: boolean;
     fontSize: number;
@@ -117,6 +118,7 @@ class TermWrap {
         this.ptyDataSource = opts.ptyDataSource;
         this.onUpdateContentHeight = opts.onUpdateContentHeight;
         this.initializing = true;
+        this.maxRows = opts.termOpts.rows;
         if (this.flexRows) {
             this.atRowMax = false;
             this.usedRows = mobx.observable.box(opts.usedRows ?? (opts.isRunning ? 1 : 0), { name: "term-usedrows" });
@@ -125,10 +127,17 @@ class TermWrap {
             this.usedRows = mobx.observable.box(opts.termOpts.rows, { name: "term-usedrows" });
         }
         if (opts.winSize == null) {
-            this.termSize = { rows: opts.termOpts.rows, cols: opts.termOpts.cols };
+            // If flex rows, start xterm at the currently used rows to avoid extra internal scroll
+            const initialRows = this.flexRows
+                ? boundInt(this.usedRows.get() || (opts.isRunning ? 1 : 0), 1, this.maxRows)
+                : opts.termOpts.rows;
+            this.termSize = { rows: initialRows, cols: opts.termOpts.cols };
         } else {
             // Start with a reasonable default, will be adjusted after initialization
-            this.termSize = { rows: opts.termOpts.rows, cols: opts.termOpts.cols || 80 };
+            const initialRows = this.flexRows
+                ? boundInt(this.usedRows.get() || (opts.isRunning ? 1 : 0), 1, this.maxRows)
+                : opts.termOpts.rows;
+            this.termSize = { rows: initialRows, cols: opts.termOpts.cols || 80 };
         }
         let theme = getThemeFromCSSVars(this.connectedElem);
         this.terminal = new Terminal({
@@ -165,7 +174,9 @@ class TermWrap {
             });
             this.terminal.loadAddon(webglAddon);
             if (!loggedWebGL) {
-                console.log("loaded webgl!");
+                try {
+                    console.log("loaded webgl!");
+                } catch {}
                 loggedWebGL = true;
             }
         }
@@ -176,7 +187,7 @@ class TermWrap {
             return state;
         });
         this.terminal.open(elem);
-        
+
         if (opts.keyHandler != null) {
             //this.terminal.onKey((e) => opts.keyHandler(e, this));
         }
@@ -211,17 +222,16 @@ class TermWrap {
                     if (core && core._charSizeService) {
                         // Force measurement
                         core._charSizeService.measure();
-                        
+
                         // Get the character dimensions
                         setTimeout(() => {
                             const charWidth = core._charSizeService?.width;
-                            
+
                             if (charWidth && charWidth > 0) {
                                 // Calculate columns based on container width and actual character width
                                 const containerWidth = this.connectedElem.clientWidth;
                                 const cols = Math.floor(containerWidth / charWidth);
-                                
-                                
+
                                 if (cols > 0 && cols !== this.terminal.cols) {
                                     this.resize({ rows: this.terminal.rows, cols });
                                 }
@@ -291,26 +301,26 @@ class TermWrap {
         if (term == null) {
             return 0;
         }
-        let termBuf = term._core.buffer;
-        let termNumLines = termBuf.lines.length;
-        let termYPos = termBuf.y;
-        if (termNumLines > term.rows) {
-            // TODO: there is a weird case here.  for commands that output more than term.rows rows of output
-            //   they get an "extra" blank line at the bottom because the cursor is positioned on the next line!
-            //   hard problem to solve because the line is already written to the buffer.  we only want to "fix"
-            //   this when the command is no longer running.
-            return term.rows;
-        }
+        const termBuf = term._core.buffer;
+        const totalLines = termBuf?.lines?.length ?? 0;
+
+        // Use a more generous scan limit to allow expansion
+        // If we have content, scan more lines to find the actual content
+        const scanUpto = Math.max(totalLines, term.rows);
+
         let usedRows = this.isRunning ? 1 : 0;
-        if (this.isRunning && termYPos >= usedRows) {
-            usedRows = termYPos + 1;
-        }
-        for (let i = term.rows - 1; i >= usedRows; i--) {
-            let line = termBuf.translateBufferLineToString(i, true);
-            if (line != null && line.trim() != "") {
-                usedRows = i + 1;
+        // Scan from the bottom of the buffer up to scanUpto, so we can grow rows as needed
+        for (let i = scanUpto - 1; i >= 0; i--) {
+            const line = termBuf.translateBufferLineToString(i, true);
+            if (line != null && line.trim() !== "") {
+                usedRows = Math.max(usedRows, i + 1);
                 break;
             }
+        }
+
+        // If no content, but we have a terminal with rows, use at least the terminal's current row count
+        if (usedRows === 0 && term.rows > 0) {
+            usedRows = term.rows;
         }
         return usedRows;
     }
@@ -362,25 +372,51 @@ class TermWrap {
         if (forceFull) {
             this.atRowMax = false;
         }
-        if (this.atRowMax) {
-            return;
-        }
+        // Always compute current used rows
         let tur = this.getTermUsedRows();
-        if (tur >= this.terminal.rows) {
-            this.atRowMax = true;
+
+        // For sidebar terminals, be more generous with expansion
+        // Allow expansion beyond current terminal rows to fill available space
+        const isInSidebar = this.getRendererContext()?.lineNum === undefined;
+        const maxAllowedRows = isInSidebar
+            ? Math.max(this.maxRows, this.terminal?.rows ?? this.maxRows, tur)
+            : Math.max(this.maxRows, this.terminal?.rows ?? this.maxRows);
+        const clampedTur = boundInt(tur, 0, maxAllowedRows);
+
+        // Update terminal's physical rows to match content when not at max
+        if (!this.atRowMax) {
+            const nextRows = Math.max(clampedTur, 1);
+            if (nextRows !== this.terminal.rows) {
+                this.resize({ rows: nextRows, cols: this.termSize.cols });
+            }
+            if (nextRows >= maxAllowedRows) {
+                this.atRowMax = true;
+            }
         }
         mobx.action(() => {
             let oldUsedRows = this.usedRows.get();
-            if (!forceFull && tur <= oldUsedRows) {
+            // After any resize, align usedRows with the actual terminal viewport so wrapper == screen
+            const newUsedRows = Math.min(this.terminal?.rows ?? clampedTur, maxAllowedRows);
+            if (!forceFull && newUsedRows <= oldUsedRows) {
                 return;
             }
-            if (tur == oldUsedRows) {
+            if (newUsedRows == oldUsedRows) {
                 return;
             }
-            this.usedRows.set(tur);
+            this.usedRows.set(newUsedRows);
             if (this.onUpdateContentHeight != null) {
-                this.onUpdateContentHeight(termContext, tur);
+                this.onUpdateContentHeight(termContext, newUsedRows);
             }
+            try {
+                console.log(
+                    "[TermWrap] usedRows updated " +
+                        JSON.stringify({
+                            oldUsedRows,
+                            newUsedRows,
+                            termRows: this.terminal?.rows,
+                        })
+                );
+            } catch {}
         })();
     }
 
@@ -413,8 +449,7 @@ class TermWrap {
         }
         this.termSize = newSize;
         this.terminal.resize(newSize.cols, newSize.rows);
-        
-        
+
         this.updateUsedRows(true, "resize");
     }
 
@@ -435,6 +470,12 @@ class TermWrap {
         if (this.terminal != null) {
             this.terminal.write(new Uint8Array(), () => {
                 this.updateUsedRows(true, "reload");
+                // Move viewport to bottom for completed outputs
+                if (!this.isRunning) {
+                    try {
+                        this.terminal.scrollToBottom();
+                    } catch {}
+                }
             });
         }
     }
@@ -518,12 +559,25 @@ class TermWrap {
         this.ptyPos += data.length;
         this.terminal.write(data, () => {
             this.updateUsedRows(false, "updatePtyData");
+            try {
+                const snapshot = this.serializeAddon?.serialize?.({ scrollback: 10 }) || "";
+            } catch (e) {
+                console.log("[TermWrap] write complete (snapshot error)", e);
+            }
+            if (!this.isRunning) {
+                try {
+                    this.terminal.scrollToBottom();
+                } catch {}
+            }
         });
     }
 
     cmdDone(): void {
         this.isRunning = false;
         this.updateUsedRows(true, "cmd-done");
+        try {
+            this.terminal?.scrollToBottom?.();
+        } catch {}
     }
 }
 

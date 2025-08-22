@@ -121,7 +121,7 @@
         -ms-overflow-style: none; /* IE and Edge */
         scrollbar-width: none; /* Firefox */
     }
-    
+
     /* Shine border animation */
     @keyframes shine-pulse {
         0% {
