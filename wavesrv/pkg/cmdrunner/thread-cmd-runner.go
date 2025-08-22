@@ -461,19 +461,6 @@ func ThreadCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus
 		}
 	}
 
-	// Associate the line with the thread
-	if err := sstore.AddThreadLine(ctx, threadId, ids.ScreenId, line); err != nil {
-		return nil, fmt.Errorf("/thread error: cannot add thread line: %w", err)
-	}
-
-	// Add threadid to line state so frontend knows which thread this line belongs to
-	// AddThreadLine will also update this in the database, but we need it here for the immediate update
-	if line.LineState == nil {
-		line.LineState = make(map[string]interface{})
-	}
-	// Store as a list since a line can belong to multiple threads
-	line.LineState["threadids"] = []string{threadId}
-
 	// Get all thread lines for this thread to build conversation
 	threadLines, err := sstore.GetThreadLinesByThread(ctx, threadId)
 	if err != nil {
@@ -520,6 +507,20 @@ func ThreadCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus
 			}
 		}
 	}
+
+	// Associate the line with the thread
+	if err := sstore.AddThreadLine(ctx, threadId, ids.ScreenId, line); err != nil {
+		return nil, fmt.Errorf("/thread error: cannot add thread line: %w", err)
+	}
+
+	// Add threadid to line state so frontend knows which thread this line belongs to
+	// AddThreadLine will also update this in the database, but we need it here for the immediate update
+	if line.LineState == nil {
+		line.LineState = make(map[string]interface{})
+	}
+	// Store as a list since a line can belong to multiple threads
+	line.LineState["threadids"] = []string{threadId}
+
 
 	// Build conversation from thread lines
 	conversation := []packet.OpenAIPromptMessageType{}

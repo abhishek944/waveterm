@@ -358,7 +358,7 @@ const ThreadModeRenderer: React.FC<{
                                 })()}
                             </div>
                             <div className="mt-2 p-3 bg-black/50 rounded font-mono text-sm border border-white/10">
-                                <div className="flex items-start">
+                                <div className="flex items-center">
                                     {/* Command div - takes 70% width */}
                                     <div className="w-[70%] pr-3 overflow-hidden">
                                         <div className="text-green-400 break-words whitespace-pre-wrap">
@@ -478,7 +478,7 @@ const ThreadModeRenderer: React.FC<{
                                     })()}
                                 </div>
                                 <div className="mt-2 p-3 bg-black/50 rounded font-mono text-sm border border-white/10">
-                                    <div className="flex items-start">
+                                    <div className="flex items-center">
                                         {/* Command div - takes 70% width */}
                                         <div className="w-[70%] pr-3 overflow-hidden">
                                             <div className="text-green-400 break-words whitespace-pre-wrap">
