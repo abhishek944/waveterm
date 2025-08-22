@@ -276,8 +276,8 @@ function useSidebarAutoRows(
             if (!termWrap) return;
             // Increase allowed rows for sidebar to prevent clamping
             // TODO: Change this according to screen height.
-            if ((termWrap as any).maxRows < 45) {
-                (termWrap as any).maxRows = 45;
+            if ((termWrap as any).maxRows < 42) {
+                (termWrap as any).maxRows = 42;
             }
             const height = container.clientHeight;
             const rows = Math.max(5, Math.floor(height / lineHeight));
