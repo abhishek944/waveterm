@@ -5,11 +5,13 @@ import * as React from "react";
 import { observer } from "mobx-react";
 import { reaction } from "mobx";
 import { GlobalModel, GlobalCommandRunner, Session, Screen } from "@/models";
-import { Plus, Sparkles, PanelLeft } from "lucide-react";
+import { Plus, Sparkles } from "lucide-react";
 import { Reorder } from "framer-motion";
 import { ScreenTab } from "@/components/workspace";
 import { clsx } from "clsx";
 import { Button } from "@/components/ui/button";
+
+import rockTerminalIcon from "/public/assets/rock-terminal-1-transparent.png";
 
 export const ScreenTabs = observer(({ session }: { session: Session }) => {
     const tabsRef = React.useRef<HTMLDivElement>(null);
@@ -92,7 +94,7 @@ export const ScreenTabs = observer(({ session }: { session: Session }) => {
                     onClick={() => GlobalModel.mainSidebarModel.setCollapsed(false)}
                 >
                     <div className="p-1.5 rounded-md bg-gradient-to-br from-gray-800 via-gray-700 to-gray-900 border border-gray-600/30 shadow-sm">
-                        <PanelLeft size={18} className="text-gray-300" />
+                        <img src={rockTerminalIcon} alt="Rock Terminal" className="w-[18px] h-[18px]" />
                     </div>
                 </div>
             )}

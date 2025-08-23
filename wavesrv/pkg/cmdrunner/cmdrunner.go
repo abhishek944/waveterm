@@ -269,6 +269,7 @@ func init() {
 	registerCmdFn("thread:addline", ThreadAddLineCommand)
 	registerCmdFn("thread:removeline", ThreadRemoveLineCommand)
 	registerCmdFn("thread:create", ThreadCreateCommand)
+	registerCmdFn("thread:forcestop", ThreadForceStopCommand)
 
 	registerCmdFn("_killserver", KillServerCommand)
 	registerCmdFn("_dumpstate", DumpStateCommand)
@@ -616,7 +617,6 @@ func doNewTabConnectLocal(ctx context.Context, screenId string, uiContext *scpac
 var screenAnchorRe = regexp.MustCompile("^(\\d+)(?::(-?\\d+))?$")
 
 var sidebarWidthRe = regexp.MustCompile("^\\d+(px|%)$")
-
 
 func createRemoteViewRemoteIdUpdate(remoteId string) scbus.UpdatePacket {
 	update := scbus.MakeUpdatePacket()
@@ -1022,7 +1022,7 @@ type HostInfoType struct {
 	ConnectMode   string
 	Ignore        bool
 	ShellPref     string
-	ProxyCommand  string  // Added ProxyCommand support
+	ProxyCommand  string // Added ProxyCommand support
 }
 
 func createSshImportSummary(changeList map[string][]string) string {
@@ -1097,7 +1097,7 @@ func NewHostInfo(hostName string) (*HostInfoType, error) {
 	}
 	identityFile, _ := ssh_config.GetStrict(hostName, "IdentityFile")
 	passwordAuth, _ := ssh_config.GetStrict(hostName, "PasswordAuthentication")
-	proxyCommand, _ := ssh_config.GetStrict(hostName, "ProxyCommand")  // Added ProxyCommand parsing
+	proxyCommand, _ := ssh_config.GetStrict(hostName, "ProxyCommand") // Added ProxyCommand parsing
 
 	cfgWaveOptionsStr, _ := ssh_config.GetStrict(hostName, "WaveOptions")
 	cfgWaveOptionsStr = strings.ToLower(cfgWaveOptionsStr)
@@ -1135,7 +1135,7 @@ func NewHostInfo(hostName string) (*HostInfoType, error) {
 	outHostInfo.ConnectMode = connectMode
 	outHostInfo.Ignore = shouldIgnore
 	outHostInfo.ShellPref = shellPref
-	outHostInfo.ProxyCommand = proxyCommand  // Pass ProxyCommand from SSH config
+	outHostInfo.ProxyCommand = proxyCommand // Pass ProxyCommand from SSH config
 	return outHostInfo, nil
 }
 
@@ -1293,11 +1293,11 @@ func CrCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.Upd
 		cwdFromKwargs := pk.Kwargs["cwd"]
 		log.Printf("[DEBUG CrCommand] connect command - Got cwd from kwargs: %s", cwdFromKwargs)
 		opts := connectOptsType{
-			Verbose:   verbose,
-			ShellType: shellType,
-			SessionId: ids.SessionId,
-			ScreenId:  ids.ScreenId,
-			RPtr:      *rptr,
+			Verbose:    verbose,
+			ShellType:  shellType,
+			SessionId:  ids.SessionId,
+			ScreenId:   ids.ScreenId,
+			RPtr:       *rptr,
 			InitialCwd: cwdFromKwargs,
 		}
 		go doAsyncResetCommand(newWsh, opts, cmd)
@@ -1756,7 +1756,6 @@ func validateRemoteColor(color string, typeStr string) error {
 	return fmt.Errorf("invalid %s, valid colors are: %s", typeStr, formatStrs(RemoteColorNames, "or", false))
 }
 
-
 func makeExternLink(urlStr string) string {
 	return fmt.Sprintf(`https://extern?%s`, url.QueryEscape(urlStr))
 }
@@ -1910,14 +1909,12 @@ func ClearSudoCache(ctx context.Context, pk *scpacket.FeCommandPacketType) (rtnU
 	return update, nil
 }
 
-
-
 type connectOptsType struct {
-	ShellType string // shell type to connect with
-	Verbose   bool   // extra output (show state changes, sizes, etc.)
-	SessionId string
-	ScreenId  string
-	RPtr      sstore.RemotePtrType
+	ShellType  string // shell type to connect with
+	Verbose    bool   // extra output (show state changes, sizes, etc.)
+	SessionId  string
+	ScreenId   string
+	RPtr       sstore.RemotePtrType
 	InitialCwd string // initial working directory
 }
 
@@ -1950,22 +1947,22 @@ func doAsyncResetCommand(wsh *remote.WaveshellProc, opts connectOptsType, cmd *s
 		return
 	}
 	feState := sstore.FeStateFromShellState(ssPk.State)
-	log.Printf("[DEBUG doAsyncResetCommand] feState[cwd]=%v, ssPk.State.Cwd=%s, opts.InitialCwd=%s", 
+	log.Printf("[DEBUG doAsyncResetCommand] feState[cwd]=%v, ssPk.State.Cwd=%s, opts.InitialCwd=%s",
 		feState["cwd"], ssPk.State.Cwd, opts.InitialCwd)
-	
+
 	// If initial cwd is specified, create a state diff to change it
 	var stateDiff *packet.ShellStateDiff
 	if opts.InitialCwd != "" && opts.InitialCwd != sstore.DefaultCwd && opts.InitialCwd != ssPk.State.Cwd {
 		stateDiff = &packet.ShellStateDiff{
 			BaseHash: ssPk.State.GetHashVal(false),
-			Version: ssPk.State.Version,
-			Cwd: opts.InitialCwd,
+			Version:  ssPk.State.Version,
+			Cwd:      opts.InitialCwd,
 		}
 		stateDiff.GetHashVal(true) // compute the hash for the diff
 		feState["cwd"] = opts.InitialCwd
 		log.Printf("[DEBUG doAsyncResetCommand] Creating state diff with cwd=%s, hash=%s", opts.InitialCwd, stateDiff.HashVal)
 	}
-	
+
 	// If we have a state diff, don't pass the state (can't pass both)
 	var stateToPass *packet.ShellState
 	if stateDiff == nil {
@@ -1976,7 +1973,7 @@ func doAsyncResetCommand(wsh *remote.WaveshellProc, opts connectOptsType, cmd *s
 		rtnErr = err
 		return
 	}
-	
+
 	newStatePtr := packet.ShellStatePtr{
 		BaseHash: ssPk.State.GetHashVal(false),
 	}
@@ -2157,8 +2154,6 @@ func makeStreamFilePk(ids resolvedIds, pk *scpacket.FeCommandPacketType) (*packe
 	return streamPk, nil
 }
 
-
-
 func MakeReadFileUrl(screenId string, lineId string, filePath string) (string, error) {
 	qvals := make(url.Values)
 	qvals.Set("screenid", screenId)
@@ -2336,19 +2331,19 @@ func RequestThreadsCommand(ctx context.Context, pk *scpacket.FeCommandPacketType
 		}
 		screenId = ids.ScreenId
 	}
-	
+
 	// Fetch threads list for the screen
 	threads, err := sstore.ListThreads(ctx, screenId)
 	if err != nil {
 		return nil, fmt.Errorf("error fetching threads: %v", err)
 	}
-	
+
 	// Convert to the format expected by frontend
 	items := make([]map[string]string, 0, len(threads))
 	for _, t := range threads {
 		items = append(items, map[string]string{"threadid": t.ThreadId, "name": t.Name})
 	}
-	
+
 	// Send update to frontend
 	update := scbus.MakeUpdatePacket()
 	update.AddUpdate(sstore.ThreadsUpdateType{ScreenId: screenId, Items: items})

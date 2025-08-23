@@ -20,13 +20,7 @@ import { commandRtnHandler } from "@/utils/util";
 import { AutocompleteSuggestionView } from "@/components/workspace";
 import { AIProviderDropdown } from "@/components/workspace";
 import { Button } from "@/components/ui/button";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 dayjs.extend(localizedFormat);
 
@@ -34,6 +28,7 @@ export const CmdInput: React.FC = observer(() => {
     const cmdInputRef = React.useRef<HTMLDivElement>(null);
     const promptRef = React.useRef<HTMLDivElement>(null);
     const sbcTimeoutId = React.useRef<NodeJS.Timeout>(null);
+    const [showForceStopMessage, setShowForceStopMessage] = React.useState(false);
 
     const updateCmdInputHeight = () => {
         const elem = cmdInputRef.current;
@@ -287,32 +282,40 @@ export const CmdInput: React.FC = observer(() => {
                     <div className="flex items-center gap-2 px-4 pb-2">
                         {/* AI Provider Dropdown */}
                         <AIProviderDropdown />
-                        
+
                         {/* Thread Mode Specific Controls */}
                         {isThreadMode && (
                             <>
                                 {/* Thread Selector */}
-                                <Select value={activeThreadId || "new-thread"} onValueChange={async (value) => {
-                                    if (value === "new-thread") {
-                                        // Create a new thread immediately
-                                        const rtn = await GlobalCommandRunner.createNewThread(screen.screenId);
-                                        commandRtnHandler(rtn, false);
-                                        // The new thread ID will be set via the update
-                                    } else {
-                                        GlobalModel.setActiveThreadId(value);
-                                    }
-                                }}>
-                                    <SelectTrigger 
+                                <Select
+                                    value={activeThreadId || "new-thread"}
+                                    onValueChange={async (value) => {
+                                        if (value === "new-thread") {
+                                            // Create a new thread immediately
+                                            const rtn = await GlobalCommandRunner.createNewThread(screen.screenId);
+                                            commandRtnHandler(rtn, false);
+                                            // The new thread ID will be set via the update
+                                        } else {
+                                            GlobalModel.setActiveThreadId(value);
+                                        }
+                                    }}
+                                >
+                                    <SelectTrigger
                                         className="h-7 px-3 text-xs bg-gradient-to-r from-gray-800 to-gray-900 border border-gray-700 rounded-lg w-[140px] hover:from-gray-700 hover:to-gray-800 transition-all duration-200"
                                         onMouseDown={(e) => e.stopPropagation()}
                                     >
                                         <SelectValue placeholder="New Thread…" />
                                     </SelectTrigger>
                                     <SelectContent className="bg-gradient-to-b from-gray-900 to-black border border-gray-700 text-white text-xs rounded-lg shadow-xl">
-                                        <SelectItem value="new-thread" className="hover:bg-gradient-to-r hover:from-purple-600/20 hover:to-pink-600/20">New Thread…</SelectItem>
+                                        <SelectItem
+                                            value="new-thread"
+                                            className="hover:bg-gradient-to-r hover:from-purple-600/20 hover:to-pink-600/20"
+                                        >
+                                            New Thread…
+                                        </SelectItem>
                                         {threads.map((t) => (
-                                            <SelectItem 
-                                                key={t.threadid} 
+                                            <SelectItem
+                                                key={t.threadid}
                                                 value={t.threadid}
                                                 className="hover:bg-gradient-to-r hover:from-purple-600/20 hover:to-pink-600/20"
                                             >
@@ -321,9 +324,9 @@ export const CmdInput: React.FC = observer(() => {
                                         ))}
                                     </SelectContent>
                                 </Select>
-                                
+
                                 {/* Execution Mode Selector */}
-                                <Select 
+                                <Select
                                     value={(() => {
                                         const clientData = GlobalModel.clientData.get();
                                         return clientData?.aiopts?.threadExecutionMode || "manual";
@@ -331,23 +334,88 @@ export const CmdInput: React.FC = observer(() => {
                                     onValueChange={(value: ThreadExecutionMode) => {
                                         const prtn = GlobalCommandRunner.setAIOpts({
                                             ...GlobalModel.clientData.get()?.aiopts,
-                                            threadExecutionMode: value
+                                            threadExecutionMode: value,
                                         });
                                         commandRtnHandler(prtn, null);
                                     }}
                                 >
-                                    <SelectTrigger 
+                                    <SelectTrigger
                                         className="h-7 px-3 text-xs bg-gradient-to-r from-gray-800 to-gray-900 border border-gray-700 rounded-lg w-[140px] hover:from-gray-700 hover:to-gray-800 transition-all duration-200"
                                         onMouseDown={(e) => e.stopPropagation()}
                                     >
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent className="bg-gradient-to-b from-gray-900 to-black border border-gray-700 text-white text-xs rounded-lg shadow-xl">
-                                        <SelectItem value="manual" className="hover:bg-gradient-to-r hover:from-purple-600/20 hover:to-pink-600/20">Manual</SelectItem>
-                                        <SelectItem value="semi-auto" className="hover:bg-gradient-to-r hover:from-purple-600/20 hover:to-pink-600/20">Semi-Auto</SelectItem>
-                                        <SelectItem value="full-auto" className="hover:bg-gradient-to-r hover:from-purple-600/20 hover:to-pink-600/20">Full Auto</SelectItem>
+                                        <SelectItem
+                                            value="manual"
+                                            className="hover:bg-gradient-to-r hover:from-purple-600/20 hover:to-pink-600/20"
+                                        >
+                                            Manual
+                                        </SelectItem>
+                                        <SelectItem
+                                            value="semi-auto"
+                                            className="hover:bg-gradient-to-r hover:from-purple-600/20 hover:to-pink-600/20"
+                                        >
+                                            Semi-Auto
+                                        </SelectItem>
+                                        <SelectItem
+                                            value="full-auto"
+                                            className="hover:bg-gradient-to-r hover:from-purple-600/20 hover:to-pink-600/20"
+                                        >
+                                            Full Auto
+                                        </SelectItem>
                                     </SelectContent>
                                 </Select>
+
+                                {/* Force Stop Button - Only show for Full Auto and Semi Auto modes */}
+                                {(() => {
+                                    const clientData = GlobalModel.clientData.get();
+                                    const executionMode = clientData?.aiopts?.threadExecutionMode || "manual";
+                                    const shouldShowForceStop =
+                                        executionMode === "full-auto" || executionMode === "semi-auto";
+
+                                    if (!shouldShowForceStop) return null;
+
+                                    return (
+                                        <>
+                                            <button
+                                                className="h-7 px-3 text-xs bg-gradient-to-r from-red-800 to-red-900 border border-red-700 rounded-lg hover:from-red-700 hover:to-red-800 transition-all duration-200 flex items-center gap-1"
+                                                title="Force stop thread execution"
+                                                onClick={async () => {
+                                                    const activeThreadId = GlobalModel.activeThreadId.get();
+                                                    if (activeThreadId) {
+                                                        // Use a special command to force stop the thread
+                                                        await GlobalModel.submitCommand(
+                                                            "thread",
+                                                            "forcestop",
+                                                            [activeThreadId],
+                                                            { nohist: "1" },
+                                                            false
+                                                        );
+
+                                                        // Show success message
+                                                        setShowForceStopMessage(true);
+
+                                                        // Hide message after 3 seconds
+                                                        setTimeout(() => {
+                                                            setShowForceStopMessage(false);
+                                                        }, 3000);
+                                                    }
+                                                }}
+                                            >
+                                                <i className="fa-sharp fa-solid fa-stop text-xs text-red-300" />
+                                                Stop
+                                            </button>
+
+                                            {/* Force Stop Message */}
+                                            {showForceStopMessage && (
+                                                <div className="text-green-400 text-xs animate-pulse">
+                                                    Execution stopped
+                                                </div>
+                                            )}
+                                        </>
+                                    );
+                                })()}
                             </>
                         )}
                     </div>

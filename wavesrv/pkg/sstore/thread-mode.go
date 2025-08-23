@@ -74,7 +74,7 @@ type ThreadLineType struct {
 	AssistantResponse  string `json:"assistantresponse"`
 	Command            string `json:"command,omitempty"`
 	CmdLineId          string `json:"cmdlineid,omitempty"`
-	CmdExecutionStatus string `json:"cmdexecutionstatus,omitempty"` // waiting, accepted, rejected
+	CmdExecutionStatus string `json:"cmd_execution_status,omitempty" dbmap:"cmd_execution_status"` // waiting, accepted, rejected
 	CreatedTs          int64  `json:"createdts"`
 }
 
@@ -161,13 +161,14 @@ func UpdateThreadLineCmdExecutionStatus(ctx context.Context, threadId string, sc
 
 // Thread data model
 type ThreadType struct {
-	ThreadId  string `json:"threadid"`
-	SessionId string `json:"sessionid"`
-	ScreenId  string `json:"screenid"`
-	Name      string `json:"name"`
-	CreatedTs int64  `json:"createdts"`
-	UpdatedTs int64  `json:"updatedts"`
-	Archived  bool   `json:"archived"`
+	ThreadId     string `json:"threadid"`
+	SessionId    string `json:"sessionid"`
+	ScreenId     string `json:"screenid"`
+	Name         string `json:"name"`
+	CreatedTs    int64  `json:"createdts"`
+	UpdatedTs    int64  `json:"updatedts"`
+	Archived     bool   `json:"archived"`
+	ForceStopped bool   `json:"force_stopped" dbmap:"force_stopped"`
 }
 
 func (ThreadType) UseDBMap() {}
@@ -198,17 +199,18 @@ func CreateThread(ctx context.Context, sessionId string, screenId string, name s
 
 	now := time.Now().UnixMilli()
 	thread := &ThreadType{
-		ThreadId:  scbase.GenWaveUUID(),
-		SessionId: sessionId,
-		ScreenId:  screenId,
-		Name:      name,
-		CreatedTs: now,
-		UpdatedTs: now,
-		Archived:  false,
+		ThreadId:     scbase.GenWaveUUID(),
+		SessionId:    sessionId,
+		ScreenId:     screenId,
+		Name:         name,
+		CreatedTs:    now,
+		UpdatedTs:    now,
+		Archived:     false,
+		ForceStopped: false,
 	}
 	err := WithTx(ctx, func(tx *TxWrap) error {
-		query := `INSERT INTO thread (threadid, sessionid, screenid, name, createdts, updatedts, archived)
-                  VALUES (:threadid, :sessionid, :screenid, :name, :createdts, :updatedts, :archived)`
+		query := `INSERT INTO thread (threadid, sessionid, screenid, name, createdts, updatedts, archived, force_stopped)
+                  VALUES (:threadid, :sessionid, :screenid, :name, :createdts, :updatedts, :archived, :force_stopped)`
 		tx.NamedExec(query, dbutil.ToDBMap(thread, false))
 		return nil
 	})
@@ -380,5 +382,24 @@ func RemoveLineFromThread(ctx context.Context, threadId string, screenId string,
 		log.Printf("[RemoveLineFromThread] Removed line %s from thread %s, remaining threads: %v", lineId, threadId, threadIds)
 
 		return nil
+	})
+}
+
+// SetThreadForceStopped sets the force_stopped flag for a thread
+func SetThreadForceStopped(ctx context.Context, threadId string, forceStopped bool) error {
+	return WithTx(ctx, func(tx *TxWrap) error {
+		query := `UPDATE thread SET force_stopped = ? WHERE threadid = ?`
+		tx.Exec(query, forceStopped, threadId)
+		return nil
+	})
+}
+
+// IsThreadForceStopped checks if a thread has been force stopped
+func IsThreadForceStopped(ctx context.Context, threadId string) (bool, error) {
+	return WithTxRtn(ctx, func(tx *TxWrap) (bool, error) {
+		query := `SELECT force_stopped FROM thread WHERE threadid = ?`
+		var forceStopped bool
+		tx.Get(&forceStopped, query, threadId)
+		return forceStopped, nil
 	})
 }

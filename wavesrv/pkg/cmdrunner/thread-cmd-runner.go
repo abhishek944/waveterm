@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"regexp"
 	"strings"
 	"time"
 
@@ -20,34 +19,6 @@ import (
 	"github.com/abhishek944/waveterm/wavesrv/pkg/scpacket"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/sstore"
 )
-
-// isCommandAllowed checks if a command matches any of the allowed regex patterns
-func isCommandAllowed(command string, allowCommands []string) bool {
-	if len(allowCommands) == 0 {
-		return false // No patterns defined, nothing is allowed
-	}
-
-	for _, pattern := range allowCommands {
-		if pattern == "" {
-			continue
-		}
-
-		// Compile and match the regex pattern
-		regex, err := regexp.Compile(pattern)
-		if err != nil {
-			log.Printf("[isCommandAllowed] Invalid regex pattern '%s': %v", pattern, err)
-			continue
-		}
-
-		if regex.MatchString(command) {
-			log.Printf("[isCommandAllowed] Command '%s' matches pattern '%s'", command, pattern)
-			return true
-		}
-	}
-
-	log.Printf("[isCommandAllowed] Command '%s' does not match any allowed patterns", command)
-	return false
-}
 
 func ThreadInstructionCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {
 	// Get instruction type and line ID from args
@@ -219,14 +190,38 @@ func ThreadInstructionCommand(ctx context.Context, pk *scpacket.FeCommandPacketT
 
 		return update, nil
 
-	case "force_stop":
-		// TODO: Implement force stop logic
-		// This should stop any ongoing multi-turn execution
-		return nil, fmt.Errorf("force_stop not implemented yet")
-
 	default:
 		return nil, fmt.Errorf("unknown instruction type: %s", instructionType)
 	}
+}
+
+func ThreadForceStopCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {
+	// Need threadId
+	if len(pk.Args) < 1 {
+		return nil, fmt.Errorf("/thread:forcestop requires 1 argument (threadId)")
+	}
+
+	threadId := pk.Args[0]
+
+	// Resolve UI IDs (we don't need the ids for this command, just validate the session/screen)
+	_, err := resolveUiIds(ctx, pk, R_Session|R_Screen)
+	if err != nil {
+		return nil, fmt.Errorf("/thread:forcestop error: %w", err)
+	}
+
+	log.Printf("[ThreadForceStopCommand] DEBUG: Handling force_stop for threadId=%s", threadId)
+
+	// Set force_stopped flag in database
+	err = sstore.SetThreadForceStopped(ctx, threadId, true)
+	if err != nil {
+		log.Printf("[ThreadForceStopCommand] ERROR: Failed to set force_stopped flag: %v\n", err)
+		return nil, fmt.Errorf("/thread:forcestop error: %w", err)
+	}
+
+	log.Printf("[ThreadForceStopCommand] DEBUG: Successfully set force_stopped flag for thread %s", threadId)
+
+	// Return empty update packet (success)
+	return scbus.MakeUpdatePacket(), nil
 }
 
 func ThreadCreateCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {
@@ -459,6 +454,14 @@ func ThreadCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus
 			scbus.MainUpdateBus.DoUpdate(update)
 
 		}
+	} else {
+		// Unset force_stopped flag when a new thread command is sent
+		err = sstore.SetThreadForceStopped(ctx, threadId, false)
+		if err != nil {
+			log.Printf("[ThreadCommand] WARNING: Failed to unset force_stopped flag: %v", err)
+		} else {
+			log.Printf("[ThreadCommand] DEBUG: Successfully unset force_stopped flag for thread %s", threadId)
+		}
 	}
 
 	// Get all thread lines for this thread to build conversation
@@ -520,7 +523,6 @@ func ThreadCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus
 	}
 	// Store as a list since a line can belong to multiple threads
 	line.LineState["threadids"] = []string{threadId}
-
 
 	// Build conversation from thread lines
 	conversation := []packet.OpenAIPromptMessageType{}
@@ -703,8 +705,16 @@ func ThreadCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus
 											log.Printf("thread sent line update with cmdexeclineid: %s\n", cmdExecLineId)
 										}
 
-										// Start multi-turn execution loop
-										go startMultiTurnExecution(bgCtx, originalPk, clientData, &originalIds, threadId, cmdExecLineId, threadResp.Command)
+										// Check if thread has been force stopped before starting multi-turn execution
+										forceStopped, err := sstore.IsThreadForceStopped(bgCtx, threadId)
+										if err != nil {
+											log.Printf("thread ERROR: Failed to check force_stopped status: %v", err)
+										} else if forceStopped {
+											log.Printf("thread DEBUG: Thread %s has been force stopped, skipping multi-turn execution", threadId)
+										} else {
+											// Start multi-turn execution loop
+											go startMultiTurnExecution(bgCtx, originalPk, clientData, &originalIds, threadId, cmdExecLineId, threadResp.Command)
+										}
 									}
 								} else {
 									// Manual mode or semi-auto with disallowed command - mark as waiting
@@ -819,8 +829,8 @@ func startMultiTurnExecution(ctx context.Context, pk *scpacket.FeCommandPacketTy
 			prevCommand, exitCode, output)
 
 		// Truncate if too long
-		if len(commandOutput) > 10000 {
-			commandOutput = commandOutput[:10000] + "\n... (output truncated)"
+		if len(commandOutput) > 1000 {
+			commandOutput = commandOutput[:1000] + "\n... (output truncated)"
 		}
 
 		// Step 3: Create NEW thread line
@@ -920,6 +930,21 @@ func startMultiTurnExecution(ctx context.Context, pk *scpacket.FeCommandPacketTy
 			Content: commandOutput,
 		})
 
+		// Initialize outputPos for potential early exit
+		var outputPos int64 = 0
+
+		// Check if thread has been force stopped before making AI call
+		forceStopped, err := sstore.IsThreadForceStopped(ctx, threadId)
+		if err != nil {
+			log.Printf("Error checking force_stopped status: %v", err)
+			break
+		}
+		if forceStopped {
+			log.Printf("Thread %s has been force stopped, stopping multi-turn execution", threadId)
+			writeTextToPty(ctx, newCmd, "Execution stopped by user.\n", &outputPos)
+			break
+		}
+
 		// Step 10: Get AI response for this new line
 		response, err := RunThreadMode(ctx, pk, clientData, conversation, provider)
 		if err != nil {
@@ -928,7 +953,6 @@ func startMultiTurnExecution(ctx context.Context, pk *scpacket.FeCommandPacketTy
 		}
 
 		// Step 11: Handle streaming response
-		var outputPos int64 = 0
 		var fullResponse strings.Builder
 		var nextCommand string
 		packetTimeout := OpenAIPacketTimeout
@@ -1100,52 +1124,5 @@ func startMultiTurnExecution(ctx context.Context, pk *scpacket.FeCommandPacketTy
 
 	if iteration >= maxIterations {
 		log.Printf("Thread execution stopped - max iterations reached")
-	}
-}
-
-// waitForCommandOutput waits for a command to complete and returns its output
-func waitForCommandOutput(ctx context.Context, screenId string, cmdLineId string) (string, int) {
-	maxWaitTime := 30 * time.Minute
-	startTime := time.Now()
-
-	for {
-		// Check if context is cancelled
-		select {
-		case <-ctx.Done():
-			return "", -1
-		default:
-		}
-
-		// Check timeout
-		if time.Since(startTime) > maxWaitTime {
-			log.Printf("Timeout waiting for command %s to complete", cmdLineId)
-			return "Command execution timeout", -1
-		}
-
-		// Get command status
-		cmd, err := sstore.GetCmdByScreenId(ctx, screenId, cmdLineId)
-		if err != nil {
-			log.Printf("Error getting command: %v", err)
-			return "", -1
-		}
-
-		if cmd.Status == sstore.CmdStatusDone || cmd.Status == sstore.CmdStatusError {
-			// Read PTY output
-			ptyPath, err := scbase.PtyOutFile(screenId, cmdLineId)
-			if err != nil {
-				log.Printf("Error getting PTY path: %v", err)
-				return "Error getting command output path", cmd.ExitCode
-			}
-			outputBytes, err := os.ReadFile(ptyPath)
-			if err != nil {
-				log.Printf("Error reading PTY output: %v", err)
-				return "Error reading command output", cmd.ExitCode
-			}
-
-			return string(outputBytes), cmd.ExitCode
-		}
-
-		// Wait a bit before checking again
-		time.Sleep(100 * time.Millisecond)
 	}
 }
