@@ -222,7 +222,7 @@ const MainSideBar: React.FC<MainSideBarProps> = observer(({ parentRef }) => {
                                 </OverlayScrollbarsComponent>
 
                                 <div className="bottom pr-1.5 flex-shrink-0 pb-4" id="sidebar-bottom">
-                                    {getUpdateAppBanner()}
+                                    {/* {getUpdateAppBanner()} */}
                                     {/* <SideBarItem
                                         key="info"
                                         frontIcon={<i className="fa-sharp fa-regular fa-circle-info icon" />}
