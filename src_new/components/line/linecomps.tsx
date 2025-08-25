@@ -22,6 +22,7 @@ import { ErrorBoundary } from "@/components/error/errorboundary";
 import { TerminalRenderer } from "@/plugins/terminal/terminal";
 import { SimpleBlobRenderer } from "@/plugins/core/basicrenderer";
 import { IncrementalRenderer } from "@/plugins/core/incrementalrenderer";
+import LineSearchBar from "@/components/line/linesearchbar";
 
 dayjs.extend(localizedFormat);
 
@@ -1330,6 +1331,11 @@ const LineCmd: React.FC<{
         const shouldShowShineBorder =
             isThreadMode && lineThreadIds && activeThreadId && lineThreadIds.includes(activeThreadId);
 
+        // Line-level search visibility for this line
+        const isLineSearchVisibleForThisLine =
+            GlobalModel.lineSearchOpen.get() &&
+            ((GlobalModel.lineSearchSelectedLineIds.get() || [GlobalModel.lineSearchLineId.get()]).includes(line.lineid));
+
         const mainDivCn = clsx(
             "line",
             "line-cmd",
@@ -1382,7 +1388,7 @@ const LineCmd: React.FC<{
                     <If condition={isSelected || cmdError}>
                         <div className={clsx("line-mask", { "error-mask": cmdError })}></div>
                     </If>
-                    <LineActions screen={screen} line={line} cmd={cmd} />
+                    {!isLineSearchVisibleForThisLine && <LineActions screen={screen} line={line} cmd={cmd} />}
                     <LineHeader line={line} cmd={cmd} />
                     <LineContent
                         screen={screen}
@@ -1412,22 +1418,29 @@ const LineHeader: React.FC<{ line: LineType; cmd: Cmd }> = observer(({ line, cmd
         }
         const renderer = line.renderer;
         const durationMs = cmd.getDurationMs();
+        const isLineSearchForThis = GlobalModel.lineSearchOpen.get() && ((GlobalModel.lineSearchSelectedLineIds.get() || [GlobalModel.lineSearchLineId.get()]).includes(line.lineid));
+
         return (
-            <div className="flex items-center text-xs text-gray-400">
-                <SmallLineAvatar line={line} cmd={cmd} />
-                <div className="mx-2">|</div>
-                <Prompt rptr={cmd.remote} festate={cmd.getRemoteFeState()} color={false} />
-                <div className="mx-2">|</div>
-                <div title={timeTitle} className="ts">
-                    {formattedTime} <If condition={durationMs > 0}>({util.formatDuration(durationMs)})</If>
-                </div>
-                <If condition={!isBlank(renderer) && renderer != "terminal"}>
+            <div className="flex items-center justify-between text-xs text-gray-400">
+                <div className="flex items-center">
+                    <SmallLineAvatar line={line} cmd={cmd} />
                     <div className="mx-2">|</div>
-                    <div className="renderer">
-                        <i className="fa-sharp fa-solid fa-fill mr-2" />
-                        {renderer}
+                    <Prompt rptr={cmd.remote} festate={cmd.getRemoteFeState()} color={false} />
+                    <div className="mx-2">|</div>
+                    <div title={timeTitle} className="ts">
+                        {formattedTime} <If condition={durationMs > 0}>({util.formatDuration(durationMs)})</If>
                     </div>
-                </If>
+                    <If condition={!isBlank(renderer) && renderer != "terminal"}>
+                        <div className="mx-2">|</div>
+                        <div className="renderer">
+                            <i className="fa-sharp fa-solid fa-fill mr-2" />
+                            {renderer}
+                        </div>
+                    </If>
+                </div>
+                <div className="flex items-center gap-2">
+                    {isLineSearchForThis ? <LineSearchBar lineId={line.lineid} /> : null}
+                </div>
             </div>
         );
     };

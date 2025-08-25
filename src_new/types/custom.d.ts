@@ -981,6 +981,9 @@ declare global {
         pathBaseName: (path: string) => string;
         pathDirName: (path: string) => string;
         pathSep: () => string;
+        findInPage: (searchText: string, options?: any) => void;
+        stopFindInPage: (action: "clearSelection" | "keepSelection" | "activateSelection") => void;
+        onFindInPageResult: (callback: (result: any) => void) => void;
     };
 
     type ElectronContextMenuItem = {

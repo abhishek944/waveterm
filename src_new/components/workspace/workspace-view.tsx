@@ -67,6 +67,34 @@ const SessionKeybindings: React.FC = () => {
         keybindManager.registerKeybinding("pane", "screen", "app:deleteActiveLine", (waveEvent) => {
             return GlobalModel.handleDeleteActiveLine();
         });
+        keybindManager.registerKeybinding("mainview", "session", "app:openSearchModal", (waveEvent) => {
+            try {
+                const activeScreen = GlobalModel.getActiveScreen();
+                if (activeScreen) {
+                    const selectedLines = activeScreen.getSelectedLines();
+                    if (selectedLines && selectedLines.length > 0) {
+                        const selectedLineIds: string[] = [];
+                        for (const ln of selectedLines) {
+                            const line = activeScreen.getLineByNum(ln);
+                            if (line && line.lineid) selectedLineIds.push(line.lineid);
+                        }
+                        const firstLineId = selectedLineIds[0];
+                        // Use any browser text selection as initial search text when available
+                        const selection = window.getSelection ? window.getSelection()?.toString() : "";
+                        const initialText = selection && selection.length > 0 ? selection : "";
+                        if (firstLineId) {
+                            GlobalModel.openLineSearch(firstLineId, initialText, selectedLineIds);
+                            return true;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn("error opening line search:", e);
+            }
+            // fallback to global search modal
+            GlobalModel.openSearchModal();
+            return true;
+        });
         keybindManager.registerKeybinding("pane", "screen", "app:copy", (waveEvent) => {
             // First check if we have a terminal selection
             const activeScreen = GlobalModel.getActiveScreen();

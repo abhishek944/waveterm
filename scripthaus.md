@@ -128,12 +128,34 @@ function buildWaveSrv {
     (cd wavesrv; CGO_ENABLED=1 GOARCH=$1 go build -tags "osusergo,netgo,sqlite_omit_load_extension" -ldflags "-X main.BuildTime=$(date +'%Y%m%d%H%M') -X main.WaveVersion=$WAVESRV_VERSION" -o ../bin/wavesrv.$1 ./cmd)
 }
 buildWaveShell darwin amd64
+buildWaveSrv arm64
+buildWaveSrv amd64
+npx electron-builder -c electron-builder.config.js -m -p never
+```
+
+```bash
+# @scripthaus command build-package-new
+# @scripthaus cd :playbook
+rm -rf dist/ dist-new/
+rm -rf bin/
+rm -rf build/
+node_modules/.bin/webpack --config webpack.config.new.js --env prod
+WAVESRV_VERSION=$(node -e 'console.log(require("./version.js"))')
+WAVESHELL_VERSION=v0.7
+GO_LDFLAGS="-s -w -X main.BuildTime=$(date +'%Y%m%d%H%M')"
+function buildWaveShell {
+    (cd waveshell; CGO_ENABLED=0 GOOS=$1 GOARCH=$2 go build -ldflags="$GO_LDFLAGS" -o ../bin/mshell/mshell-$WAVESHELL_VERSION-$1.$2 main-waveshell.go)
+}
+function buildWaveSrv {
+    (cd wavesrv; CGO_ENABLED=1 GOARCH=$1 go build -tags "osusergo,netgo,sqlite_omit_load_extension" -ldflags "-X main.BuildTime=$(date +'%Y%m%d%H%M') -X main.WaveVersion=$WAVESRV_VERSION" -o ../bin/wavesrv.$1 ./cmd)
+}
+buildWaveShell darwin amd64
 buildWaveShell darwin arm64
 buildWaveShell linux amd64
 buildWaveShell linux arm64
 buildWaveSrv arm64
 buildWaveSrv amd64
-yarn run electron-builder -c electron-builder.config.js -m -p never
+npx electron-builder -c electron-builder.config.js -m -p never
 ```
 
 ```bash

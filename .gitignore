@@ -1,5 +1,6 @@
 dist/
 dist-dev/
+dist-new/
 dist-dev-new/
 node_modules/
 *~

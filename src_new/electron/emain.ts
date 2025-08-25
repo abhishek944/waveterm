@@ -55,7 +55,7 @@ const loggerConfig = {
     level: "info",
     format: winston.format.combine(
         winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
-        winston.format.printf((info) => `${info.timestamp} ${info.message}`),
+        winston.format.printf((info) => `${info.timestamp} ${info.message}`)
     ),
     transports: loggerTransports,
 };
@@ -75,14 +75,17 @@ console.log(
         getElectronAppBasePath(),
         getGoAppBasePath(),
         unamePlatform,
-        unameArch,
-    ),
+        unameArch
+    )
 );
 if (isDev) {
     console.log("waveterm-app WAVETERM_DEV set");
 }
 const app = electron.app;
-app.setName(isDev ? "Wave (Dev)" : "Wave");
+
+// Set app name immediately after app creation
+app.setName(isDev ? "Rock (Dev)" : "Rock");
+
 let waveSrvProc: child_process.ChildProcessWithoutNullStreams | null = null;
 let waveSrvShouldRestart = false;
 
@@ -251,7 +254,7 @@ const menuTemplate: Electron.MenuItemConstructorOptions[] = [
         role: "appMenu",
         submenu: [
             {
-                label: "About Wave Terminal",
+                label: `About ${isDev ? "Rock (Dev)" : "Rock"}`,
                 click: (_, window) => {
                     window?.webContents.send("menu-item-about");
                 },
@@ -335,8 +338,8 @@ function createWindow(clientData: ClientDataType | null): Electron.BrowserWindow
         minHeight: 600,
         icon:
             unamePlatform == "linux"
-                ? path.join(getElectronAppBasePath(), "public/logos/wave-logo-dark.png")
-                : undefined,
+                ? path.join(getElectronAppBasePath(), "public/logos/rockterminal_256x256.png")
+                : path.join(getElectronAppBasePath(), "public/rockterminal.icns"), // macOS/Windows icon
         webPreferences: {
             preload: path.join(getElectronAppBasePath(), DistDir, "preload.js"),
         },
@@ -347,12 +350,12 @@ function createWindow(clientData: ClientDataType | null): Electron.BrowserWindow
         win.show();
     });
     const indexHtml = isDev ? "index-dev.html" : "index.html";
-    
+
     // Check if hot reload is enabled
     if (isDev && process.env.WAVETERM_HOT_RELOAD) {
         // Load from webpack dev server for hot reload
         win.loadURL("http://localhost:9001");
-        
+
         // Open DevTools in development with hot reload
         win.webContents.openDevTools();
     } else {
@@ -372,11 +375,11 @@ function createWindow(clientData: ClientDataType | null): Electron.BrowserWindow
     win.webContents.on("will-frame-navigate", shFrameNavHandler);
     win.on(
         "resize",
-        debounce(400, (e) => mainResizeHandler(e, win)),
+        debounce(400, (e) => mainResizeHandler(e, win))
     );
     win.on(
         "move",
-        debounce(400, (e) => mainResizeHandler(e, win)),
+        debounce(400, (e) => mainResizeHandler(e, win))
     );
     win.on("focus", () => {
         wasInFg = true;
@@ -384,6 +387,9 @@ function createWindow(clientData: ClientDataType | null): Electron.BrowserWindow
     });
     win.webContents.on("zoom-changed", (e) => {
         win.webContents.send("zoom-changed");
+    });
+    win.webContents.on("found-in-page", (event, result) => {
+        win.webContents.send("find-in-page-result", result);
     });
     win.webContents.setWindowOpenHandler(({ url, frameName }) => {
         if (url.startsWith("https://legacydocs.waveterm.dev/")) {
@@ -620,6 +626,20 @@ electron.ipcMain.on("path-dirname", (event, p) => {
 
 electron.ipcMain.on("path-sep", (event) => {
     event.returnValue = path.sep;
+});
+
+electron.ipcMain.on("find-in-page", (event, searchText, options) => {
+    const window = getWindowForEvent(event);
+    if (window) {
+        window.webContents.findInPage(searchText, options);
+    }
+});
+
+electron.ipcMain.on("stop-find-in-page", (event, action) => {
+    const window = getWindowForEvent(event);
+    if (window) {
+        window.webContents.stopFindInPage(action);
+    }
 });
 
 function readLastLinesOfFile(filePath: string, lineCount: number) {
@@ -901,8 +921,8 @@ function initUpdater(): NodeJS.Timeout {
         // Display the update banner and create a system notification
         setAppUpdateStatus("ready");
         const updateNotification = new electron.Notification({
-            title: "Wave Terminal",
-            body: "A new version of Wave Terminal is ready to install.",
+            title: isDev ? "Rock (Dev)" : "Rock",
+            body: `A new version of ${isDev ? "Rock (Dev)" : "Rock"} is ready to install.`,
         });
         updateNotification.on("click", () => {
             fireAndForget(() => installAppUpdate());
@@ -994,6 +1014,11 @@ function configureAutoUpdater(enabled: boolean) {
 // ====== MAIN ====== //
 
 (async () => {
+    // Set the app user model ID to ensure proper app name display on Windows
+    if (process.platform === "win32") {
+        app.setAppUserModelId("com.waveterm.rock");
+    }
+
     const instanceLock = app.requestSingleInstanceLock();
     if (!instanceLock) {
         console.log("waveterm-app could not get single-instance-lock, shutting down");

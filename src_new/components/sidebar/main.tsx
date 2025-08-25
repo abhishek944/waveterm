@@ -223,13 +223,13 @@ const MainSideBar: React.FC<MainSideBarProps> = observer(({ parentRef }) => {
 
                                 <div className="bottom pr-1.5 flex-shrink-0 pb-4" id="sidebar-bottom">
                                     {getUpdateAppBanner()}
-                                    <SideBarItem
+                                    {/* <SideBarItem
                                         key="info"
                                         frontIcon={<i className="fa-sharp fa-regular fa-circle-info icon" />}
                                         className={clsx({ "bg-gray-700": infoActive })}
                                         contents="Info"
                                         onClick={handleInfoClick}
-                                    />
+                                    /> */}
                                     <SideBarItem
                                         key="settings"
                                         frontIcon={<SettingsIcon className="icon" />}

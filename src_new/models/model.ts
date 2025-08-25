@@ -94,6 +94,16 @@ class Model {
     aboutModalOpen: OV<boolean> = mobx.observable.box(false, {
         name: "aboutModalOpen",
     });
+    searchModalOpen: OV<boolean> = mobx.observable.box(false, {
+        name: "searchModalOpen",
+    });
+
+    // Line-level search state
+    lineSearchOpen: OV<boolean> = mobx.observable.box(false, { name: "lineSearchOpen" });
+    lineSearchLineId: OV<string | null> = mobx.observable.box(null, { name: "lineSearchLineId" });
+    lineSearchText: OV<string> = mobx.observable.box("", { name: "lineSearchText" });
+    lineSearchSelectedLineIds: OV<string[] | null> = mobx.observable.box(null, { name: "lineSearchSelectedLineIds" });
+
     screenSettingsModal: OV<{ sessionId: string; screenId: string }> = mobx.observable.box(null, {
         name: "screenSettingsModal",
     });
@@ -240,12 +250,12 @@ class Model {
             lineHeightSm: 13,
             pad: 7,
         };
-        
+
         // Monitor active screen changes when thread mode is active
         mobx.reaction(
             () => ({
                 activeScreen: this.getActiveScreen(),
-                isThreadMode: this.isThreadMode.get()
+                isThreadMode: this.isThreadMode.get(),
             }),
             ({ activeScreen, isThreadMode }) => {
                 if (isThreadMode && activeScreen) {
@@ -475,7 +485,7 @@ class Model {
             }
             const newThreadModeState = !this.isThreadMode.get();
             this.isThreadMode.set(newThreadModeState);
-            
+
             // If enabling thread mode, request threads list for the active screen
             if (newThreadModeState) {
                 const activeScreen = this.getActiveScreen();
@@ -631,7 +641,7 @@ class Model {
         usp.set("lineid", lineId);
         const url = new URL(this.getBaseHostPort() + "/api/get-thread-line?" + usp.toString());
         const fetchHeaders = this.getFetchHeaders();
-        
+
         try {
             const response = await fetch(url, { method: "GET", headers: fetchHeaders });
             if (!response.ok) {
@@ -755,7 +765,7 @@ class Model {
         if (this.activeMainView.get() != "session") {
             return;
         }
-        
+
         // This function now only handles copying entire blocks
         // Text selection is handled by the browser's default behavior
         const activeScreen = this.getActiveScreen();
@@ -1211,9 +1221,15 @@ class Model {
                 } else if (update.clientdata != null) {
                     console.log("[Model.runUpdate_internal] Received clientdata update:", update.clientdata);
                     console.log("[Model.runUpdate_internal] clientdata.aiopts:", update.clientdata.aiopts);
-                    console.log("[Model.runUpdate_internal] Before setClientData - current aiopts:", this.clientData.get()?.aiopts);
+                    console.log(
+                        "[Model.runUpdate_internal] Before setClientData - current aiopts:",
+                        this.clientData.get()?.aiopts
+                    );
                     this.setClientData(update.clientdata);
-                    console.log("[Model.runUpdate_internal] After setClientData - new aiopts:", this.clientData.get()?.aiopts);
+                    console.log(
+                        "[Model.runUpdate_internal] After setClientData - new aiopts:",
+                        this.clientData.get()?.aiopts
+                    );
                 } else if (update.cmdline != null) {
                     this.inputModel.updateCmdLine(update.cmdline);
                 } else if (update.openaicmdinfochat != null) {
@@ -1239,15 +1255,15 @@ class Model {
                     mobx.action(() => {
                         const threads = u.items ?? [];
                         this.threadsByScreen.set(u.screenid, threads);
-                        
+
                         // If thread mode is active and no thread is selected, select the latest thread
                         if (this.isThreadMode.get() && threads.length > 0) {
                             const currentThreadId = this.activeThreadId.get();
                             const activeScreen = this.getActiveScreen();
-                            
+
                             // Only auto-select if:
                             // 1. No thread is currently selected, OR
-                            // 2. Current thread no longer exists (was deleted), OR  
+                            // 2. Current thread no longer exists (was deleted), OR
                             // 3. This is for the active screen and we're switching from "new-thread"
                             if (activeScreen && activeScreen.screenId === u.screenid) {
                                 const threadExists = threads.some((t: any) => t.threadid === currentThreadId);
@@ -2091,6 +2107,43 @@ class Model {
         };
         pk.activity[atype] = 1;
         this.ws.pushMessage(pk);
+    }
+
+    openSearchModal() {
+        mobx.action(() => {
+            this.searchModalOpen.set(true);
+        })();
+    }
+
+    closeSearchModal() {
+        mobx.action(() => {
+            this.searchModalOpen.set(false);
+            // Stop any active search
+            (window as any).api.stopFindInPage("clearSelection");
+        })();
+    }
+
+    // Line-level search actions
+    openLineSearch(lineId: string, initialText: string = "", selectedLineIds?: string[]) {
+        mobx.action(() => {
+            this.lineSearchLineId.set(lineId);
+            this.lineSearchText.set(initialText);
+            this.lineSearchSelectedLineIds.set(selectedLineIds ?? [lineId]);
+            this.lineSearchOpen.set(true);
+        })();
+    }
+
+    closeLineSearch() {
+        mobx.action(() => {
+            this.lineSearchOpen.set(false);
+            this.lineSearchLineId.set(null);
+            this.lineSearchText.set("");
+            this.lineSearchSelectedLineIds.set(null);
+            (window as any).api.stopFindInPage("clearSelection");
+            try {
+                window.getSelection()?.removeAllRanges();
+            } catch (e) {}
+        })();
     }
 }
 

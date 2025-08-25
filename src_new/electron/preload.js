@@ -35,4 +35,7 @@ contextBridge.exposeInMainWorld("api", {
     pathSep: () => ipcRenderer.sendSync("path-sep"),
     showContextMenu: (menu, position) => ipcRenderer.send("contextmenu-show", menu, position),
     onContextMenuClick: (callback) => ipcRenderer.on("contextmenu-click", callback),
+    findInPage: (searchText, options) => ipcRenderer.send("find-in-page", searchText, options),
+    stopFindInPage: (action) => ipcRenderer.send("stop-find-in-page", action),
+    onFindInPageResult: (callback) => ipcRenderer.on("find-in-page-result", callback),
 });

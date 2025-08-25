@@ -8,15 +8,15 @@ const path = require("path");
  */
 const config = {
     appId: pkg.build.appId,
-    productName: pkg.productName,
+    productName: process.env.WAVETERM_DEV ? "Rock (Dev)" : pkg.productName,
     artifactName: "${productName}-${platform}-${arch}-${version}.${ext}",
     npmRebuild: false,
     nodeGypRebuild: false,
     electronCompile: false,
     files: [
         {
-            from: "./dist",
-            to: "./dist",
+            from: "./dist-new",
+            to: "./dist-new",
             filter: ["**/*"],
         },
         {
@@ -56,7 +56,7 @@ const config = {
                 arch: "universal",
             },
         ],
-        icon: "public/waveterm.icns",
+        icon: "public/rockterminal.icns",
         category: "public.app-category.developer-tools",
         minimumSystemVersion: "10.15.0",
         notarize: process.env.APPLE_TEAM_ID
@@ -70,14 +70,14 @@ const config = {
             .map((f) => path.resolve(f.path, f.name)),
     },
     linux: {
-        executableName: pkg.productName,
+        executableName: process.env.WAVETERM_DEV ? "Rock (Dev)" : pkg.productName,
         category: "TerminalEmulator",
-        icon: "public/waveterm.icns",
+        icon: "public/rockterminal.icns",
         target: ["zip", "deb", "rpm", "AppImage", "pacman"],
         synopsis: pkg.description,
         description: null,
         desktop: {
-            Name: pkg.productName,
+            Name: process.env.WAVETERM_DEV ? "Rock (Dev)" : pkg.productName,
             Comment: pkg.description,
             Keywords: "developer;terminal;emulator;",
             category: "Development;Utility;",

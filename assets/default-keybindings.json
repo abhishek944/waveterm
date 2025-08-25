@@ -100,6 +100,10 @@
       "command": "app:openHistoryView"
     },
     {
+      "command": "app:openSearchModal",
+      "keys": ["Cmd:f"]
+    },
+    {
       "command": "app:openTabSearchModal",
       "keys": ["Cmd:p"]
     },

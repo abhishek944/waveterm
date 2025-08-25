@@ -98,7 +98,7 @@ export const TerminalRenderer: React.FC<{
             );
             return;
         }
-        console.log("[TerminalRenderer] loadTerminal " + JSON.stringify({ lineid: line.lineid, width }));
+        // console.log("[TerminalRenderer] loadTerminal " + JSON.stringify({ lineid: line.lineid, width }));
         screen.loadTerminalRenderer(termRef.current, line, cmd, width);
         setTermLoaded(true);
         loadingRef.current = false;
@@ -114,10 +114,10 @@ export const TerminalRenderer: React.FC<{
             })();
             if (vis && !termLoaded && !loadingRef.current) {
                 loadingRef.current = true;
-                console.log("[TerminalRenderer] effect -> load " + JSON.stringify({ lineid: line.lineid }));
+                // console.log("[TerminalRenderer] effect -> load " + JSON.stringify({ lineid: line.lineid }));
                 loadTerminal();
             } else if (!vis && termLoaded) {
-                console.log("[TerminalRenderer] effect -> unload " + JSON.stringify({ lineid: line.lineid }));
+                // console.log("[TerminalRenderer] effect -> unload " + JSON.stringify({ lineid: line.lineid }));
                 unloadTerminal(false);
             }
         }
