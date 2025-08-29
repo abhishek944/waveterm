@@ -22,13 +22,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kevinburke/ssh_config"
-	"github.com/skeema/knownhosts"
 	"github.com/abhishek944/waveterm/waveshell/pkg/base"
 	"github.com/abhishek944/waveterm/waveshell/pkg/utilfn"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/scbus"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/sstore"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/userinput"
+	"github.com/kevinburke/ssh_config"
+	"github.com/skeema/knownhosts"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 	xknownhosts "golang.org/x/crypto/ssh/knownhosts"
@@ -400,16 +400,16 @@ func createMissingKnownHostsVerifier(connCtx context.Context, knownHostsFile str
 func createHostKeyCallback(connCtx context.Context, opts *sstore.SSHOpts) (ssh.HostKeyCallback, HostKeyAlgorithms, error) {
 	ssh_config.ReloadConfigs()
 	log.Printf("[SSH] Looking up SSH config for host: %s", opts.SSHHost)
-	
+
 	// Check what default is returned
 	defaultUserKnownHosts, _ := ssh_config.GetStrict("", "UserKnownHostsFile")
 	log.Printf("[SSH] Default UserKnownHostsFile: %q", defaultUserKnownHosts)
-	
+
 	rawUserKnownHostsFiles, _ := ssh_config.GetStrict(opts.SSHHost, "UserKnownHostsFile")
 	userKnownHostsFiles := strings.Fields(rawUserKnownHostsFiles) // TODO - smarter splitting escaped spaces and quotes
 	rawGlobalKnownHostsFiles, _ := ssh_config.GetStrict(opts.SSHHost, "GlobalKnownHostsFile")
 	globalKnownHostsFiles := strings.Fields(rawGlobalKnownHostsFiles) // TODO - smarter splitting escaped spaces and quotes
-	
+
 	log.Printf("[SSH] Raw UserKnownHostsFile value: %q", rawUserKnownHostsFiles)
 	log.Printf("[SSH] UserKnownHostsFile from config: %v", userKnownHostsFiles)
 	log.Printf("[SSH] GlobalKnownHostsFile from config: %v", globalKnownHostsFiles)
@@ -434,7 +434,7 @@ func createHostKeyCallback(connCtx context.Context, opts *sstore.SSHOpts) (ssh.H
 	if len(knownHostsFiles) == 0 {
 		return nil, nil, fmt.Errorf("no known_hosts files provided by ssh. defaults are overridden")
 	}
-	
+
 	log.Printf("[SSH] Using known_hosts files: %v", knownHostsFiles)
 
 	var unreadableFiles []string
@@ -644,26 +644,26 @@ func (c *proxyCommandConn) SetWriteDeadline(t time.Time) error {
 // DialContextWithProxy establishes an SSH connection through a ProxyCommand
 func DialContextWithProxy(ctx context.Context, proxyCommand string, addr string, config *ssh.ClientConfig) (*ssh.Client, error) {
 	log.Printf("[SSH] Executing ProxyCommand: %s", proxyCommand)
-	
+
 	// Parse the ProxyCommand and replace %h and %p placeholders
 	host, port, _ := net.SplitHostPort(addr)
 	proxyCmd := strings.ReplaceAll(proxyCommand, "%h", host)
 	proxyCmd = strings.ReplaceAll(proxyCmd, "%p", port)
-	
+
 	// Split the command into parts for exec.Command
 	parts := strings.Fields(proxyCmd)
 	if len(parts) == 0 {
 		return nil, fmt.Errorf("empty proxy command")
 	}
-	
+
 	cmd := exec.CommandContext(ctx, parts[0], parts[1:]...)
-	
+
 	// Capture stderr for debugging
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create stderr pipe: %v", err)
 	}
-	
+
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create stdin pipe: %v", err)
@@ -672,11 +672,11 @@ func DialContextWithProxy(ctx context.Context, proxyCommand string, addr string,
 	if err != nil {
 		return nil, fmt.Errorf("failed to create stdout pipe: %v", err)
 	}
-	
+
 	if err := cmd.Start(); err != nil {
 		return nil, fmt.Errorf("failed to start proxy command: %v", err)
 	}
-	
+
 	// Read stderr in background for debugging
 	go func() {
 		var stderrBuf strings.Builder
@@ -685,14 +685,14 @@ func DialContextWithProxy(ctx context.Context, proxyCommand string, addr string,
 			log.Printf("[SSH] ProxyCommand stderr: %s", stderrBuf.String())
 		}
 	}()
-	
+
 	// Create a custom connection that uses the proxy command's stdio
 	proxyConn := &proxyCommandConn{
 		stdin:  stdin,
 		stdout: stdout,
 		cmd:    cmd,
 	}
-	
+
 	// Establish SSH connection through the proxy
 	log.Printf("[SSH] Establishing SSH connection through proxy")
 	c, chans, reqs, err := ssh.NewClientConn(proxyConn, addr, config)
@@ -707,7 +707,7 @@ func DialContextWithProxy(ctx context.Context, proxyCommand string, addr string,
 		}
 		return nil, fmt.Errorf("failed to establish SSH connection through proxy: %v", err)
 	}
-	
+
 	log.Printf("[SSH] Successfully established SSH connection through proxy")
 	return ssh.NewClient(c, chans, reqs), nil
 }
@@ -730,11 +730,11 @@ func startKeepalive(ctx context.Context, client *ssh.Client, interval int, count
 	if interval <= 0 {
 		return
 	}
-	
+
 	go func() {
 		ticker := time.NewTicker(time.Duration(interval) * time.Second)
 		defer ticker.Stop()
-		
+
 		failureCount := 0
 		for {
 			select {
@@ -855,7 +855,7 @@ func ConnectToClient(connCtx context.Context, opts *sstore.SSHOpts, remoteDispla
 		}
 		return client, nil
 	}
-	
+
 	log.Printf("[SSH] Attempting to dial %s", networkAddr)
 	client, err := DialContext(connCtx, "tcp", networkAddr, clientConfig)
 	if err != nil {
@@ -883,9 +883,9 @@ type SshKeywords struct {
 	PreferredAuthentications     []string
 	AddKeysToAgent               bool
 	IdentityAgent                string
-	ProxyCommand                 string  // Added ProxyCommand support
-	ServerAliveInterval          int     // Added ServerAliveInterval support
-	ServerAliveCountMax          int     // Added ServerAliveCountMax support
+	ProxyCommand                 string // Added ProxyCommand support
+	ServerAliveInterval          int    // Added ServerAliveInterval support
+	ServerAliveCountMax          int    // Added ServerAliveCountMax support
 }
 
 func combineSshKeywords(opts *sstore.SSHOpts, configKeywords *SshKeywords) (*SshKeywords, error) {
@@ -937,7 +937,7 @@ func combineSshKeywords(opts *sstore.SSHOpts, configKeywords *SshKeywords) (*Ssh
 	sshKeywords.PreferredAuthentications = configKeywords.PreferredAuthentications
 	sshKeywords.AddKeysToAgent = configKeywords.AddKeysToAgent
 	sshKeywords.IdentityAgent = configKeywords.IdentityAgent
-	
+
 	// Add ProxyCommand support
 	if opts.SSHProxyCommand != "" {
 		sshKeywords.ProxyCommand = opts.SSHProxyCommand
@@ -1027,7 +1027,7 @@ func findSshConfigKeywords(hostPattern string, sshAuthSock string) (*SshKeywords
 	} else {
 		sshKeywords.IdentityAgent = base.ExpandHomeDir(utilfn.TryTrimQuotes(identityAgentRaw))
 	}
-	
+
 	// Parse ProxyCommand from SSH config
 	sshKeywords.ProxyCommand, err = ssh_config.GetStrict(hostPattern, "ProxyCommand")
 	if err != nil {

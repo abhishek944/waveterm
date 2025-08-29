@@ -8,8 +8,8 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/fsnotify/fsnotify"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/scbase"
+	"github.com/fsnotify/fsnotify"
 )
 
 const ConfigReturnTypeStr = "termthemes"

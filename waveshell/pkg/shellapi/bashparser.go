@@ -11,11 +11,11 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/alessio/shellescape"
 	"github.com/abhishek944/waveterm/waveshell/pkg/packet"
 	"github.com/abhishek944/waveterm/waveshell/pkg/shellenv"
 	"github.com/abhishek944/waveterm/waveshell/pkg/utilfn"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/scbase"
+	"github.com/alessio/shellescape"
 	"mvdan.cc/sh/v3/expand"
 	"mvdan.cc/sh/v3/syntax"
 )

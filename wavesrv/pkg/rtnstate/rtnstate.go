@@ -9,13 +9,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/alessio/shellescape"
 	"github.com/abhishek944/waveterm/waveshell/pkg/packet"
 	"github.com/abhishek944/waveterm/waveshell/pkg/shellapi"
 	"github.com/abhishek944/waveterm/waveshell/pkg/shellenv"
 	"github.com/abhishek944/waveterm/waveshell/pkg/simpleexpand"
 	"github.com/abhishek944/waveterm/waveshell/pkg/utilfn"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/sstore"
+	"github.com/alessio/shellescape"
 	"mvdan.cc/sh/v3/syntax"
 )
 

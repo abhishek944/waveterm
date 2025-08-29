@@ -32,7 +32,6 @@ func historyCmdFilter(hitem *history.HistoryItemType) bool {
 	return true
 }
 
-
 func HistoryCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {
 	ids, err := resolveUiIds(ctx, pk, R_Session|R_Screen|R_Remote)
 	if err != nil {

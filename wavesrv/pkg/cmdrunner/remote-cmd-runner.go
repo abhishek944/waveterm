@@ -120,7 +120,7 @@ func RemoteConfigParseCommand(ctx context.Context, pk *scpacket.FeCommandPacketT
 				sshOpts.SSHIdentity = hostInfo.SshKeyFile
 			}
 			if hostInfo.ProxyCommand != "" {
-				sshOpts.SSHProxyCommand = hostInfo.ProxyCommand  // Pass ProxyCommand from SSH config
+				sshOpts.SSHProxyCommand = hostInfo.ProxyCommand // Pass ProxyCommand from SSH config
 			}
 
 			// this is new and must be created for the first time

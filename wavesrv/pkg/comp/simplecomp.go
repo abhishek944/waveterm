@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/google/uuid"
 	"github.com/abhishek944/waveterm/waveshell/pkg/packet"
 	"github.com/abhishek944/waveterm/waveshell/pkg/utilfn"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/remote"
+	"github.com/google/uuid"
 )
 
 var globalLock = &sync.Mutex{}

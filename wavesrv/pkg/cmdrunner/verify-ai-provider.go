@@ -36,7 +36,7 @@ func min(a, b int) int {
 func ClientVerifyAIProviderCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (scbus.UpdatePacket, error) {
 	log.Printf("[ClientVerifyAIProviderCommand] Starting verification")
 	log.Printf("[ClientVerifyAIProviderCommand] Kwargs: %v", pk.Kwargs)
-	
+
 	clientData, err := sstore.EnsureClientData(ctx)
 	if err != nil {
 		log.Printf("[ClientVerifyAIProviderCommand] Error retrieving client data: %v", err)
@@ -48,7 +48,7 @@ func ClientVerifyAIProviderCommand(ctx context.Context, pk *scpacket.FeCommandPa
 		log.Printf("[ClientVerifyAIProviderCommand] Provider parameter not found")
 		return nil, fmt.Errorf("provider parameter is required")
 	}
-	
+
 	log.Printf("[ClientVerifyAIProviderCommand] Verifying provider: %s", provider)
 
 	// Get current AI options
@@ -57,7 +57,7 @@ func ClientVerifyAIProviderCommand(ctx context.Context, pk *scpacket.FeCommandPa
 		log.Printf("[ClientVerifyAIProviderCommand] No AI options configured")
 		return nil, fmt.Errorf("no AI options configured")
 	}
-	
+
 	log.Printf("[ClientVerifyAIProviderCommand] Current AI options: %+v", aiOpts)
 
 	// Create a simple test prompt
@@ -71,14 +71,14 @@ func ClientVerifyAIProviderCommand(ctx context.Context, pk *scpacket.FeCommandPa
 	// Set timeout for verification
 	verifyCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	
+
 	log.Printf("[ClientVerifyAIProviderCommand] Created context with 10s timeout")
 
 	var verifyErr error
 	connectionStatus := ConnectionStatusPending
 
 	log.Printf("[ClientVerifyAIProviderCommand] Starting provider-specific verification")
-	
+
 	switch provider {
 	case "openai":
 		log.Printf("[ClientVerifyAIProviderCommand] Checking OpenAI configuration")

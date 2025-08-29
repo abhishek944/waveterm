@@ -17,13 +17,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/alessio/shellescape"
 	"github.com/abhishek944/waveterm/waveshell/pkg/base"
 	"github.com/abhishek944/waveterm/waveshell/pkg/packet"
 	"github.com/abhishek944/waveterm/waveshell/pkg/shellapi"
 	"github.com/abhishek944/waveterm/waveshell/pkg/shexec"
 	"github.com/abhishek944/waveterm/waveshell/pkg/utilfn"
 	"github.com/abhishek944/waveterm/waveshell/pkg/wlog"
+	"github.com/alessio/shellescape"
 )
 
 const MaxFileDataPacketSize = 16 * 1024
@@ -564,6 +564,16 @@ func (m *MServer) returnStreamFileNewFileResponse(pk *packet.StreamFilePacketTyp
 
 func (m *MServer) streamFile(pk *packet.StreamFilePacketType) {
 	resp := packet.MakeStreamFileResponse(pk.ReqId)
+
+	// TODO: Phase 2.6 - Permission Integration
+	// Check permission before accessing the file
+	err := m.CheckStreamFilePermission(context.Background(), pk.Path)
+	if err != nil {
+		resp.Error = fmt.Sprintf("permission denied for file %q: %v", pk.Path, err)
+		m.Sender.SendPacket(resp)
+		return
+	}
+
 	finfo, err := os.Stat(pk.Path)
 	if errors.Is(err, fs.ErrNotExist) {
 		// special return

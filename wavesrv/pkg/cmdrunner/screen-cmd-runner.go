@@ -196,13 +196,13 @@ func ScreenOpenCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (s
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Check if we already have 9 tabs
 	screens, err := sstore.GetSessionScreens(ctx, ids.SessionId)
 	if err != nil {
 		return nil, fmt.Errorf("error getting session screens: %v", err)
 	}
-	
+
 	// Count non-archived screens
 	activeScreenCount := 0
 	for _, screen := range screens {
@@ -210,11 +210,11 @@ func ScreenOpenCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (s
 			activeScreenCount++
 		}
 	}
-	
+
 	if activeScreenCount >= 9 {
 		return nil, fmt.Errorf("maximum number of tabs (9) reached")
 	}
-	
+
 	activate := resolveBool(pk.Kwargs["activate"], true)
 	newName := pk.Kwargs["name"]
 	if newName != "" {
@@ -225,7 +225,7 @@ func ScreenOpenCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (s
 	}
 	// Get the current cwd from the remote instance's state
 	cwdVal := sstore.DefaultCwd
-	
+
 	// Try to get the current remote instance state
 	localRemote := remote.GetLocalRemote()
 	remotePtr := sstore.RemotePtrType{RemoteId: localRemote.RemoteId}
@@ -238,7 +238,7 @@ func ScreenOpenCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (s
 	} else {
 		log.Printf("[DEBUG ScreenOpenCommand] Could not get remote instance or festate: err=%v, ri=%v", err, ri)
 	}
-	
+
 	// If we couldn't get from remote instance, try last command
 	if cwdVal == sstore.DefaultCwd {
 		cwdVal, err = sstore.GetLastCmdCwd(ctx, ids.ScreenId)
@@ -250,8 +250,8 @@ func ScreenOpenCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (s
 		}
 	}
 	sco := sstore.ScreenCreateOpts{
-	  Cwd:         cwdVal,
-	  RtnScreenId: new(string),
+		Cwd:         cwdVal,
+		RtnScreenId: new(string),
 	}
 	update, err := sstore.InsertScreen(ctx, ids.SessionId, newName, sco, activate)
 	if err != nil {

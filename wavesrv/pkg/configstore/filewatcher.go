@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/fsnotify/fsnotify"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/scbus"
+	"github.com/fsnotify/fsnotify"
 )
 
 var instance *Watcher

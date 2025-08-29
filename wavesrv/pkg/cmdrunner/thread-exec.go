@@ -24,10 +24,10 @@ import (
 func ExecuteCommandInThread(
 	ctx context.Context,
 	sessionId string,
-	threadId string, 
-	screenId string, 
-	lineId string, 
-	commandStr string, 
+	threadId string,
+	screenId string,
+	lineId string,
+	commandStr string,
 	remotePtr *sstore.RemotePtrType) (string, error) {
 
 	termOpts := sstore.TermOpts{
@@ -36,35 +36,35 @@ func ExecuteCommandInThread(
 		FlexRows:   true,
 		MaxPtySize: remote.DefaultMaxPtySize,
 	}
-	
+
 	// Create a new UUID for command execution
 	cmdExecLineId := scbase.GenWaveUUID()
-	
+
 	// Get current remote state to populate FeState and StatePtr
 	ri, err := sstore.GetRemoteInstance(ctx, sessionId, screenId, *remotePtr)
 	if err != nil {
 		return "", fmt.Errorf("cannot get remote instance: %w", err)
 	}
-	
+
 	// Get the state pointer for the remote
 	statePtr, err := sstore.GetRemoteStatePtr(ctx, sessionId, screenId, *remotePtr)
 	if err != nil {
 		log.Printf("[ExecuteCommandInThread] Warning: cannot get remote state pointer: %v", err)
 		// Continue anyway, as state pointer is optional
 	}
-	
+
 	// Create command record with the new UUID
 	cmd := &sstore.CmdType{
-		ScreenId:     screenId,
-		LineId:       cmdExecLineId, // Use a new UUID for command execution
-		CmdStr:       commandStr,
-		RawCmdStr:    commandStr,
-		Remote:       *remotePtr,
-		TermOpts:     termOpts,
-		Status:       sstore.CmdStatusRunning,
-		RunOut:       nil,
+		ScreenId:  screenId,
+		LineId:    cmdExecLineId, // Use a new UUID for command execution
+		CmdStr:    commandStr,
+		RawCmdStr: commandStr,
+		Remote:    *remotePtr,
+		TermOpts:  termOpts,
+		Status:    sstore.CmdStatusRunning,
+		RunOut:    nil,
 	}
-	
+
 	// Set StatePtr and FeState
 	if statePtr != nil {
 		cmd.StatePtr = *statePtr
@@ -72,11 +72,11 @@ func ExecuteCommandInThread(
 	if ri.FeState != nil {
 		cmd.FeState = ri.FeState
 	}
-	
+
 	// Store the mapping between thread lineId and command execution lineId for frontend use
 	// This will be used to find the command execution PTY when displaying in sidebar
 	// For now, we'll store it in the thread line's metadata
-	
+
 	// Create a line record for the command execution (needed for sidebar to find it)
 	// This line uses a special line type so it's not shown in main terminal view
 	cmdLine := &sstore.LineType{
@@ -84,13 +84,13 @@ func ExecuteCommandInThread(
 		UserId:    DefaultUserId,
 		LineId:    cmdExecLineId,
 		Ts:        time.Now().UnixMilli(),
-		LineNum:   0,  // Not displayed in main view
+		LineNum:   0, // Not displayed in main view
 		LineLocal: true,
-		LineType:  sstore.LineTypeThreadModeCmd,  // Special type for thread command execution
-		Renderer:  "",  // Regular terminal renderer
+		LineType:  sstore.LineTypeThreadModeCmd, // Special type for thread command execution
+		Renderer:  "",                           // Regular terminal renderer
 		LineState: map[string]any{
-			"threadlineid": lineId,  // Reference back to the thread line
-			"iscmdexec": true,       // Mark as command execution line
+			"threadlineid": lineId, // Reference back to the thread line
+			"iscmdexec":    true,   // Mark as command execution line
 		},
 	}
 
@@ -99,7 +99,7 @@ func ExecuteCommandInThread(
 	if err != nil {
 		return "", fmt.Errorf("cannot insert command execution line: %w", err)
 	}
-	
+
 	// Send line update to frontend so it knows about the new command execution line
 	cmdExecLine, err := sstore.GetLineById(ctx, screenId, cmdExecLineId)
 	if err == nil && cmdExecLine != nil {
@@ -112,14 +112,14 @@ func ExecuteCommandInThread(
 	// Create run packet
 	runPacket := packet.MakeRunPacket()
 	runPacket.ReqId = scbase.GenWaveUUID()
-	runPacket.CK = base.MakeCommandKey(screenId, cmdExecLineId)  // Use cmdExecLineId for PTY output
+	runPacket.CK = base.MakeCommandKey(screenId, cmdExecLineId) // Use cmdExecLineId for PTY output
 	runPacket.UsePty = true
 	runPacket.TermOpts = &packet.TermOpts{
 		Rows: int(termOpts.Rows),
 		Cols: int(termOpts.Cols),
 	}
 	runPacket.Command = commandStr
-	runPacket.ReturnState = true  // We want to capture state changes (e.g., cd)
+	runPacket.ReturnState = true // We want to capture state changes (e.g., cd)
 
 	// No need to write header - the command output will go directly to the PTY
 
@@ -131,7 +131,7 @@ func ExecuteCommandInThread(
 		// Don't provide StatePtr - let remote use its current state
 		// This allows us to use ReturnState=true
 	}
-	
+
 	// Execute command synchronously
 	cmdResult, callback, err := remote.RunCommand(ctx, rcOpts, runPacket)
 	if err != nil {
@@ -144,10 +144,10 @@ func ExecuteCommandInThread(
 
 	// Command execution started successfully
 	log.Printf("[ExecuteCommandInThread] Command execution started for lineId: %s", cmdExecLineId)
-	
+
 	if cmdResult != nil {
 		log.Printf("[ExecuteCommandInThread] Command status: %s", cmdResult.Status)
-		
+
 		// Update the remote state if we got new state back (important for cd commands)
 		if cmdResult.RtnState && !cmdResult.RtnStatePtr.IsEmpty() {
 			log.Printf("[ExecuteCommandInThread] Got new state after command execution, updating remote state")

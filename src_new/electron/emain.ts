@@ -968,6 +968,99 @@ electron.ipcMain.on("change-auto-update", (_, enable: boolean) => {
     configureAutoUpdater(enable);
 });
 
+// TODO: Phase 3.8 - Electron Permission UI
+// Permission management IPC handlers
+
+electron.ipcMain.handle("permissions:grant-folder", async (event, options: { path?: string; description?: string }) => {
+    try {
+        // Show folder selection dialog
+        const result = await electron.dialog.showOpenDialog({
+            title: "Grant Folder Access Permission",
+            message: options.description || "Select a folder to grant access permission",
+            properties: ["openDirectory"],
+            defaultPath: options.path || process.env.HOME,
+        });
+
+        if (result.canceled || result.filePaths.length === 0) {
+            return { success: false, canceled: true };
+        }
+
+        const selectedPath = result.filePaths[0];
+
+        // Create permission record
+        const permission = {
+            path: selectedPath,
+            consent: true,
+            displayName: path.basename(selectedPath),
+            source: "user",
+            scopeLevel: 2, // Read-write by default
+        };
+
+        // POST permission to wavesrv API
+        const response = await fetch(`${isDev ? DevServerEndpoint : ProdServerEndpoint}/api/permissions`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-Wave-Auth-Key": GlobalAuthKey,
+            },
+            body: JSON.stringify(permission),
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to save permission: ${response.statusText}`);
+        }
+
+        const savedPermission = await response.json();
+        return { success: true, permission: savedPermission };
+    } catch (error) {
+        console.error("Error granting folder permission:", error);
+        return { success: false, error: error.message };
+    }
+});
+
+electron.ipcMain.handle("permissions:list", async () => {
+    try {
+        const response = await fetch(`${isDev ? DevServerEndpoint : ProdServerEndpoint}/api/permissions`, {
+            headers: {
+                "X-Wave-Auth-Key": GlobalAuthKey,
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to list permissions: ${response.statusText}`);
+        }
+
+        const permissions = await response.json();
+        return { success: true, permissions };
+    } catch (error) {
+        console.error("Error listing permissions:", error);
+        return { success: false, error: error.message };
+    }
+});
+
+electron.ipcMain.handle("permissions:revoke", async (event, permissionId: string) => {
+    try {
+        const response = await fetch(
+            `${isDev ? DevServerEndpoint : ProdServerEndpoint}/api/permissions/${permissionId}`,
+            {
+                method: "DELETE",
+                headers: {
+                    "X-Wave-Auth-Key": GlobalAuthKey,
+                },
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error(`Failed to revoke permission: ${response.statusText}`);
+        }
+
+        return { success: true };
+    } catch (error) {
+        console.error("Error revoking permission:", error);
+        return { success: false, error: error.message };
+    }
+});
+
 /**
  * Configures the auto-updater based on the client data
  * @param clientData The client data to use to configure the auto-updater. If the clientData has noreleasecheck set to true, the auto-updater will be disabled.

@@ -2065,7 +2065,7 @@ func RunCommand(ctx context.Context, rcOpts RunCommandOpts, runPacket *packet.Ru
 	}
 	// statePtr will not be nil
 	log.Printf("[DEBUG] RunCommand: Final statePtr=%+v\n", *statePtr)
-	
+
 	// Check if statePtr has empty BaseHash and use returnState to get initial state
 	if statePtr.BaseHash == "" {
 		log.Printf("[DEBUG] RunCommand: StatePtr has empty BaseHash, will request state from waveshell\n")
@@ -2073,10 +2073,10 @@ func RunCommand(ctx context.Context, rcOpts RunCommandOpts, runPacket *packet.Ru
 		statePtr = nil
 		runPacket.ReturnState = true
 	}
-	
+
 	var currentState *packet.ShellState
 	var err error
-	
+
 	if statePtr != nil {
 		runPacket.StatePtr = statePtr
 		currentState, err = sstore.GetFullState(ctx, *statePtr)
@@ -2121,7 +2121,7 @@ func RunCommand(ctx context.Context, rcOpts RunCommandOpts, runPacket *packet.Ru
 	if err != nil {
 		return nil, nil, fmt.Errorf("cannot load current remote state: %w", err)
 	}
-	
+
 	// Only set state if we have it (not requesting ReturnState)
 	if currentState != nil {
 		runPacket.State = addScVarsToState(currentState)
@@ -2176,12 +2176,12 @@ func RunCommand(ctx context.Context, rcOpts RunCommandOpts, runPacket *packet.Ru
 	if currentState != nil {
 		feState = sstore.FeStateFromShellState(currentState)
 	}
-	
+
 	var cmdStatePtr packet.ShellStatePtr
 	if statePtr != nil {
 		cmdStatePtr = *statePtr
 	}
-	
+
 	cmd := &sstore.CmdType{
 		ScreenId:   runPacket.CK.GetGroupId(),
 		LineId:     runPacket.CK.GetCmdId(),

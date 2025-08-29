@@ -8,14 +8,14 @@ import (
 	"path"
 	"sync"
 
+	"github.com/abhishek944/waveterm/wavesrv/pkg/dbutil"
+	"github.com/abhishek944/waveterm/wavesrv/pkg/scbase"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/sqlite3"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/sawka/txwrap"
-	"github.com/abhishek944/waveterm/wavesrv/pkg/dbutil"
-	"github.com/abhishek944/waveterm/wavesrv/pkg/scbase"
 
 	dbfs "github.com/abhishek944/waveterm/wavesrv/db"
 )

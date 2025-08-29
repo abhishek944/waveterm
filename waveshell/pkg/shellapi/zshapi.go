@@ -13,7 +13,6 @@ import (
 	"sync"
 	"unicode"
 
-	"github.com/alessio/shellescape"
 	"github.com/abhishek944/waveterm/waveshell/pkg/base"
 	"github.com/abhishek944/waveterm/waveshell/pkg/binpack"
 	"github.com/abhishek944/waveterm/waveshell/pkg/packet"
@@ -22,6 +21,7 @@ import (
 	"github.com/abhishek944/waveterm/waveshell/pkg/utilfn"
 	"github.com/abhishek944/waveterm/waveshell/pkg/wlog"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/scbase"
+	"github.com/alessio/shellescape"
 )
 
 const BaseZshOpts = ``

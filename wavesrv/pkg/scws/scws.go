@@ -11,7 +11,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/abhishek944/waveterm/waveshell/pkg/packet"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/configstore"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/mapqueue"
@@ -21,6 +20,7 @@ import (
 	"github.com/abhishek944/waveterm/wavesrv/pkg/sstore"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/userinput"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/wsshell"
+	"github.com/google/uuid"
 )
 
 const WSStatePacketChSize = 20

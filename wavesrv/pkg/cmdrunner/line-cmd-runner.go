@@ -83,16 +83,16 @@ func LineRestartCommand(ctx context.Context, pk *scpacket.FeCommandPacketType) (
 	if line == nil {
 		return nil, fmt.Errorf("line not found")
 	}
-	
+
 	log.Printf("[DEBUG] LineRestartCommand: Attempting to restart lineId=%s, lineType=%s\n", lineId, line.LineType)
-	
+
 	// Check if this is a thread mode or agent mode line that shouldn't be restarted
 	if line.LineType == sstore.LineTypeThreadMode || line.LineType == sstore.LineTypeAgentMode {
 		log.Printf("[DEBUG] LineRestartCommand: Silently skipping restart for %s line lineId=%s\n", line.LineType, lineId)
 		// Return empty update packet - no error, just skip the operation
 		return scbus.MakeUpdatePacket(), nil
 	}
-	
+
 	if cmd == nil {
 		log.Printf("[DEBUG] LineRestartCommand: No cmd found for lineId=%s, lineType=%s\n", lineId, line.LineType)
 		return nil, fmt.Errorf("cannot restart line (no cmd found)")

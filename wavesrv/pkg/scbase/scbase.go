@@ -20,8 +20,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/abhishek944/waveterm/waveshell/pkg/base"
+	"github.com/google/uuid"
 	"golang.org/x/mod/semver"
 	"golang.org/x/sys/unix"
 )

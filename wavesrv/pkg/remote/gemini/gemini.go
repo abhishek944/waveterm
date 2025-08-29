@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/google/generative-ai-go/genai"
-	"google.golang.org/api/option"
 	"github.com/abhishek944/waveterm/waveshell/pkg/packet"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/sstore"
+	"github.com/google/generative-ai-go/genai"
+	"google.golang.org/api/option"
 )
 
 const DefaultMaxTokens = 1000
@@ -64,12 +64,12 @@ func RunCompletionWithSchema(ctx context.Context, opts *sstore.GeminiOptsType, p
 	defer client.Close()
 
 	model := client.GenerativeModel(opts.Model)
-	
+
 	// Configure the model
 	if opts.MaxTokens > 0 {
 		model.SetMaxOutputTokens(int32(opts.MaxTokens))
 	}
-	
+
 	// Add response schema if provided
 	if responseSchema != nil {
 		model.GenerationConfig.ResponseMIMEType = "application/json"
@@ -81,13 +81,13 @@ func RunCompletionWithSchema(ctx context.Context, opts *sstore.GeminiOptsType, p
 	if len(parts) == 0 {
 		return nil, fmt.Errorf("no prompt provided")
 	}
-	
+
 	// Generate content
 	resp, err := model.GenerateContent(ctx, parts...)
 	if err != nil {
 		return nil, fmt.Errorf("error calling gemini API: %v", err)
 	}
-	
+
 	return marshalResponse(resp, opts.Model), nil
 }
 
@@ -108,12 +108,12 @@ func RunCompletionStreamWithSchema(ctx context.Context, opts *sstore.GeminiOptsT
 	}
 
 	model := client.GenerativeModel(opts.Model)
-	
+
 	// Configure the model
 	if opts.MaxTokens > 0 {
 		model.SetMaxOutputTokens(int32(opts.MaxTokens))
 	}
-	
+
 	// Add response schema if provided
 	if responseSchema != nil {
 		model.GenerationConfig.ResponseMIMEType = "application/json"
@@ -130,9 +130,9 @@ func RunCompletionStreamWithSchema(ctx context.Context, opts *sstore.GeminiOptsT
 	go func() {
 		defer close(rtn)
 		defer client.Close()
-		
+
 		sentHeader := false
-		
+
 		iter := model.GenerateContentStream(ctx, parts...)
 		for {
 			resp, err := iter.Next()
@@ -176,7 +176,7 @@ func RunCompletionStreamWithSchema(ctx context.Context, opts *sstore.GeminiOptsT
 
 func marshalResponse(resp *genai.GenerateContentResponse, model string) []*packet.OpenAIPacketType {
 	var rtn []*packet.OpenAIPacketType
-	
+
 	headerPk := packet.MakeOpenAIPacket()
 	headerPk.Model = model
 	headerPk.Created = 0 // Gemini doesn't provide creation timestamp
@@ -191,7 +191,7 @@ func marshalResponse(resp *genai.GenerateContentResponse, model string) []*packe
 					text += string(textPart)
 				}
 			}
-			
+
 			choicePk := packet.MakeOpenAIPacket()
 			choicePk.Index = int(cand.Index)
 			choicePk.Text = text

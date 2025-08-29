@@ -68,6 +68,22 @@ const config = {
             .readdirSync("bin", { recursive: true, withFileTypes: true })
             .filter((f) => f.isFile())
             .map((f) => path.resolve(f.path, f.name)),
+        // macOS Permissions Configuration
+        entitlements: "public/entitlements.mac.plist",
+        entitlementsInherit: "public/entitlements.mac.plist",
+        hardenedRuntime: true,
+        gatekeeperAssess: false,
+        // Custom Info.plist for permission usage descriptions
+        extendInfo: {
+            NSDownloadsFolderUsageDescription:
+                "Rock Terminal needs access to your Downloads folder to read and write files for terminal operations.",
+            NSDesktopFolderUsageDescription:
+                "Rock Terminal needs access to your Desktop folder to read and write files for terminal operations.",
+            NSDocumentsFolderUsageDescription:
+                "Rock Terminal needs access to your Documents folder to read and write files for terminal operations.",
+            NSFileProviderDomainUsageDescription:
+                "Rock Terminal needs access to files to perform terminal operations like reading, writing, and executing files.",
+        },
     },
     linux: {
         executableName: process.env.WAVETERM_DEV ? "Rock (Dev)" : pkg.productName,

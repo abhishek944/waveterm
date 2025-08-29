@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- App Information -->
+    <key>CFBundleName</key>
+    <string>Rock</string>
+    <key>CFBundleDisplayName</key>
+    <string>Rock Terminal</string>
+    <key>CFBundleIdentifier</key>
+    <string>dev.waveterm.rock</string>
+    <key>CFBundleVersion</key>
+    <string>1.0.0</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
+    
+    <!-- Permission Usage Descriptions -->
+    <key>NSDownloadsFolderUsageDescription</key>
+    <string>Rock Terminal needs access to your Downloads folder to read and write files for terminal operations.</string>
+    
+    <key>NSDesktopFolderUsageDescription</key>
+    <string>Rock Terminal needs access to your Desktop folder to read and write files for terminal operations.</string>
+    
+    <key>NSDocumentsFolderUsageDescription</key>
+    <string>Rock Terminal needs access to your Documents folder to read and write files for terminal operations.</string>
+    
+    <key>NSFileProviderDomainUsageDescription</key>
+    <string>Rock Terminal needs access to files to perform terminal operations like reading, writing, and executing files.</string>
+    
+    <!-- App Category -->
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.developer-tools</string>
+    
+    <!-- Minimum macOS Version -->
+    <key>LSMinimumSystemVersion</key>
+    <string>10.15.0</string>
+    
+    <!-- App Transport Security -->
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsArbitraryLoads</key>
+        <true/>
+        <key>NSAllowsLocalNetworking</key>
+        <true/>
+    </dict>
+    
+    <!-- Background Modes -->
+    <key>UIBackgroundModes</key>
+    <array>
+        <string>background-processing</string>
+    </array>
+    
+    <!-- File Associations -->
+    <key>CFBundleDocumentTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>Shell Script</string>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+                <string>sh</string>
+                <string>bash</string>
+                <string>zsh</string>
+            </array>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>LSHandlerRank</key>
+            <string>Owner</string>
+        </dict>
+    </array>
+    
+    <!-- URL Schemes -->
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>dev.waveterm.rock</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>waveterm</string>
+                <string>rock</string>
+            </array>
+        </dict>
+    </array>
+</dict>
+</plist>
+

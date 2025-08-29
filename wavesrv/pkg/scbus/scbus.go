@@ -12,8 +12,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/abhishek944/waveterm/waveshell/pkg/packet"
+	"github.com/google/uuid"
 )
 
 var MainUpdateBus *UpdateBus = MakeUpdateBus()

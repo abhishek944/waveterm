@@ -11,11 +11,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/google/uuid"
 	"github.com/abhishek944/waveterm/waveshell/pkg/packet"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/remote"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/scpacket"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/sstore"
+	"github.com/google/uuid"
 )
 
 const (

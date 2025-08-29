@@ -25,9 +25,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/alessio/shellescape"
-	"github.com/creack/pty"
-	"github.com/google/uuid"
 	"github.com/abhishek944/waveterm/waveshell/pkg/base"
 	"github.com/abhishek944/waveterm/waveshell/pkg/cirfile"
 	"github.com/abhishek944/waveterm/waveshell/pkg/mpio"
@@ -38,6 +35,9 @@ import (
 	"github.com/abhishek944/waveterm/waveshell/pkg/utilfn"
 	"github.com/abhishek944/waveterm/waveshell/pkg/wlog"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/waveenc"
+	"github.com/alessio/shellescape"
+	"github.com/creack/pty"
+	"github.com/google/uuid"
 	"golang.org/x/mod/semver"
 	"golang.org/x/sys/unix"
 )

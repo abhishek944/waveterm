@@ -1124,6 +1124,127 @@ func configWatcher() {
 // 	}
 // }
 
+
+// HandleCreatePermission handles POST /api/permissions
+func HandleCreatePermission(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+	var permission sstore.PermissionRecord
+	err := decoder.Decode(&permission)
+	if err != nil {
+		WriteJsonError(w, fmt.Errorf(ErrorDecodingJson, err))
+		return
+	}
+
+	// Get client data for owner ID
+	cdata, err := sstore.EnsureClientData(r.Context())
+	if err != nil {
+		WriteJsonError(w, err)
+		return
+	}
+	permission.OwnerID = cdata.UserId
+
+	// Validate permission path
+	err = sstore.ValidatePermissionPath(permission.Path)
+	if err != nil {
+		WriteJsonError(w, fmt.Errorf("invalid permission path: %w", err))
+		return
+	}
+
+	err = sstore.SavePermission(r.Context(), &permission)
+	if err != nil {
+		WriteJsonError(w, fmt.Errorf("error saving permission: %w", err))
+		return
+	}
+
+	WriteJsonSuccess(w, permission)
+}
+
+// HandleListPermissions handles GET /api/permissions
+func HandleListPermissions(w http.ResponseWriter, r *http.Request) {
+	cdata, err := sstore.EnsureClientData(r.Context())
+	if err != nil {
+		WriteJsonError(w, err)
+		return
+	}
+
+	permissions, err := sstore.ListPermissions(r.Context(), cdata.UserId)
+	if err != nil {
+		WriteJsonError(w, fmt.Errorf("error listing permissions: %w", err))
+		return
+	}
+
+	WriteJsonSuccess(w, permissions)
+}
+
+// HandleCheckPermission handles GET /api/permissions/check?path=...&op=...
+func HandleCheckPermission(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	path := q.Get("path")
+	op := q.Get("op")
+	if path == "" {
+		WriteJsonError(w, fmt.Errorf("path is required"))
+		return
+	}
+
+	// Validate path input
+	if err := sstore.ValidatePermissionPath(path); err != nil {
+		WriteJsonError(w, fmt.Errorf("invalid permission path: %w", err))
+		return
+	}
+
+	allowed, perm, err := sstore.HasPermissionForPath(r.Context(), path)
+	if err != nil {
+		WriteJsonError(w, fmt.Errorf("error checking permission: %w", err))
+		return
+	}
+
+	// Enforce operation scope if requested
+	if allowed && op != "" && perm != nil {
+		switch op {
+		case "read":
+			// read allowed for all scope levels
+		case "write":
+			if perm.ScopeLevel < 2 {
+				allowed = false
+			}
+		case "delete":
+			if perm.ScopeLevel < 3 {
+				allowed = false
+			}
+		default:
+			// unknown op -> deny
+			allowed = false
+		}
+	}
+
+	result := map[string]interface{}{"allowed": allowed}
+	if perm != nil {
+		result["scopeLevel"] = perm.ScopeLevel
+		result["permission"] = perm
+	}
+
+	WriteJsonSuccess(w, result)
+}
+
+// HandleDeletePermission handles DELETE /api/permissions/{id}
+func HandleDeletePermission(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id := vars["id"]
+
+	if id == "" {
+		WriteJsonError(w, fmt.Errorf("permission ID is required"))
+		return
+	}
+
+	err := sstore.DeletePermission(r.Context(), id)
+	if err != nil {
+		WriteJsonError(w, fmt.Errorf("error deleting permission: %w", err))
+		return
+	}
+
+	WriteJsonSuccess(w, true)
+}
+
 func main() {
 	scbase.BuildTime = BuildTime
 	scbase.WaveVersion = WaveVersion
@@ -1231,6 +1352,15 @@ func main() {
 	// gr.HandleFunc("/api/log-active-state", AuthKeyWrap(HandleLogActiveState))
 	gr.HandleFunc("/api/read-file", AuthKeyWrapAllowHmac(HandleReadFile))
 	gr.HandleFunc("/api/write-file", AuthKeyWrap(HandleWriteFile)).Methods("POST")
+
+	// Permission management endpoints
+	gr.HandleFunc("/api/permissions/check", AuthKeyWrap(HandleCheckPermission)).Methods("GET")
+
+	// TODO: Phase 1.4 - HTTP/RPC Endpoints
+	// Permission management endpoints
+	gr.HandleFunc("/api/permissions", AuthKeyWrap(HandleCreatePermission)).Methods("POST")
+	gr.HandleFunc("/api/permissions", AuthKeyWrap(HandleListPermissions)).Methods("GET")
+	gr.HandleFunc("/api/permissions/{id}", AuthKeyWrap(HandleDeletePermission)).Methods("DELETE")
 	configPath := filepath.Join(scbase.GetWaveHomeDir(), "config") + string(filepath.Separator)
 	log.Printf("[wave] config path: %q\n", configPath)
 	isFileHandler := http.StripPrefix("/config/", http.FileServer(http.Dir(configPath)))

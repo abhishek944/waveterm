@@ -19,12 +19,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/creack/pty"
 	"github.com/abhishek944/waveterm/waveshell/pkg/base"
 	"github.com/abhishek944/waveterm/waveshell/pkg/packet"
 	"github.com/abhishek944/waveterm/waveshell/pkg/shellutil"
 	"github.com/abhishek944/waveterm/waveshell/pkg/utilfn"
 	"github.com/abhishek944/waveterm/waveshell/pkg/wlog"
+	"github.com/creack/pty"
 )
 
 const GetVersionTimeout = 5 * time.Second

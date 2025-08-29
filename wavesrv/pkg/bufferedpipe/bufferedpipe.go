@@ -14,10 +14,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/abhishek944/waveterm/waveshell/pkg/wlog"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/scbase"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/waveenc"
+	"github.com/google/uuid"
 )
 
 const (

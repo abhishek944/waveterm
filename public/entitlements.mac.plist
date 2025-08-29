@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- File Access Permissions -->
+    <key>com.apple.security.files.user-selected.read-write</key>
+    <true/>
+    
+    <!-- Allow access to Downloads folder -->
+    <key>com.apple.security.files.downloads.read-write</key>
+    <true/>
+    
+    <!-- Allow access to Desktop folder -->
+    <key>com.apple.security.files.desktop.read-write</key>
+    <true/>
+    
+    <!-- Allow access to Documents folder -->
+    <key>com.apple.security.files.documents.read-write</key>
+    <true/>
+    
+    <!-- Network access for wavesrv communication -->
+    <key>com.apple.security.network.client</key>
+    <true/>
+    
+    <!-- Allow app to be a terminal emulator -->
+    <key>com.apple.security.automation.apple-events</key>
+    <true/>
+    
+    <!-- Allow app to control system -->
+    <key>com.apple.security.temporary-exception.apple-events</key>
+    <array>
+        <string>com.apple.Terminal</string>
+        <string>com.apple.finder</string>
+    </array>
+    
+    <!-- Disable app sandbox for terminal functionality -->
+    <key>com.apple.security.app-sandbox</key>
+    <false/>
+    
+    <!-- Allow execution of downloaded content -->
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+    
+    <!-- Allow execution of unsigned code (for shell scripts) -->
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+    
+    <!-- Allow dynamic code signing -->
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+</dict>
+</plist>
+

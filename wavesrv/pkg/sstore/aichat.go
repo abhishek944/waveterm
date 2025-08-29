@@ -14,7 +14,7 @@ type AIChatType struct {
 	ChatId    string `json:"chatid"`
 	CreatedTs int64  `json:"createdts"`
 	UpdatedTs int64  `json:"updatedts"`
-	
+
 	// only for updates
 	Remove bool `json:"remove,omitempty"`
 }

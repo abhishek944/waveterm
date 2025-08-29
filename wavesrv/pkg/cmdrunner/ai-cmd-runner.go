@@ -12,8 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/generative-ai-go/genai"
-	openaiapi "github.com/openai/openai-go/v2"
 	"github.com/abhishek944/waveterm/waveshell/pkg/base"
 	"github.com/abhishek944/waveterm/waveshell/pkg/packet"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/prompts"
@@ -24,6 +22,8 @@ import (
 	"github.com/abhishek944/waveterm/wavesrv/pkg/scbus"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/scpacket"
 	"github.com/abhishek944/waveterm/wavesrv/pkg/sstore"
+	"github.com/google/generative-ai-go/genai"
+	openaiapi "github.com/openai/openai-go/v2"
 )
 
 // AI Provider constants
@@ -41,7 +41,7 @@ const (
 
 // AIRequest represents a generic AI request
 type AIRequest struct {
-	Mode      string                            // agent or thread
+	Mode      string // agent or thread
 	Prompt    []packet.OpenAIPromptMessageType
 	Streaming bool
 	Provider  string // openai, gemini, azure
@@ -89,7 +89,7 @@ func GetAIOptions(clientData *sstore.ClientData, provider string) (interface{}, 
 // RunAICompletion is the main entry point for AI completions
 func RunAICompletion(ctx context.Context, clientData *sstore.ClientData, request *AIRequest) (*AIResponse, error) {
 	fmt.Printf("DEBUG RunAICompletion START: provider=%s, mode=%s, streaming=%v\n", request.Provider, request.Mode, request.Streaming)
-	
+
 	provider := request.Provider
 	if provider == "" {
 		fmt.Printf("DEBUG RunAICompletion: No provider specified, getting default\n")
@@ -130,7 +130,7 @@ func RunAICompletion(ctx context.Context, clientData *sstore.ClientData, request
 // runOpenAICompletion handles OpenAI completions
 func runOpenAICompletion(ctx context.Context, opts *sstore.OpenAIOptsType, request *AIRequest) (*AIResponse, error) {
 	fmt.Printf("DEBUG runOpenAICompletion START: opts=%+v\n", opts)
-	
+
 	if opts.Model == "" {
 		opts.Model = openai.DefaultModel
 		fmt.Printf("DEBUG runOpenAICompletion: Using default model: %s\n", opts.Model)
@@ -148,7 +148,7 @@ func runOpenAICompletion(ctx context.Context, opts *sstore.OpenAIOptsType, reque
 	}
 
 	fmt.Printf("DEBUG runOpenAICompletion: Streaming=%v, prompt length=%d\n", request.Streaming, len(request.Prompt))
-	
+
 	if request.Streaming {
 		fmt.Printf("DEBUG runOpenAICompletion: Calling RunCompletionStreamWithFormat, prompt = %+v\n", request.Prompt)
 		ch, err := openai.RunCompletionStreamWithFormat(ctx, opts, request.Prompt, responseFormat)
@@ -173,7 +173,7 @@ func runOpenAICompletion(ctx context.Context, opts *sstore.OpenAIOptsType, reque
 // runGeminiCompletion handles Gemini completions
 func runGeminiCompletion(ctx context.Context, opts *sstore.GeminiOptsType, request *AIRequest) (*AIResponse, error) {
 	fmt.Printf("DEBUG runGeminiCompletion START: opts=%+v\n", opts)
-	
+
 	if opts.Model == "" {
 		opts.Model = gemini.DefaultModel
 		fmt.Printf("DEBUG runGeminiCompletion: Using default model: %s\n", opts.Model)
@@ -191,7 +191,7 @@ func runGeminiCompletion(ctx context.Context, opts *sstore.GeminiOptsType, reque
 	}
 
 	fmt.Printf("DEBUG runGeminiCompletion: Streaming=%v, prompt length=%d\n", request.Streaming, len(request.Prompt))
-	
+
 	if request.Streaming {
 		fmt.Printf("DEBUG runGeminiCompletion: Calling RunCompletionStreamWithSchema\n")
 		ch, err := gemini.RunCompletionStreamWithSchema(ctx, opts, request.Prompt, responseSchema)
@@ -216,7 +216,7 @@ func runGeminiCompletion(ctx context.Context, opts *sstore.GeminiOptsType, reque
 // runAzureOpenAICompletion handles Azure OpenAI completions
 func runAzureOpenAICompletion(ctx context.Context, opts *sstore.AzureOpenAIOptsType, request *AIRequest) (*AIResponse, error) {
 	fmt.Printf("DEBUG runAzureOpenAICompletion START: opts=%+v\n", opts)
-	
+
 	// Determine if we need structured output for thread mode
 	var responseFormat *openaiapi.ChatCompletionNewParamsResponseFormatUnion
 	if request.Mode == AIModeThread {
@@ -225,7 +225,7 @@ func runAzureOpenAICompletion(ctx context.Context, opts *sstore.AzureOpenAIOptsT
 	}
 
 	fmt.Printf("DEBUG runAzureOpenAICompletion: Streaming=%v, prompt length=%d\n", request.Streaming, len(request.Prompt))
-	
+
 	if request.Streaming {
 		fmt.Printf("DEBUG runAzureOpenAICompletion: Calling RunCompletionStreamWithFormat\n")
 		ch, err := azureopenai.RunCompletionStreamWithFormat(ctx, opts, request.Prompt, responseFormat)
