@@ -240,9 +240,9 @@ const handleFileAccess = async (path: string) => {
 
 Notes on waveshell integration:
 
--   The waveshell `CheckFilePermission` performs an HTTP `GET /api/permissions?path=...` on the local wavesrv server (configurable via `WAVETERM_SRV_ADDR`).
--   It reads the `X-AuthKey` from the file `WAVETERM_HOME/waveterm.authkey` (created or read by the server) and sets it on the request.
--   The check uses a short HTTP timeout and, as a pragmatic choice, will fail-open (allow operations) if the server is unreachable to avoid blocking terminal IO. This can be changed to fail-closed if stricter security is desired.
+- The waveshell `CheckFilePermission` performs an HTTP `GET /api/permissions?path=...` on the local wavesrv server (configurable via `WAVETERM_SRV_ADDR`).
+- It reads the `X-AuthKey` from the file `WAVETERM_HOME/waveterm.authkey` (created or read by the server) and sets it on the request.
+- The check uses a short HTTP timeout and, as a pragmatic choice, will fail-open (allow operations) if the server is unreachable to avoid blocking terminal IO. This can be changed to fail-closed if stricter security is desired.
 
 -   Frequently accessed permissions are cached in memory
 -   Cache invalidation on permission changes

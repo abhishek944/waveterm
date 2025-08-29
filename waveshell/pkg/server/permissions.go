@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -84,14 +85,19 @@ func (m *MServer) CheckFilePermission(ctx context.Context, path string, operatio
 		req.Header.Set("X-AuthKey", string(authKeyBytes))
 	}
 
+	// Log the permission check request
+	log.Printf("[PERM_CHECK] Requesting %s (authkey present=%v, authfile=%s)", reqUrl, authKeyBytes != nil, authKeyFile)
+
 	resp, err := client.Do(req)
 	if err != nil {
 		// If server is unavailable, allow operation (fail-open) to avoid blocking
+		log.Printf("[PERM_CHECK] HTTP request failed: %v (allowing by fail-open)", err)
 		return nil
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		log.Printf("[PERM_CHECK] permission API returned status %d", resp.StatusCode)
 		return fmt.Errorf("permission API returned status %d", resp.StatusCode)
 	}
 
@@ -106,6 +112,7 @@ func (m *MServer) CheckFilePermission(ctx context.Context, path string, operatio
 	}
 
 	if !body.Success {
+		log.Printf("[PERM_CHECK] permission API returned success=false, error=%s", body.Error)
 		return &PermissionError{Code: ErrPermissionRequired, Message: "permission required (empty)", Path: normalizedPath}
 	}
 
@@ -116,6 +123,7 @@ func (m *MServer) CheckFilePermission(ctx context.Context, path string, operatio
 			allowed = b
 		}
 	}
+	log.Printf("[PERM_CHECK] response allowed=%v data=%#v", allowed, data)
 	if !allowed {
 		return &PermissionError{Code: ErrPermissionRequired, Message: "no permission found", Path: normalizedPath}
 	}
@@ -125,8 +133,10 @@ func (m *MServer) CheckFilePermission(ctx context.Context, path string, operatio
 		if f, ok := v.(float64); ok {
 			scopeLevel := int(f)
 			if err := m.ValidateOperationScope(ctx, normalizedPath, operation, scopeLevel); err != nil {
+				log.Printf("[PERM_CHECK] scope validation failed for op=%s scope=%d: %v", operation, scopeLevel, err)
 				return err
 			}
+			log.Printf("[PERM_CHECK] scope validated op=%s scope=%d", operation, scopeLevel)
 		}
 	}
 

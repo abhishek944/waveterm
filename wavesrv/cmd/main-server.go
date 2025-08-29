@@ -1124,7 +1124,6 @@ func configWatcher() {
 // 	}
 // }
 
-
 // HandleCreatePermission handles POST /api/permissions
 func HandleCreatePermission(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
@@ -1216,6 +1215,9 @@ func HandleCheckPermission(w http.ResponseWriter, r *http.Request) {
 			allowed = false
 		}
 	}
+
+	// Log the permission check
+	log.Printf("[PERM_HANDLER] check path=%s op=%s allowed=%v perm=%#v", path, op, allowed, perm)
 
 	result := map[string]interface{}{"allowed": allowed}
 	if perm != nil {
